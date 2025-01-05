@@ -1,22 +1,21 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, Logger } from '@nestjs/common';
 import { AppSettingsService } from './app-settings.service';
-import { Preference } from './interfaces/preference.interface';
 
 @Controller('app-settings')
 export class AppSettingsController {
+  private readonly logger = new Logger(AppSettingsController.name);
+
   constructor(private readonly appSettingsService: AppSettingsService) {}
 
   @Get()
-  public async getAll(): Promise<Preference[]> {
+  public async getAll(): Promise<any[]> {
+    this.logger.log('GET /app-settings');
     return this.appSettingsService.getAll();
   }
 
   @Get(':id')
-  public async getById(@Param('id') id: string): Promise<Preference> {
-    const preference = await this.appSettingsService.getById(id);
-    if (!preference) {
-      throw new NotFoundException('Preference not found');
-    }
-    return preference;
+  public async getById(@Param('id') id: string): Promise<any> {
+    this.logger.log(`GET /app-settings/${id}`);
+    return this.appSettingsService.getById(id);
   }
 } 
