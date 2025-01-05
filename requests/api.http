@@ -1,0 +1,44 @@
+@baseUrl = http://localhost:3000
+
+### App Settings
+GET {{baseUrl}}/app-settings
+GET {{baseUrl}}/app-settings/123
+
+### Cities
+GET {{baseUrl}}/cities
+GET {{baseUrl}}/cities/123
+GET {{baseUrl}}/cities/123/chatrooms
+GET {{baseUrl}}/cities/chatrooms/all
+GET {{baseUrl}}/cities/123/events
+GET {{baseUrl}}/cities/events/all
+GET {{baseUrl}}/cities/123/chatrooms/456/messages
+GET {{baseUrl}}/cities/messages/all
+
+### Businesses
+GET {{baseUrl}}/businesses
+GET {{baseUrl}}/businesses/123
+GET {{baseUrl}}/businesses/categories
+GET {{baseUrl}}/businesses/users
+
+### Users
+GET {{baseUrl}}/users
+GET {{baseUrl}}/users/123
+
+POST {{baseUrl}}/users/123
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "userType": "REGULAR",
+  "managementId": "123"
+}
+
+PUT {{baseUrl}}/users/123
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "language": "de"
+}
+
+DELETE {{baseUrl}}/users/123 
