@@ -2,22 +2,38 @@
 
 ### App Settings
 GET {{baseUrl}}/app-settings
+
+### App Settings by ID
 GET {{baseUrl}}/app-settings/123
 
 ### Cities
 GET {{baseUrl}}/cities
+
+### Cities by ID
 GET {{baseUrl}}/cities/123
+
+### Chatrooms
 GET {{baseUrl}}/cities/123/chatrooms
-GET {{baseUrl}}/cities/chatrooms/all
+
+
+### Events
 GET {{baseUrl}}/cities/123/events
-GET {{baseUrl}}/cities/events/all
+
+
+### Messages
 GET {{baseUrl}}/cities/123/chatrooms/456/messages
-GET {{baseUrl}}/cities/messages/all
+
 
 ### Businesses
 GET {{baseUrl}}/businesses
+
+### Businesses by ID
 GET {{baseUrl}}/businesses/123
+
+### Business Categories
 GET {{baseUrl}}/businesses/categories
+
+### Business Users
 GET {{baseUrl}}/businesses/users
 
 ### Users
