@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CitiesController } from './cities.controller';
-import { CitiesService } from './cities.service';
 import { FirebaseModule } from '../firebase/firebase.module';
+import { CitiesService } from './cities.service';
 
 @Module({
   imports: [FirebaseModule],

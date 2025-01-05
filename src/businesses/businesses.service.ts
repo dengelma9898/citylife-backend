@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Business } from './interfaces/business.interface';
+import { BusinessCategory } from './interfaces/business-category.interface';
+import { BusinessUser } from './interfaces/business-user.interface';
 
 @Injectable()
 export class BusinessesService {
@@ -48,5 +50,35 @@ export class BusinessesService {
       updatedAt: data.updatedAt,
       isDeleted: data.isDeleted || false,
     };
+  }
+
+  // Business Categories methods
+  public async getAllCategories(): Promise<BusinessCategory[]> {
+    const db = getFirestore();
+    const categoriesCol = collection(db, 'business_categories');
+    const snapshot = await getDocs(categoriesCol);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data().name,
+      description: doc.data().description,
+      iconName: doc.data().iconName,
+      createdAt: doc.data().createdAt,
+      updatedAt: doc.data().updatedAt,
+    }));
+  }
+
+  // Business Users methods
+  public async getAllBusinessUsers(): Promise<BusinessUser[]> {
+    const db = getFirestore();
+    const usersCol = collection(db, 'business_users');
+    const snapshot = await getDocs(usersCol);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      email: doc.data().email,
+      businessIds: doc.data().businessIds || [],
+      createdAt: doc.data().createdAt,
+      updatedAt: doc.data().updatedAt,
+      isDeleted: doc.data().isDeleted || false,
+    }));
   }
 } 

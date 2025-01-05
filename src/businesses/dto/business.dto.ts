@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, IsArray, IsBoolean, IsDateString, ValidateNested, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
-import { BusinessCategoryDto } from '../../business-categories/dto/business-category.dto';
+import { BusinessCategoryDto } from './business-category.dto';
 import { BusinessContactDto } from './business-contact.dto';
 import { BusinessAddressDto } from './business-address.dto';
 

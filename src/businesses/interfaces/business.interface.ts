@@ -1,4 +1,4 @@
-import { BusinessCategory } from '../../business-categories/interfaces/business-category.interface';
+import { BusinessCategory } from './business-category.interface';
 import { BusinessContact } from './business-contact.interface';
 import { BusinessAddress } from './business-address.interface';
 
