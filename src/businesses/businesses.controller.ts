@@ -8,6 +8,16 @@ import { BusinessUser } from './interfaces/business-user.interface';
 export class BusinessesController {
   constructor(private readonly businessesService: BusinessesService) {}
 
+  @Get('categories')
+  public async getAllCategories(): Promise<BusinessCategory[]> {
+    return this.businessesService.getAllCategories();
+  }
+
+  @Get('users')
+  public async getAllBusinessUsers(): Promise<BusinessUser[]> {
+    return this.businessesService.getAllBusinessUsers();
+  }
+
   @Get()
   public async getAll(): Promise<Business[]> {
     return this.businessesService.getAll();
@@ -20,15 +30,5 @@ export class BusinessesController {
       throw new NotFoundException('Business not found');
     }
     return business;
-  }
-
-  @Get('categories')
-  public async getAllCategories(): Promise<BusinessCategory[]> {
-    return this.businessesService.getAllCategories();
-  }
-
-  @Get('users')
-  public async getAllBusinessUsers(): Promise<BusinessUser[]> {
-    return this.businessesService.getAllBusinessUsers();
   }
 } 
