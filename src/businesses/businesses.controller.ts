@@ -1,10 +1,12 @@
-import { Controller, Get, Param, NotFoundException, Logger } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Logger, UseGuards } from '@nestjs/common';
 import { BusinessesService } from './businesses.service';
 import { Business } from './interfaces/business.interface';
 import { BusinessCategory } from './interfaces/business-category.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
+import { AuthGuard } from '../core/guards/auth.guard';
 
 @Controller('businesses')
+@UseGuards(AuthGuard)
 export class BusinessesController {
   private readonly logger = new Logger(BusinessesController.name);
 

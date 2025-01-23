@@ -7,6 +7,8 @@ import { FirebaseModule } from './firebase/firebase.module';
 import { CitiesModule } from './cities/cities.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
 import { BusinessesModule } from './businesses/businesses.module';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from './core/guards/auth.guard';
 
 @Module({
   imports: [
@@ -18,6 +20,12 @@ import { BusinessesModule } from './businesses/businesses.module';
     CitiesModule,
     AppSettingsModule,
     BusinessesModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
   ],
 })
 export class AppModule {} 
