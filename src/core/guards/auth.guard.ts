@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, Logger } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, Logger, UnauthorizedException } from '@nestjs/common';
 import { Observable } from 'rxjs';
 
 @Injectable()
@@ -9,11 +9,26 @@ export class AuthGuard implements CanActivate {
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
     const request = context.switchToHttp().getRequest();
-    const token = request.headers.authorization;
+    const authHeader = request.headers.authorization;
     
-    this.logger.debug(`Received auth token: ${token}`);
+    if (!authHeader) {
+      this.logger.warn('No authorization header present');
+      throw new UnauthorizedException('No authorization header present');
+    }
+
+    const [type, token] = authHeader.split(' ');
     
-    // In der ersten Iteration geben wir immer true zurück
+    if (type !== 'Bearer') {
+      this.logger.warn(`Invalid authorization type: ${type}`);
+      throw new UnauthorizedException('Invalid authorization type. Expected Bearer token');
+    }
+
+    if (!token) {
+      this.logger.warn('No token provided');
+      throw new UnauthorizedException('No token provided');
+    }
+
+    this.logger.debug(`Received valid bearer token: ${token}`);
     return true;
   }
 } 
