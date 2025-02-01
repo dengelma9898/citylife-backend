@@ -1,12 +1,18 @@
-import { Controller, Post, Body, Get, Param, Res, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Res, Logger, NotFoundException } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { Response } from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
+import { UsersService } from '../users/users.service';
 
 @Controller('wallet')
 export class WalletController {
   private readonly logger = new Logger(WalletController.name);
 
-  constructor(private readonly walletService: WalletService) {}
+  constructor(
+    private readonly walletService: WalletService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @Get('test')
   public async testEndpoint(): Promise<{ status: string; timestamp: number }> {
@@ -16,29 +22,67 @@ export class WalletController {
     };
   }
 
-  @Get('passes/:id')
-  async getPass(@Param('id') id: string, @Res() res: Response) {
-    this.logger.log(`GET /wallet/passes/${id}`);
+  @Get('coupon')
+  async getCouponPass(@Res() res: Response) {
+    this.logger.log('GET /wallet/coupon');
     
-    const passData = {
-      id,
-      description: 'Test Pass Description',
-      logoText: 'Test App',
-      barcode: `PASS-${id}`
-    };
+    const passPath = path.join(process.cwd(), 'nuernbergspots.pass', 'Coupon.pkpass');
+    
+    if (!fs.existsSync(passPath)) {
+      this.logger.error(`Pass file not found at ${passPath}`);
+      return res.status(404).send('Pass file not found');
+    }
 
-    const passBuffer = await this.walletService.generatePass(passData);
+    const passFile = fs.readFileSync(passPath);
 
     res.set({
       'Content-Type': 'application/vnd.apple.pkpass',
-      'Content-Disposition': `attachment; filename=pass-${id}.pkpass`
+      'Content-Disposition': 'attachment; filename=Coupon.pkpass'
+    });
+    
+    return res.send(passFile);
+  }
+
+  @Post('personalized/:userId')
+  async getPersonalizedPass(
+    @Param('userId') userId: string,
+    @Res() res: Response
+  ) {
+    this.logger.log(`POST /wallet/personalized/${userId}`);
+    
+    const user = await this.usersService.getById(userId);
+    if (!user || !user.name) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.customerId) {
+      const customerId = `NSP-${userId}`;
+      await this.usersService.update(userId, { customerId });
+      user.customerId = customerId;
+    }
+
+    // Generate member since date if not exists
+    if (!user.memberSince) {
+      const date = new Date();
+      const memberSince = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      await this.usersService.update(userId, { memberSince });
+      user.memberSince = memberSince;
+    }
+
+    const passData = {
+      customerId: user.customerId,
+      userName: user.name,
+      memberSince: user.memberSince
+    };
+
+    const passBuffer = await this.walletService.generatePersonalizedPass(passData);
+
+    res.set({
+      'Content-Type': 'application/vnd.apple.pkpass',
+      'Content-Disposition': `attachment; filename=member-${user.customerId}.pkpass`
     });
     
     return res.send(passBuffer);
   }
 
-/*   @Post('signature')
-  public async generateSignature(@Body('userId') userId: string): Promise<{ signature: string }> {
-    return this.walletService.generateWalletSignature(userId);
-  } */
 } 

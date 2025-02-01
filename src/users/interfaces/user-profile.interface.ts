@@ -10,4 +10,6 @@ export interface UserProfile {
   preferences?: string[];
   language?: string;
   livingInCitySinceYear?: number;
+  customerId?: string;
+  memberSince?: string;
 } 

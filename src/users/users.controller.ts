@@ -15,38 +15,38 @@ export class UsersController {
     return this.usersService.getAll();
   }
 
-  @Get(':id')
-  public async getById(@Param('id') id: string): Promise<UserProfile> {
-    this.logger.log(`GET /users/${id}`);
+  @Get(':id/profile')
+  public async getProfile(@Param('id') id: string): Promise<UserProfile> {
+    this.logger.log(`GET /users/${id}/profile`);
     const user = await this.usersService.getById(id);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('User profile not found');
     }
     return user;
   }
 
-  @Post(':id')
-  public async create(
+  @Post(':id/profile')
+  public async createProfile(
     @Param('id') id: string,
     @Body() userProfileDto: UserProfileDto
   ): Promise<UserProfile> {
-    this.logger.log(`POST /users/${id}`);
+    this.logger.log(`POST /users/${id}/profile`);
     const { id: _, ...profile } = userProfileDto;
     return this.usersService.create(id, profile);
   }
 
-  @Put(':id')
-  public async update(
+  @Put(':id/profile')
+  public async updateProfile(
     @Param('id') id: string,
     @Body() userProfileDto: Partial<UserProfileDto>
   ): Promise<UserProfile> {
-    this.logger.log(`PUT /users/${id}`);
+    this.logger.log(`PUT /users/${id}/profile`);
     return this.usersService.update(id, userProfileDto);
   }
 
-  @Delete(':id')
-  public async delete(@Param('id') id: string): Promise<void> {
-    this.logger.log(`DELETE /users/${id}`);
+  @Delete(':id/profile')
+  public async deleteProfile(@Param('id') id: string): Promise<void> {
+    this.logger.log(`DELETE /users/${id}/profile`);
     return this.usersService.delete(id);
   }
 } 

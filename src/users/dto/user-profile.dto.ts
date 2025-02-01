@@ -36,4 +36,12 @@ export class UserProfileDto {
   @Max(new Date().getFullYear())
   @IsOptional()
   public readonly livingInCitySinceYear?: number;
+
+  @IsString()
+  @IsOptional()
+  public readonly memberSince?: string;
+
+  @IsString()
+  @IsOptional()
+  public readonly customerId?: string;
 } 
