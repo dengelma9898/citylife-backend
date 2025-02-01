@@ -12,7 +12,10 @@ import { AuthGuard } from './core/guards/auth.guard';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env', '.env.docker'],
+    }),
     CoreModule,
     FirebaseModule,
     UsersModule,

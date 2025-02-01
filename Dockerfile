@@ -6,7 +6,12 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+
+# Copy pass templates
+COPY pass-templates ./pass-templates
+
+# Build the app
 RUN npm run build
 
-EXPOSE 3000
-CMD ["npm", "run", "start"]
+# Environment variables will be injected at runtime
+CMD ["npm", "run", "start:prod"]
