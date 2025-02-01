@@ -1,121 +1,104 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { FirebaseService } from '../firebase/firebase.service';
-import * as crypto from 'crypto';
-import * as fs from 'fs';
+import { Barcode, PKPass } from 'passkit-generator';
 import * as path from 'path';
-import * as AdmZip from 'adm-zip';
+import * as fs from 'fs';
+import { ConfigService } from '@nestjs/config';
 
-interface MockPassData {
-  id: string;
-  description: string;
-  barcode?: string;
-  logoText?: string;
-  // Add more fields as needed
+interface PersonalizedPassData {
+  customerId: string;
+  userName: string;
+  memberSince: string;
 }
 
 @Injectable()
 export class WalletService {
   private readonly logger = new Logger(WalletService.name);
 
-  constructor(private readonly firebaseService: FirebaseService) {}
+  constructor(private readonly configService: ConfigService) {}
 
-/*   public async generateWalletSignature(userId: string): Promise<string> {
-    const timestamp = Date.now();
-    const data = `${userId}-${timestamp}`;
-    const privateKey = process.env.WALLET_PRIVATE_KEY;
-    const sign = crypto.createSign('SHA256');
-    sign.update(data);
-    return sign.sign(privateKey, 'base64');
-  } */
+  async generatePersonalizedPass(data: PersonalizedPassData): Promise<Buffer> {
+    this.logger.debug('Generating personalized wallet pass');
 
-  async generatePass(passData: MockPassData): Promise<Buffer> {
-    this.logger.debug('Generating unsigned test pkpass');
-    
-    const mockPass = {
-      formatVersion: 1,
-      passTypeIdentifier: "pass.com.yourapp.test",
-      serialNumber: passData.id,
-      teamIdentifier: "MOCK_TEAM_ID",
-      organizationName: "Test Organization",
-      description: passData.description,
-      logoText: passData.logoText || "Test Pass",
-      foregroundColor: "rgb(255, 255, 255)",
-      backgroundColor: "rgb(60, 65, 76)",
-      barcode: {
-        message: passData.barcode || "123456789",
-        format: "PKBarcodeFormatQR",
-        messageEncoding: "iso-8859-1"
-      },
-      generic: {
-        primaryFields: [
-          {
-            key: "test",
-            label: "Test Pass",
-            value: "Demo Value"
-          }
-        ]
+    try {
+      // Load certificates from env
+      const wwdrCert = this.configService.get<string>('WALLET_WWDR_CERT');
+      const signerCertStr = this.configService.get<string>('WALLET_SIGNER_CERT');
+      const signerKeyStr = this.configService.get<string>('WALLET_SIGNER_KEY');
+      const passphrase = this.configService.get<string>('WALLET_KEY_PASSPHRASE');
+
+      if (!wwdrCert || !signerCertStr || !signerKeyStr || !passphrase) {
+        throw new Error('Missing wallet certificate configuration');
       }
-    };
 
-    // Create ZIP (pkpass) file
-    const zip = new AdmZip();
-    
-    // Add pass.json
-    zip.addFile('pass.json', Buffer.from(JSON.stringify(mockPass)));
-    
-    // Add dummy images (required by spec)
-    const dummyImage = Buffer.from('dummy image');
-    zip.addFile('icon.png', dummyImage);
-    zip.addFile('logo.png', dummyImage);
-    
-    this.logger.debug('Unsigned test pkpass generated');
-    return zip.toBuffer();
+      const wwdr = Buffer.from(wwdrCert, 'base64');
+      const signerCert = Buffer.from(signerCertStr, 'base64');
+      const signerKey = Buffer.from(signerKeyStr, 'base64');
+
+      // Create pass from template
+      const pass = await PKPass.from({
+        model: path.join(process.cwd(), 'pass-templates', 'nuernbergspots.pass'),
+        certificates: {
+          wwdr,
+          signerCert,
+          signerKey,
+          signerKeyPassphrase: passphrase
+        }
+      }, {
+        serialNumber: data.customerId,
+        description: 'Nuernbergspots Mitgliedskarte',
+        backgroundColor: '#000000',
+        foregroundColor: '#FFFFFF',
+        labelColor: '#FFFFFF',
+        logoText: 'Nuernbergspots',
+        formatVersion: 1,
+        organizationName: 'Nuernbergspots',
+        teamIdentifier: '4T9BXP692G',
+        passTypeIdentifier: 'pass.de.dengelma.nuernbergspots'
+      });
+
+      // Set pass type to generic
+      pass.type = 'generic';
+
+      // Add personalized data
+      pass.primaryFields.push({
+        key: 'name',
+        label: 'Name',
+        value: data.userName
+      });
+
+      // Format date to German format (MM.YYYY)
+      const [year, month] = data.memberSince.split('-');
+      const formattedDate = `${month}.${year}`;
+
+      pass.secondaryFields.push({
+        key: 'memberSince',
+        label: 'Mitglied seit',
+        value: formattedDate
+      });
+
+      pass.languages.push('de-DE');
+
+      pass.auxiliaryFields.push({
+        key: 'description',
+        label: 'Deine Benefits',
+        value: 'Lasse den Barcode bei teilnehmenden Unternehmen scannen und erhalte diverse Vorteile.'
+      });
+
+      pass.setBarcodes(({
+        message: data.customerId,
+        format: 'PKBarcodeFormatQR',
+        messageEncoding: 'iso-8859-1'
+      }));
+
+      // Generate signed pass buffer
+      const passBuffer = pass.getAsBuffer();
+      
+      this.logger.debug('Personalized pass generated successfully');
+      return passBuffer;
+
+    } catch (error) {
+      this.logger.error('Error generating pass:', error.message);
+      throw error;
+    }
   }
-
-  /* async generateSignedPass(passData: MockPassData): Promise<Buffer> {
-    this.logger.debug('Generating signed pkpass');
-    
-    // 1. Create manifest.json (SHA-1 hashes of all files)
-    const manifest = {
-      'pass.json': this.generateHash(passJsonBuffer),
-      'icon.png': this.generateHash(iconBuffer),
-      'logo.png': this.generateHash(logoBuffer)
-    };
-
-    // 2. Create signature (using OpenSSL)
-    const signature = this.createSignature(
-      manifest,
-      signerCert,
-      signerKey,
-      wwdr
-    );
-
-    // 3. Package everything into .pkpass
-    const zip = new AdmZip();
-    zip.addFile('pass.json', passJsonBuffer);
-    zip.addFile('manifest.json', Buffer.from(JSON.stringify(manifest)));
-    zip.addFile('signature', signature);
-    zip.addFile('icon.png', iconBuffer);
-    zip.addFile('logo.png', logoBuffer);
-
-    return zip.toBuffer();
-  }
-
-  private generateHash(buffer: Buffer): string {
-    return crypto
-      .createHash('sha1')
-      .update(buffer)
-      .digest('hex');
-  }
-
-  private createSignature(
-    manifest: any,
-    signerCert: Buffer,
-    signerKey: Buffer,
-    wwdr: Buffer
-  ): Buffer {
-    // Create PKCS#7 signature using OpenSSL
-    // This is a complex process involving proper certificate chain
-    // Return signature buffer
-  } */
 } 

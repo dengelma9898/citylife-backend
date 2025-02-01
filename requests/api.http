@@ -40,7 +40,10 @@ GET {{baseUrl}}/businesses/users
 GET {{baseUrl}}/users
 GET {{baseUrl}}/users/123
 
-POST {{baseUrl}}/users/123
+### Users Profile
+GET {{baseUrl}}/users/123/profile
+
+POST {{baseUrl}}/users/123/profile
 Content-Type: application/json
 
 {
@@ -49,7 +52,7 @@ Content-Type: application/json
   "managementId": "123"
 }
 
-PUT {{baseUrl}}/users/123
+PUT {{baseUrl}}/users/123/profile
 Content-Type: application/json
 
 {
@@ -57,4 +60,17 @@ Content-Type: application/json
   "language": "de"
 }
 
-DELETE {{baseUrl}}/users/123 
+DELETE {{baseUrl}}/users/123/profile
+
+### Get Coupon Pass
+GET {{baseUrl}}/wallet/coupon
+
+### Get Personalized Pass
+POST {{baseUrl}}/wallet/personalized/345
+Content-Type: application/json
+
+{
+  "userId": "123",
+  "userName": "John Doe",
+  "memberSince": "2024-01"
+} 
