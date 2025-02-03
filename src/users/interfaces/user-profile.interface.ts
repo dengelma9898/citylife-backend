@@ -12,4 +12,5 @@ export interface UserProfile {
   livingInCitySinceYear?: number;
   memberSince?: string;
   customerId?: string;
+  currentCityId?: string;
 } 
