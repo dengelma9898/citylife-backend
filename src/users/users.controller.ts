@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, NotFoundException, Log
 import { UsersService } from './users.service';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { UserProfileDto } from './dto/user-profile.dto';
-import { City } from './interfaces/city.interface';
+import { City } from '../cities/interfaces/city.interface';
 
 @Controller('users')
 export class UsersController {
