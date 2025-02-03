@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, NotFoundException, Log
 import { UsersService } from './users.service';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { UserProfileDto } from './dto/user-profile.dto';
+import { City } from './interfaces/city.interface';
 
 @Controller('users')
 export class UsersController {
@@ -48,5 +49,20 @@ export class UsersController {
   public async deleteProfile(@Param('id') id: string): Promise<void> {
     this.logger.log(`DELETE /users/${id}/profile`);
     return this.usersService.delete(id);
+  }
+
+  @Get(':id/current-city')
+  public async getCurrentCity(@Param('id') userId: string): Promise<City> {
+    this.logger.log(`GET /users/${userId}/current-city`);
+    return this.usersService.getCurrentCity(userId);
+  }
+
+  @Put(':id/current-city')
+  public async setCurrentCity(
+    @Param('id') userId: string,
+    @Body('cityId') cityId: string
+  ): Promise<City> {
+    this.logger.log(`PUT /users/${userId}/current-city`);
+    return this.usersService.setCurrentCity(userId, cityId);
   }
 } 

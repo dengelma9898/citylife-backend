@@ -73,4 +73,15 @@ Content-Type: application/json
   "userId": "123",
   "userName": "John Doe",
   "memberSince": "2024-01"
+}
+
+### Get Current City
+GET {{baseUrl}}/users/123/current-city
+
+### Set Current City
+PUT {{baseUrl}}/users/123/current-city
+Content-Type: application/json
+
+{
+  "cityId": "bbc845b5-9685-40a1-8809-beba589fd4eb"
 } 
