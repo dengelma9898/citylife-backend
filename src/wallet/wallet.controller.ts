@@ -50,7 +50,7 @@ export class WalletController {
   ) {
     this.logger.log(`POST /wallet/personalized/${userId}`);
     
-    const user = await this.usersService.getById(userId);
+    const user = await this.usersService.getUserProfile(userId);
     if (!user || !user.name) {
       throw new NotFoundException('User not found');
     }

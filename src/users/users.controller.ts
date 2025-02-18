@@ -3,7 +3,7 @@ import { UsersService } from './users.service';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { UserProfileDto } from './dto/user-profile.dto';
 import { City } from '../cities/interfaces/city.interface';
-
+import { BusinessUser } from './interfaces/business-user.interface';
 @Controller('users')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
@@ -17,7 +17,7 @@ export class UsersController {
   }
 
   @Get(':id/profile')
-  public async getProfile(@Param('id') id: string): Promise<UserProfile> {
+  public async getProfile(@Param('id') id: string): Promise<UserProfile | BusinessUser> {
     this.logger.log(`GET /users/${id}/profile`);
     const user = await this.usersService.getById(id);
     if (!user) {
@@ -57,12 +57,12 @@ export class UsersController {
     return this.usersService.getCurrentCity(userId);
   }
 
-  @Put(':id/current-city')
+  @Put(':id/current-city/:cityId')
   public async setCurrentCity(
     @Param('id') userId: string,
-    @Body('cityId') cityId: string
+    @Param('cityId') cityId: string
   ): Promise<City> {
-    this.logger.log(`PUT /users/${userId}/current-city`);
+    this.logger.log(`PUT /users/${userId}/current-city/${cityId}`);
     return this.usersService.setCurrentCity(userId, cityId);
   }
 } 

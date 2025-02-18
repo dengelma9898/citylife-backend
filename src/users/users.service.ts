@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { UserProfile } from './interfaces/user-profile.interface';
+import { BusinessUser } from './interfaces/business-user.interface';
 import { CitiesService } from '../cities/cities.service';
 import { City } from '../cities/interfaces/city.interface';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
-  private readonly DEFAULT_CITY_ID = 'bbc845b5-9685-40a1-8809-beba589fd4eb';
+  public anonymousCityId = 'bbc845b5-9685-40a1-8809-beba589fd4eb';
 
   constructor(
     private readonly citiesService: CitiesService,
@@ -23,19 +24,49 @@ export class UsersService {
     } as UserProfile));
   }
 
-  public async getById(id: string): Promise<UserProfile | null> {
+  public async getById(id: string): Promise<UserProfile | BusinessUser | null> {
+    const userProfile = await this.getUserProfile(id);
+    if (userProfile) return userProfile;
+
+    const businessUser = await this.getBusinessUser(id);
+    if (businessUser) return businessUser;
+
+    this.logger.warn(`User ${id} not found in any collection`);
+    return null;
+  }
+
+  public async getUserProfile(id: string): Promise<UserProfile | null> {
+    this.logger.debug(`Getting user profile for id: ${id}`);
     const db = getFirestore();
-    const docRef = doc(db, 'users', id);
-    const docSnap = await getDoc(docRef);
+    const userDocRef = doc(db, 'users', id);
+    const userDocSnap = await getDoc(userDocRef);
     
-    if (!docSnap.exists()) {
-      return null;
+    if (userDocSnap.exists()) {
+      this.logger.debug('Found user in users collection');
+      return {
+        id: userDocSnap.id,
+        ...userDocSnap.data()
+      } as UserProfile;
     }
 
-    return {
-      id: docSnap.id,
-      ...docSnap.data()
-    } as UserProfile;
+    return null;
+  }
+
+  public async getBusinessUser(id: string): Promise<BusinessUser | null> {
+    this.logger.debug(`Getting business user for id: ${id}`);
+    const db = getFirestore();
+    const businessUserDocRef = doc(db, 'business_users', id);
+    const businessUserDocSnap = await getDoc(businessUserDocRef);
+    
+    if (businessUserDocSnap.exists()) {
+      this.logger.debug('Found user in business_users collection');
+      return {
+        id: businessUserDocSnap.id,
+        ...businessUserDocSnap.data()
+      } as BusinessUser;
+    }
+
+    return null;
   }
 
   public async create(id: string, profile: Omit<UserProfile, 'id'>): Promise<UserProfile> {
@@ -82,7 +113,7 @@ export class UsersService {
   public async getCurrentCity(userId: string): Promise<City> {
     this.logger.debug(`Getting current city for userId: ${userId}`);
 
-    const user = await this.getById(userId);
+    const user = await this.getUserProfile(userId);
     
     if (user?.currentCityId) {
       const city = await this.citiesService.getById(user.currentCityId);
@@ -92,7 +123,7 @@ export class UsersService {
       this.logger.warn(`Saved city ${user.currentCityId} not found, falling back to default`);
     }
 
-    const defaultCity = await this.citiesService.getById(this.DEFAULT_CITY_ID);
+    const defaultCity = await this.citiesService.getById(this.anonymousCityId);
     if (!defaultCity) {
       throw new NotFoundException('Default city not found');
     }
@@ -104,15 +135,17 @@ export class UsersService {
     
     const user = await this.getById(userId);
     if (!user) {
-      throw new NotFoundException('User not found');
+      this.anonymousCityId = cityId;
+      this.logger.warn(`User ${userId} not found, using anonymous city ${cityId}`);
     }
 
     const city = await this.citiesService.getById(cityId);
     if (!city) {
       throw new NotFoundException('City not found');
     }
-
-    await this.update(userId, { currentCityId: cityId });
+    if (user) {
+      await this.update(userId, { currentCityId: cityId });
+    }
     return city;
   }
 } 
