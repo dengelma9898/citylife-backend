@@ -84,4 +84,35 @@ Content-Type: application/json
 
 {
   "cityId": "bbc845b5-9685-40a1-8809-beba589fd4eb"
+}
+
+### Create Business
+POST {{baseUrl}}/businesses
+Content-Type: application/json
+
+{
+  "name": "Test Business",
+  "categoryId": "category123",
+  "description": "A test business",
+  "contact": {
+    "email": "test@business.com",
+    "phoneNumber": "+49123456789"
+  },
+  "address": {
+    "street": "Test Street",
+    "houseNumber": "123",
+    "postalCode": "12345",
+    "city": "Test City",
+    "latitude": 49.4521,
+    "longitude": 11.0767
+  }
+}
+
+### Update Business
+PUT {{baseUrl}}/businesses/business123
+Content-Type: application/json
+
+{
+  "name": "Updated Business Name",
+  "description": "Updated description"
 } 
