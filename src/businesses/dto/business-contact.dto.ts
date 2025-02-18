@@ -1,19 +1,12 @@
-import { IsString, IsNotEmpty, IsEmail, IsOptional } from 'class-validator';
+import { IsEmail, IsOptional, IsPhoneNumber } from 'class-validator';
 
 export class BusinessContactDto {
-  @IsString()
-  @IsNotEmpty()
-  public readonly firstName: string;
 
-  @IsString()
-  @IsNotEmpty()
-  public readonly lastName: string;
-
-  @IsEmail()
   @IsOptional()
+  @IsEmail()
   public readonly email?: string;
 
-  @IsString()
   @IsOptional()
+  @IsPhoneNumber('DE')
   public readonly phoneNumber?: string;
 } 
