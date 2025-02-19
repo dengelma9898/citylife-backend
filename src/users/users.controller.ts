@@ -4,6 +4,8 @@ import { UserProfile } from './interfaces/user-profile.interface';
 import { UserProfileDto } from './dto/user-profile.dto';
 import { City } from '../cities/interfaces/city.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
+import { CreateUserProfileDto } from './dto/create-user-profile.dto';
+
 @Controller('users')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
@@ -29,11 +31,10 @@ export class UsersController {
   @Post(':id/profile')
   public async createProfile(
     @Param('id') id: string,
-    @Body() userProfileDto: UserProfileDto
+    @Body() userProfileDto: CreateUserProfileDto
   ): Promise<UserProfile> {
     this.logger.log(`POST /users/${id}/profile`);
-    const { id: _, ...profile } = userProfileDto;
-    return this.usersService.create(id, profile);
+    return this.usersService.create(id, userProfileDto);
   }
 
   @Put(':id/profile')

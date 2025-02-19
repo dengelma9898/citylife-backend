@@ -4,11 +4,15 @@ import { UserProfile } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CitiesService } from '../cities/cities.service';
 import { City } from '../cities/interfaces/city.interface';
+import { CreateUserProfileDto } from './dto/create-user-profile.dto';
+import { v4 as uuidv4 } from 'uuid';
+import { UserType } from './enums/user-type.enum';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
   public anonymousCityId = 'bbc845b5-9685-40a1-8809-beba589fd4eb';
+
 
   constructor(
     private readonly citiesService: CitiesService,
@@ -18,10 +22,7 @@ export class UsersService {
     const db = getFirestore();
     const usersCol = collection(db, 'users');
     const snapshot = await getDocs(usersCol);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as UserProfile));
+    return snapshot.docs.map(doc => doc.data() as UserProfile);
   }
 
   public async getById(id: string): Promise<UserProfile | BusinessUser | null> {
@@ -43,10 +44,7 @@ export class UsersService {
     
     if (userDocSnap.exists()) {
       this.logger.debug('Found user in users collection');
-      return {
-        id: userDocSnap.id,
-        ...userDocSnap.data()
-      } as UserProfile;
+      return userDocSnap.data() as UserProfile;
     }
 
     return null;
@@ -69,15 +67,20 @@ export class UsersService {
     return null;
   }
 
-  public async create(id: string, profile: Omit<UserProfile, 'id'>): Promise<UserProfile> {
+  public async create(id: string, profile: CreateUserProfileDto): Promise<UserProfile> {
+    this.logger.debug(`Creating user profile for id: ${id}`);
+    const userProfile: UserProfile = {
+      ...profile,
+      userType: UserType.USER,
+      managementId: uuidv4(),
+      customerId: `NSP-${id}`,
+      memberSince: `${new Date().getFullYear()}-${new Date().getMonth() + 1}`,
+    };
     const db = getFirestore();
     const docRef = doc(db, 'users', id);
-    await setDoc(docRef, profile);
-    
-    return {
-      id,
-      ...profile
-    };
+    await setDoc(docRef, userProfile);
+
+    return userProfile;
   }
 
   public async update(id: string, profile: Partial<UserProfile>): Promise<UserProfile> {
@@ -92,10 +95,7 @@ export class UsersService {
     await updateDoc(docRef, profile);
     
     const updatedDoc = await getDoc(docRef);
-    return {
-      id: updatedDoc.id,
-      ...updatedDoc.data()
-    } as UserProfile;
+    return updatedDoc.data() as UserProfile;
   }
 
   public async delete(id: string): Promise<void> {

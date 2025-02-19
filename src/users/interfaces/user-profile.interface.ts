@@ -1,7 +1,6 @@
 import { UserType } from '../enums/user-type.enum';
 
 export interface UserProfile {
-  id: string;
   email: string;
   userType: UserType;
   managementId: string;
