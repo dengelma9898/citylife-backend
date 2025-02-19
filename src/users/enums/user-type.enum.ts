@@ -1,5 +1,7 @@
 export enum UserType {
-  REGULAR = 'REGULAR',
-  BUSINESS = 'BUSINESS',
-  ADMIN = 'ADMIN'
+  USER = 'user',
+  ADMIN = 'admin',
+  SUPER_ADMIN = 'super_admin',
+  BUSINESS = 'business',
+  PREMIUM_BUSINESS = 'premium_business',
 } 
