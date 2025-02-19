@@ -2,6 +2,12 @@ import { BusinessCategory } from './business-category.interface';
 import { BusinessContact } from './business-contact.interface';
 import { BusinessAddress } from './business-address.interface';
 
+export enum BusinessStatus {
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE'
+}
+
 export interface Business {
   id: string;
   name: string;
@@ -15,4 +21,5 @@ export interface Business {
   createdAt: string;
   updatedAt: string;
   isDeleted: boolean;
+  status: BusinessStatus;
 } 

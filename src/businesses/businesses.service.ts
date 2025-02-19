@@ -4,6 +4,7 @@ import { Business } from './interfaces/business.interface';
 import { BusinessCategory } from './interfaces/business-category.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateBusinessDto } from './dto/create-business.dto';
+import { BusinessStatus } from './interfaces/business.interface';
 
 @Injectable()
 export class BusinessesService {
@@ -96,6 +97,7 @@ export class BusinessesService {
       logo: data.logo || '',
       photos: data.photos,
       openingHours: data.openingHours,
+      status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isDeleted: false
@@ -125,7 +127,7 @@ export class BusinessesService {
     };
   }
 
-  public async update(id: string, data: Partial<CreateBusinessDto>): Promise<Business> {
+  public async update(id: string, data: Partial<Business>): Promise<Business> {
     this.logger.debug(`Updating business ${id}`);
     const db = getFirestore();
     const docRef = doc(db, 'businesses', id);
@@ -147,5 +149,10 @@ export class BusinessesService {
       id: updatedDoc.id,
       ...updatedDoc.data()
     } as Business;
+  }
+
+  public async updateStatus(id: string, status: BusinessStatus): Promise<Business> {
+    this.logger.debug(`Updating business ${id} status to ${status}`);
+    return this.update(id, { status });
   }
 } 
