@@ -19,12 +19,6 @@ export class BusinessesController {
     return this.businessesService.getAllCategories();
   }
 
-  @Get('users')
-  public async getAllBusinessUsers(): Promise<BusinessUser[]> {
-    this.logger.log('GET /businesses/users');
-    return this.businessesService.getAllBusinessUsers();
-  }
-
   @Get()
   public async getAll(): Promise<Business[]> {
     this.logger.log('GET /businesses');

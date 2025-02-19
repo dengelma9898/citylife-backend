@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsArray, ValidateNested, IsObject, IsDateString } from 'class-validator';
+import { IsString, IsNotEmpty, IsArray, ValidateNested, IsObject, IsDateString, IsBoolean, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BusinessContactDto } from './business-contact.dto';
 import { BusinessAddressDto } from './business-address.dto';
@@ -39,4 +39,8 @@ export class CreateBusinessDto {
 
   @IsObject()
   public readonly openingHours: Record<string, string> = {};
+
+  @IsBoolean()
+  @IsOptional()
+  public readonly isAdmin?: boolean = false;
 } 

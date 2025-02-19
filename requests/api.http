@@ -115,4 +115,30 @@ Content-Type: application/json
 {
   "name": "Updated Business Name",
   "description": "Updated description"
-} 
+}
+
+### Get All Business Users
+GET {{baseUrl}}/business-users
+
+### Get Business User by ID
+GET {{baseUrl}}/business-users/123
+
+### Create Business User
+POST {{baseUrl}}/business-users
+Content-Type: application/json
+
+{
+  "email": "business@example.com",
+  "businessIds": ["business123"]
+}
+
+### Update Business User
+PUT {{baseUrl}}/business-users/123
+Content-Type: application/json
+
+{
+  "businessIds": ["business123", "business456"]
+}
+
+### Delete Business User
+DELETE {{baseUrl}}/business-users/123 
