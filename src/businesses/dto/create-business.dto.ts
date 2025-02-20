@@ -31,12 +31,6 @@ export class CreateBusinessDto {
   @IsString({ each: true })
   public readonly photos: string[] = [];
 
-  @IsDateString()
-  public readonly createdAt: string;
-
-  @IsDateString()
-  public readonly updatedAt: string;
-
   @IsObject()
   public readonly openingHours: Record<string, string> = {};
 
