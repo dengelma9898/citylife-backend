@@ -7,6 +7,7 @@ import { City } from '../cities/interfaces/city.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { UserType } from './enums/user-type.enum';
+import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -67,7 +68,7 @@ export class UsersService {
     return null;
   }
 
-  public async create(id: string, profile: CreateUserProfileDto): Promise<UserProfile> {
+  public async createUserProfile(id: string, profile: CreateUserProfileDto): Promise<UserProfile> {
     this.logger.debug(`Creating user profile for id: ${id}`);
     const userProfile: UserProfile = {
       ...profile,
@@ -147,5 +148,62 @@ export class UsersService {
       await this.update(userId, { currentCityId: cityId });
     }
     return city;
+  }
+
+  public async createBusinessUser(data: CreateBusinessUserDto): Promise<BusinessUser> {
+    this.logger.debug('Creating business user');
+    const db = getFirestore();
+    
+    const userData: Omit<BusinessUser, 'id'> = {
+      email: data.email,
+      businessIds: [data.businessId],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isDeleted: false
+    };
+
+    const docRef = doc(db, 'business_users', data.userId);
+    await setDoc(docRef, userData);
+    
+    return {
+      id: data.userId,
+      ...userData
+    };
+  }
+
+  public async updateBusinessUser(id: string, data: Partial<BusinessUser>): Promise<BusinessUser> {
+    this.logger.debug(`Updating business user ${id}`);
+    const db = getFirestore();
+    const docRef = doc(db, 'business_users', id);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new NotFoundException('Business user not found');
+    }
+
+    const updateData = {
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+
+    await updateDoc(docRef, updateData);
+    const businessUser = await this.getBusinessUser(id);
+    if (!businessUser) {
+      throw new NotFoundException('Business user not found');
+    }
+    return businessUser;
+  }
+
+  public async deleteBusinessUser(id: string): Promise<void> {
+    this.logger.debug(`Deleting business user ${id}`);
+    const db = getFirestore();
+    const docRef = doc(db, 'business_users', id);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new NotFoundException('Business user not found');
+    }
+
+    await deleteDoc(docRef);
   }
 } 

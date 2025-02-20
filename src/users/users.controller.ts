@@ -5,6 +5,8 @@ import { UserProfileDto } from './dto/user-profile.dto';
 import { City } from '../cities/interfaces/city.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
+import { CreateBusinessUserDto } from './dto/create-business-user.dto';
+import { UserType } from './enums/user-type.enum';
 
 @Controller('users')
 export class UsersController {
@@ -29,12 +31,21 @@ export class UsersController {
   }
 
   @Post(':id/profile')
-  public async createProfile(
+  public async createUserProfile(
     @Param('id') id: string,
     @Body() userProfileDto: CreateUserProfileDto
   ): Promise<UserProfile> {
     this.logger.log(`POST /users/${id}/profile`);
-    return this.usersService.create(id, userProfileDto);
+    return this.usersService.createUserProfile(id, userProfileDto);
+  }
+
+  @Post(':id/business-profile')
+  public async createBusinessProfile(
+    @Param('id') id: string,
+    @Body() businessUserDto: CreateBusinessUserDto
+  ): Promise<BusinessUser> {
+    this.logger.log(`POST /users/${id}/business-profile`);
+    return this.usersService.createBusinessUser(businessUserDto);
   }
 
   @Put(':id/profile')
@@ -65,5 +76,42 @@ export class UsersController {
   ): Promise<City> {
     this.logger.log(`PUT /users/${userId}/current-city/${cityId}`);
     return this.usersService.setCurrentCity(userId, cityId);
+  }
+
+  @Post(':id/business-profile')
+  public async createBusinessUser(@Body() createUserDto: CreateBusinessUserDto): Promise<BusinessUser> {
+    this.logger.log('POST /users/business-profile');
+    return this.usersService.createBusinessUser(createUserDto);
+  }
+
+  @Put(':id/business-profile')
+  public async updateBusinessUser(
+    @Param('id') id: string,
+    @Body() updateUserDto: Partial<BusinessUser>
+  ): Promise<BusinessUser> {
+    this.logger.log(`PUT /users/${id}/business-profile`);
+    return this.usersService.updateBusinessUser(id, updateUserDto);
+  }
+
+  @Delete(':id/business-profile')
+  public async deleteBusinessUser(@Param('id') id: string): Promise<void> {
+    this.logger.log(`DELETE /users/${id}/business-profile`);
+    return this.usersService.deleteBusinessUser(id);
+  }
+
+  @Get(':id/type')
+  public async getUserType(@Param('id') id: string): Promise<{ userType: UserType }> {
+    this.logger.log(`GET /users/${id}/type`);
+    const userProfile = await this.usersService.getUserProfile(id);
+    if (userProfile) {
+      return { userType: userProfile.userType };
+    }
+
+    const businessUser = await this.usersService.getBusinessUser(id);
+    if (businessUser) {
+      return { userType: UserType.BUSINESS };
+    }
+
+    throw new NotFoundException('User not found');
   }
 } 
