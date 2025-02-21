@@ -155,4 +155,28 @@ export class BusinessesService {
     this.logger.debug(`Updating business ${id} status to ${status}`);
     return this.update(id, { status });
   }
+
+  public async patch(id: string, data: Partial<Business>): Promise<Business> {
+    this.logger.debug(`Patching business ${id} with data:`, data);
+    const db = getFirestore();
+    const docRef = doc(db, 'businesses', id);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      this.logger.error(`Business ${id} not found`);
+      throw new NotFoundException('Business not found');
+    }
+
+    const currentData = docSnap.data() as Business;
+    const patchedData = {
+      ...currentData,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+
+    this.logger.debug(`Updating business ${id} with patched data`);
+    await updateDoc(docRef, patchedData);
+    
+    return patchedData;
+  }
 } 
