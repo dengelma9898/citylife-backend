@@ -141,4 +141,16 @@ Content-Type: application/json
 }
 
 ### Delete Business User
-DELETE {{baseUrl}}/business-users/123 
+DELETE {{baseUrl}}/business-users/123
+
+### Patch Business
+PATCH {{baseUrl}}/businesses/business123
+Content-Type: application/json
+
+{
+  "name": "Updated Name",
+  "description": "Updated description",
+  "contact": {
+    "email": "new@email.com"
+  }
+} 

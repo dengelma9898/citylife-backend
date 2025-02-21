@@ -1,4 +1,4 @@
-import { Controller, Get, Param, NotFoundException, Logger, UseGuards, Post, Body, Put } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Logger, UseGuards, Post, Body, Put, Patch } from '@nestjs/common';
 import { BusinessesService } from './businesses.service';
 import { Business } from './interfaces/business.interface';
 import { BusinessCategory } from './interfaces/business-category.interface';
@@ -48,5 +48,14 @@ export class BusinessesController {
   ): Promise<Business> {
     this.logger.log(`PUT /businesses/${id}`);
     return this.businessesService.update(id, updateBusinessDto);
+  }
+
+  @Patch(':id')
+  public async patchBusiness(
+    @Param('id') id: string,
+    @Body() patchData: Partial<Business>
+  ): Promise<Business> {
+    this.logger.log(`PATCH /businesses/${id}`);
+    return this.businessesService.patch(id, patchData);
   }
 } 
