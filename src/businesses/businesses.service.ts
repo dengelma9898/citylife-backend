@@ -97,6 +97,7 @@ export class BusinessesService {
       logo: data.logo || '',
       photos: data.photos,
       openingHours: data.openingHours,
+      benefit: data.benefit,
       status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

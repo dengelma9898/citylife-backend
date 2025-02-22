@@ -22,4 +22,5 @@ export interface Business {
   updatedAt: string;
   isDeleted: boolean;
   status: BusinessStatus;
+  benefit: string;
 } 

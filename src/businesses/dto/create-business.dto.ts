@@ -37,4 +37,8 @@ export class CreateBusinessDto {
   @IsBoolean()
   @IsOptional()
   public readonly isAdmin?: boolean = false;
+
+  @IsString()
+  @IsNotEmpty()
+  public readonly benefit: string;
 } 
