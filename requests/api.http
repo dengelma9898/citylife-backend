@@ -153,4 +153,13 @@ Content-Type: application/json
   "contact": {
     "email": "new@email.com"
   }
+}
+
+### Scan Customer
+PATCH {{baseUrl}}/businesses/business123/scan
+Content-Type: application/json
+
+{
+  "customerId": "NSP-user123",
+  "userId": "user123"
 } 

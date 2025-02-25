@@ -1,4 +1,5 @@
 import { UserType } from '../enums/user-type.enum';
+import { BusinessHistory } from './business-history.interface';
 
 export interface UserProfile {
   email: string;
@@ -12,4 +13,5 @@ export interface UserProfile {
   memberSince?: string;
   customerId?: string;
   currentCityId?: string;
+  businessHistory: BusinessHistory[];
 } 

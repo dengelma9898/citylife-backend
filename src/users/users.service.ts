@@ -76,6 +76,7 @@ export class UsersService {
       managementId: uuidv4(),
       customerId: `NSP-${id}`,
       memberSince: `${new Date().getFullYear()}-${new Date().getMonth() + 1}`,
+      businessHistory: [],
     };
     const db = getFirestore();
     const docRef = doc(db, 'users', id);
