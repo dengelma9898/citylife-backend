@@ -1,6 +1,7 @@
 import { BusinessCategory } from './business-category.interface';
 import { BusinessContact } from './business-contact.interface';
 import { BusinessAddress } from './business-address.interface';
+import { BusinessCustomer } from './business-customer.interface';
 
 export enum BusinessStatus {
   PENDING = 'PENDING',
@@ -23,4 +24,5 @@ export interface Business {
   isDeleted: boolean;
   status: BusinessStatus;
   benefit: string;
+  customers: BusinessCustomer[];
 } 

@@ -5,10 +5,15 @@ import { BusinessCategory } from './interfaces/business-category.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { BusinessStatus } from './interfaces/business.interface';
+import { BusinessCustomerDto } from './dto/business-customer.dto';
+import { BusinessCustomer } from './interfaces/business-customer.interface';
+import { UserAdapterService } from '../users/services/user-adapter.service';
 
 @Injectable()
 export class BusinessesService {
   private readonly logger = new Logger(BusinessesService.name);
+
+  constructor(private readonly userAdapter: UserAdapterService) {}
 
   public async getAll(): Promise<Business[]> {
     this.logger.debug('Fetching all businesses from Firestore');
@@ -99,6 +104,7 @@ export class BusinessesService {
       openingHours: data.openingHours,
       benefit: data.benefit,
       status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING,
+      customers: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isDeleted: false
@@ -179,5 +185,38 @@ export class BusinessesService {
     await updateDoc(docRef, patchedData);
     
     return patchedData;
+  }
+
+  public async addCustomerScan(businessId: string, scanData: BusinessCustomerDto): Promise<Business> {
+    this.logger.debug(`Adding customer scan for business ${businessId}`);
+    const business = await this.getById(businessId);
+    
+    if (!business) {
+      this.logger.error(`Business ${businessId} not found`);
+      throw new NotFoundException('Business not found');
+    }
+
+    const newCustomer: BusinessCustomer = {
+      customerId: scanData.customerId,
+      scannedAt: new Date().toISOString()
+    };
+
+    // Ensure customers is an array
+    const currentCustomers = business.customers || [];
+    const updatedCustomers = [...currentCustomers, newCustomer];
+
+    const updatedBusiness = await this.patch(businessId, { 
+      customers: updatedCustomers,
+      updatedAt: new Date().toISOString()
+    });
+
+    await this.userAdapter.addBusinessToHistory(
+      scanData.userId, 
+      businessId, 
+      updatedBusiness.name, 
+      updatedBusiness.benefit
+    );
+    
+    return updatedBusiness;
   }
 } 

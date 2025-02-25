@@ -5,6 +5,7 @@ import { BusinessCategory } from './interfaces/business-category.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { AuthGuard } from '../core/guards/auth.guard';
 import { CreateBusinessDto } from './dto/create-business.dto';
+import { BusinessCustomerDto } from './dto/business-customer.dto';
 
 @Controller('businesses')
 @UseGuards(AuthGuard)
@@ -57,5 +58,14 @@ export class BusinessesController {
   ): Promise<Business> {
     this.logger.log(`PATCH /businesses/${id}`);
     return this.businessesService.patch(id, patchData);
+  }
+
+  @Patch(':id/scan')
+  public async scanCustomer(
+    @Param('id') businessId: string,
+    @Body() scanData: BusinessCustomerDto
+  ): Promise<Business> {
+    this.logger.log(`PATCH /businesses/${businessId}/scan`);
+    return this.businessesService.addCustomerScan(businessId, scanData);
   }
 } 
