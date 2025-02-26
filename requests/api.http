@@ -162,4 +162,30 @@ Content-Type: application/json
 {
   "customerId": "NSP-user123",
   "userId": "user123"
+}
+
+### Get All Blog Posts
+GET {{baseUrl}}/blog
+
+### Get Blog Post by ID
+GET {{baseUrl}}/blog/123
+
+### Create Blog Post
+POST {{baseUrl}}/blog
+Content-Type: application/json
+
+{
+  "title": "My First Blog Post",
+  "content": "This is the content of my first blog post",
+  "authorName": "John Doe",
+  "imageUrl": "https://example.com/image.jpg"
+}
+
+### Update Blog Post
+PUT {{baseUrl}}/blog/123
+Content-Type: application/json
+
+{
+  "title": "Updated Title",
+  "content": "Updated content"
 } 
