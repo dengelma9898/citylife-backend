@@ -40,9 +40,10 @@ export class BlogPostsService {
     
     const postData: Omit<BlogPost, 'id'> = {
       ...data,
+      blogPictures: data.blogPictures || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      likes: 0,
+      likedByUsers: [],
       views: 0
     };
 
@@ -76,5 +77,25 @@ export class BlogPostsService {
       id: updatedDoc.id,
       ...updatedDoc.data()
     } as BlogPost;
+  }
+
+  public async toggleLike(postId: string, userId: string): Promise<BlogPost> {
+    this.logger.debug(`Toggling like for post ${postId} by user ${userId}`);
+    const post = await this.getById(postId);
+    
+    if (!post) {
+      throw new NotFoundException('Blog post not found');
+    }
+
+    const likedByUsers = post.likedByUsers || [];
+    const userLikeIndex = likedByUsers.indexOf(userId);
+    
+    if (userLikeIndex > -1) {
+      likedByUsers.splice(userLikeIndex, 1);
+    } else {
+      likedByUsers.push(userId);
+    }
+
+    return this.update(postId, { likedByUsers });
   }
 } 

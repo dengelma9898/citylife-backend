@@ -170,7 +170,7 @@ GET {{baseUrl}}/blog
 ### Get Blog Post by ID
 GET {{baseUrl}}/blog/123
 
-### Create Blog Post
+### Create Blog Post with Pictures
 POST {{baseUrl}}/blog
 Content-Type: application/json
 
@@ -178,7 +178,11 @@ Content-Type: application/json
   "title": "My First Blog Post",
   "content": "This is the content of my first blog post",
   "authorName": "John Doe",
-  "imageUrl": "https://example.com/image.jpg"
+  "imageUrl": "https://example.com/main-image.jpg",
+  "blogPictures": [
+    "https://example.com/image1.jpg",
+    "https://example.com/image2.jpg"
+  ]
 }
 
 ### Update Blog Post
@@ -188,4 +192,12 @@ Content-Type: application/json
 {
   "title": "Updated Title",
   "content": "Updated content"
+}
+
+### Toggle Like on Blog Post
+PATCH {{baseUrl}}/blog/123/like
+Content-Type: application/json
+
+{
+  "userId": "user123"
 } 

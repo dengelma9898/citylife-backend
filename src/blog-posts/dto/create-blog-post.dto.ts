@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsUrl } from 'class-validator';
+import { IsString, IsNotEmpty, IsUrl, IsArray, IsOptional } from 'class-validator';
 
 export class CreateBlogPostDto {
   @IsString()
@@ -15,4 +15,9 @@ export class CreateBlogPostDto {
 
   @IsString()
   public readonly imageUrl: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  public readonly blogPictures?: string[];
 } 

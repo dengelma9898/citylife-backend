@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch, BadRequestException } from '@nestjs/common';
 import { BlogPostsService } from './blog-posts.service';
 import { BlogPost } from './interfaces/blog-post.interface';
 import { CreateBlogPostDto } from './dto/create-blog-post.dto';
@@ -38,5 +38,19 @@ export class BlogPostsController {
   ): Promise<BlogPost> {
     this.logger.log(`PATCH /blog/${id}`);
     return this.blogPostsService.update(id, updatePostDto);
+  }
+
+  @Patch(':id/like')
+  public async toggleLike(
+    @Param('id') postId: string,
+    @Body('userId') userId: string
+  ): Promise<BlogPost> {
+    this.logger.log(`PATCH /blog/${postId}/like for user ${userId}`);
+    
+    if (!userId) {
+      throw new BadRequestException('userId is required');
+    }
+
+    return this.blogPostsService.toggleLike(postId, userId);
   }
 } 
