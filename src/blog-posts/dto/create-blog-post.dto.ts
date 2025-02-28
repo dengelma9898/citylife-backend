@@ -13,6 +13,6 @@ export class CreateBlogPostDto {
   @IsNotEmpty()
   public readonly authorName: string;
 
-  @IsUrl()
+  @IsString()
   public readonly imageUrl: string;
 } 

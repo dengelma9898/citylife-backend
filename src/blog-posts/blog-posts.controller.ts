@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch } from '@nestjs/common';
 import { BlogPostsService } from './blog-posts.service';
 import { BlogPost } from './interfaces/blog-post.interface';
 import { CreateBlogPostDto } from './dto/create-blog-post.dto';
@@ -31,12 +31,12 @@ export class BlogPostsController {
     return this.blogPostsService.create(createPostDto);
   }
 
-  @Put(':id')
+  @Patch(':id')
   public async update(
     @Param('id') id: string,
     @Body() updatePostDto: Partial<BlogPost>
   ): Promise<BlogPost> {
-    this.logger.log(`PUT /blog/${id}`);
+    this.logger.log(`PATCH /blog/${id}`);
     return this.blogPostsService.update(id, updatePostDto);
   }
 } 
