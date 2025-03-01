@@ -2,8 +2,6 @@ import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
-import { CitiesService } from '../cities/cities.service';
-import { City } from '../cities/interfaces/city.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { UserType } from './enums/user-type.enum';
@@ -12,12 +10,8 @@ import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
-  public anonymousCityId = 'bbc845b5-9685-40a1-8809-beba589fd4eb';
 
-
-  constructor(
-    private readonly citiesService: CitiesService,
-  ) {}
+  constructor() {}
 
   public async getAll(): Promise<UserProfile[]> {
     const db = getFirestore();
@@ -110,45 +104,6 @@ export class UsersService {
     }
 
     await deleteDoc(docRef);
-  }
-
-  public async getCurrentCity(userId: string): Promise<City> {
-    this.logger.debug(`Getting current city for userId: ${userId}`);
-
-    const user = await this.getUserProfile(userId);
-    
-    if (user?.currentCityId) {
-      const city = await this.citiesService.getById(user.currentCityId);
-      if (city) {
-        return city;
-      }
-      this.logger.warn(`Saved city ${user.currentCityId} not found, falling back to default`);
-    }
-
-    const defaultCity = await this.citiesService.getById(this.anonymousCityId);
-    if (!defaultCity) {
-      throw new NotFoundException('Default city not found');
-    }
-    return defaultCity;
-  }
-
-  public async setCurrentCity(userId: string, cityId: string): Promise<City> {
-    this.logger.debug(`Setting current city ${cityId} for user ${userId}`);
-    
-    const user = await this.getById(userId);
-    if (!user) {
-      this.anonymousCityId = cityId;
-      this.logger.warn(`User ${userId} not found, using anonymous city ${cityId}`);
-    }
-
-    const city = await this.citiesService.getById(cityId);
-    if (!city) {
-      throw new NotFoundException('City not found');
-    }
-    if (user) {
-      await this.update(userId, { currentCityId: cityId });
-    }
-    return city;
   }
 
   public async createBusinessUser(data: CreateBusinessUserDto): Promise<BusinessUser> {
