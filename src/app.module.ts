@@ -9,7 +9,9 @@ import { AppSettingsModule } from './app-settings/app-settings.module';
 import { BusinessesModule } from './businesses/businesses.module';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './core/guards/auth.guard';
-import { BlogPostsModule } from './blog-posts/blog-posts.module'; 
+import { BlogPostsModule } from './blog-posts/blog-posts.module';
+import { EventsModule } from './events/events.module';
+import { ChatroomsModule } from './chatrooms/chatrooms.module';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { BlogPostsModule } from './blog-posts/blog-posts.module';
     AppSettingsModule,
     BusinessesModule,
     BlogPostsModule,
+    EventsModule,
+    ChatroomsModule,
   ],
   providers: [
     {

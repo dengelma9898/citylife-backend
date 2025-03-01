@@ -63,21 +63,6 @@ export class UsersController {
     return this.usersService.delete(id);
   }
 
-  @Get(':id/current-city')
-  public async getCurrentCity(@Param('id') userId: string): Promise<City> {
-    this.logger.log(`GET /users/${userId}/current-city`);
-    return this.usersService.getCurrentCity(userId);
-  }
-
-  @Put(':id/current-city/:cityId')
-  public async setCurrentCity(
-    @Param('id') userId: string,
-    @Param('cityId') cityId: string
-  ): Promise<City> {
-    this.logger.log(`PUT /users/${userId}/current-city/${cityId}`);
-    return this.usersService.setCurrentCity(userId, cityId);
-  }
-
   @Post(':id/business-profile')
   public async createBusinessUser(@Body() createUserDto: CreateBusinessUserDto): Promise<BusinessUser> {
     this.logger.log('POST /users/business-profile');
