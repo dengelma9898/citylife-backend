@@ -4,6 +4,7 @@ import { UsersController } from './users.controller';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { CitiesModule } from '../cities/cities.module';
 import { UserAdapterService } from './services/user-adapter.service';
+import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 
 @Module({
   imports: [
@@ -12,7 +13,8 @@ import { UserAdapterService } from './services/user-adapter.service';
   ],
   providers: [
     UsersService,
-    UserAdapterService
+    UserAdapterService,
+    FirebaseStorageService
   ],
   controllers: [UsersController],
   exports: [UsersService, UserAdapterService],

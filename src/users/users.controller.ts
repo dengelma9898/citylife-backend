@@ -1,18 +1,23 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, NotFoundException, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, NotFoundException, Logger, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { UserProfileDto } from './dto/user-profile.dto';
-import { City } from '../cities/interfaces/city.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { UserType } from './enums/user-type.enum';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { FirebaseStorageService } from '../firebase/firebase-storage.service';
+import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 
 @Controller('users')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
 
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly firebaseStorageService: FirebaseStorageService
+  ) {}
 
   @Get()
   public async getAll(): Promise<UserProfile[]> {
@@ -98,5 +103,19 @@ export class UsersController {
     }
 
     throw new NotFoundException('User not found');
+  }
+
+  @Post(':id/profile/picture')
+  @UseInterceptors(FileInterceptor('file'))
+  public async uploadProfilePicture(
+    @Param('id') userId: string,
+    @UploadedFile(FileValidationPipe) file: Express.Multer.File
+  ): Promise<UserProfile> {
+    this.logger.log(`POST /users/${userId}/profile/picture`);
+
+    const path = `profile-pictures/${userId}/${Date.now()}-${file.originalname}`;
+    const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
+
+    return this.usersService.update(userId, { profilePictureUrl: imageUrl });
   }
 } 
