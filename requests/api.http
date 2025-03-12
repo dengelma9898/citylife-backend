@@ -200,4 +200,15 @@ Content-Type: application/json
 
 {
   "userId": "user123"
-} 
+}
+
+### Upload Profile Picture
+POST {{baseUrl}}/users/123/profile/picture
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="profile.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/profile.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW-- 

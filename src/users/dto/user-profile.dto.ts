@@ -6,6 +6,9 @@ export class UserProfileDto {
   @IsEmail()
   public readonly email: string;
 
+  @IsEnum(UserType)
+  public readonly userType: UserType;
+
   @IsString()
   public readonly managementId: string;
 
