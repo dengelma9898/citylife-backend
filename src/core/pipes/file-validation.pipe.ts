@@ -1,15 +1,30 @@
 import { PipeTransform, Injectable, ArgumentMetadata, BadRequestException, Logger } from '@nestjs/common';
 
+export interface FileValidationOptions {
+  optional?: boolean;
+}
+
 @Injectable()
 export class FileValidationPipe implements PipeTransform {
   private readonly logger = new Logger(FileValidationPipe.name);
   private readonly MAX_FILE_SIZE = 1024 * 1024; // 1MB
   private readonly ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
+  private readonly options: FileValidationOptions;
+
+  constructor(options: FileValidationOptions = {}) {
+    this.options = options;
+  }
 
   transform(file: Express.Multer.File, metadata: ArgumentMetadata) {
     this.logger.debug(`Validating file: ${file?.originalname}`);
     
-    if (!file) {
+    if (!file || file.originalname === undefined) {
+
+      if (this.options.optional) {
+        this.logger.debug('No file provided, but file is optional');
+        return file;
+      }
+      
       this.logger.error('File validation failed: No file provided');
       throw new BadRequestException('No file provided');
     }

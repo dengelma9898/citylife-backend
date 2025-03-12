@@ -109,7 +109,7 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('file'))
   public async uploadProfilePicture(
     @Param('id') userId: string,
-    @UploadedFile(FileValidationPipe) file: Express.Multer.File
+    @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File
   ): Promise<UserProfile> {
     this.logger.log(`POST /users/${userId}/profile/picture`);
 
