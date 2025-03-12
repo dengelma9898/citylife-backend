@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { BlogPost } from './interfaces/blog-post.interface';
 import { CreateBlogPostDto } from './dto/create-blog-post.dto';
 
@@ -34,13 +34,13 @@ export class BlogPostsService {
     } as BlogPost;
   }
 
-  public async create(data: CreateBlogPostDto): Promise<BlogPost> {
+  public async create(data: CreateBlogPostDto, blogPictures: string[]): Promise<BlogPost> {
     this.logger.debug('Creating blog post');
     const db = getFirestore();
     
     const postData: Omit<BlogPost, 'id'> = {
       ...data,
-      blogPictures: data.blogPictures || [],
+      blogPictures: blogPictures || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       likedByUsers: [],
@@ -97,5 +97,18 @@ export class BlogPostsService {
     }
 
     return this.update(postId, { likedByUsers });
+  }
+
+  public async delete(id: string): Promise<void> {
+    this.logger.debug(`Deleting blog post ${id}`);
+    const db = getFirestore();
+    const docRef = doc(db, 'blog_posts', id);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new NotFoundException('Blog post not found');
+    }
+
+    await deleteDoc(docRef);
   }
 } 
