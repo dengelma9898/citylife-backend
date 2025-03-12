@@ -113,6 +113,13 @@ export class UsersController {
   ): Promise<UserProfile> {
     this.logger.log(`POST /users/${userId}/profile/picture`);
 
+    // Get current profile to check for existing picture
+    const currentProfile = await this.usersService.getUserProfile(userId);
+    if (currentProfile?.profilePictureUrl) {
+      this.logger.debug('Deleting old profile picture');
+      await this.firebaseStorageService.deleteFile(currentProfile.profilePictureUrl);
+    }
+
     const path = `profile-pictures/${userId}/${Date.now()}-${file.originalname}`;
     const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
 

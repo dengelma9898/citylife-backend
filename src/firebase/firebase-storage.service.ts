@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 @Injectable()
 export class FirebaseStorageService {
@@ -16,5 +15,17 @@ export class FirebaseStorageService {
     
     this.logger.debug(`File uploaded successfully, URL: ${downloadUrl}`);
     return downloadUrl;
+  }
+
+  public async deleteFile(url: string): Promise<void> {
+    try {
+      this.logger.debug(`Deleting file from URL: ${url}`);
+      const storage = getStorage();
+      const fileRef = ref(storage, url);
+      await deleteObject(fileRef);
+      this.logger.debug('File deleted successfully');
+    } catch (error) {
+      this.logger.error(`Failed to delete file: ${error.message}`);
+    }
   }
 } 
