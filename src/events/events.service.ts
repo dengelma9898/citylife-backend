@@ -48,7 +48,8 @@ export class EventsService {
       },
       startDate: data.startDate,
       endDate: data.endDate,
-      imageUrl: data.imageUrl,
+      imageUrls: [],
+      titleImageUrl: '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

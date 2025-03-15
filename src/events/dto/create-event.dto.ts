@@ -25,7 +25,4 @@ export class CreateEventDto {
   @IsDateString()
   public readonly endDate: string;
 
-  @IsString()
-  @IsOptional()
-  public readonly imageUrl?: string;
 } 

@@ -9,7 +9,8 @@ export interface Event {
   };
   startDate: string;
   endDate: string;
-  imageUrl?: string;
+  titleImageUrl?: string;
+  imageUrls?: string[];
   createdAt: string;
   updatedAt: string;
 } 
