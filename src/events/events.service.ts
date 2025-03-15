@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 
@@ -84,5 +84,18 @@ export class EventsService {
       id: updatedDoc.id,
       ...updatedDoc.data()
     } as Event;
+  }
+
+  public async delete(id: string): Promise<void> {
+    this.logger.debug(`Deleting event ${id}`);
+    const db = getFirestore();
+    const docRef = doc(db, 'events', id);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new NotFoundException('Event not found');
+    }
+
+    await deleteDoc(docRef);
   }
 } 
