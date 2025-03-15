@@ -1,13 +1,19 @@
-import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch, UseInterceptors, UploadedFile, Delete } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
+import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 
 @Controller('events')
 export class EventsController {
   private readonly logger = new Logger(EventsController.name);
 
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    private readonly eventsService: EventsService,
+    private readonly firebaseStorageService: FirebaseStorageService
+  ) {}
 
   @Get()
   public async getAll(): Promise<Event[]> {
@@ -38,5 +44,72 @@ export class EventsController {
   ): Promise<Event> {
     this.logger.log(`PATCH /events/${id}`);
     return this.eventsService.update(id, updateEventDto);
+  }
+
+  @Patch(':id/title-image')
+  @UseInterceptors(FileInterceptor('file'))
+  public async updateTitleImage(
+    @Param('id') eventId: string,
+    @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File
+  ): Promise<Event> {
+    this.logger.log(`PATCH /events/${eventId}/title-image`);
+
+    // Get current event to check for existing title image
+    const currentEvent = await this.eventsService.getById(eventId);
+    if (!currentEvent) {
+      throw new NotFoundException('Event not found');
+    }
+
+    // Delete old title image if it exists
+    if (currentEvent.titleImageUrl) {
+      this.logger.debug('Deleting old title image');
+      await this.firebaseStorageService.deleteFile(currentEvent.titleImageUrl);
+    }
+
+    // Upload the new title image
+    const path = `events/title-images/${eventId}/${Date.now()}-${file.originalname}`;
+    const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
+
+    // Update the event with the new title image URL
+    return this.eventsService.update(eventId, { titleImageUrl: imageUrl });
+  }
+
+  @Delete(':id')
+  public async delete(@Param('id') id: string): Promise<void> {
+    this.logger.log(`DELETE /events/${id}`);
+    
+    // Get current event to check for existing images
+    const currentEvent = await this.eventsService.getById(id);
+    if (!currentEvent) {
+      throw new NotFoundException('Event not found');
+    }
+    
+    // Array to collect all delete promises
+    const deletePromises: Promise<void>[] = [];
+    
+    // Delete title image if it exists
+    if (currentEvent.titleImageUrl) {
+      this.logger.debug(`Deleting title image: ${currentEvent.titleImageUrl}`);
+      deletePromises.push(this.firebaseStorageService.deleteFile(currentEvent.titleImageUrl));
+    }
+    
+    // Delete all additional images if they exist
+    if (currentEvent.imageUrls && currentEvent.imageUrls.length > 0) {
+      this.logger.debug(`Deleting ${currentEvent.imageUrls.length} additional images for event ${id}`);
+      
+      // Add each image deletion to the promises array
+      currentEvent.imageUrls.forEach(imageUrl => {
+        this.logger.debug(`Deleting image: ${imageUrl}`);
+        deletePromises.push(this.firebaseStorageService.deleteFile(imageUrl));
+      });
+    }
+    
+    // Wait for all images to be deleted
+    if (deletePromises.length > 0) {
+      await Promise.all(deletePromises);
+    }
+    
+    // Delete the event
+    return this.eventsService.delete(id);
   }
 } 
