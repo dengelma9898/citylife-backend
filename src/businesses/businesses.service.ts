@@ -89,7 +89,11 @@ export class BusinessesService {
       description: data.description,
       contact: {
         email: data.contact.email,
-        phoneNumber: data.contact.phoneNumber
+        phoneNumber: data.contact.phoneNumber,
+        instagram: data.contact.instagram,
+        facebook: data.contact.facebook,
+        tiktok: data.contact.tiktok,
+        website: data.contact.website
       },
       address: {
         street: data.address.street,
