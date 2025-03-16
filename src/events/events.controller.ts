@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch, UseInterceptors, UploadedFile, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch, UseInterceptors, UploadedFile, Delete, UploadedFiles } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 
@@ -111,5 +111,71 @@ export class EventsController {
     
     // Delete the event
     return this.eventsService.delete(id);
+  }
+
+  @Patch(':id/images')
+  @UseInterceptors(FilesInterceptor('images'))
+  public async addImages(
+    @Param('id') eventId: string,
+    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
+  ): Promise<Event> {
+    this.logger.log(`PATCH /events/${eventId}/images`);
+
+    // Get current event
+    const currentEvent = await this.eventsService.getById(eventId);
+    if (!currentEvent) {
+      throw new NotFoundException('Event not found');
+    }
+
+    // Initialize imageUrls array if it doesn't exist
+    let imageUrls = currentEvent.imageUrls || [];
+    
+    if (files && files.length > 0) {
+      this.logger.debug(`Uploading ${files.length} new images for event ${eventId}`);
+      
+      // Upload each file and collect URLs
+      for (const file of files) {
+        const path = `events/images/${eventId}/${Date.now()}-${file.originalname}`;
+        const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
+        imageUrls.push(imageUrl);
+      }
+    } else {
+      this.logger.debug('No new images provided for event update');
+    }
+    
+    // Update the event with the new image URLs
+    return this.eventsService.update(eventId, { imageUrls });
+  }
+
+  @Patch(':id/images/remove')
+  public async removeImage(
+    @Param('id') eventId: string,
+    @Body('imageUrl') imageUrl: string
+  ): Promise<Event> {
+    this.logger.log(`PATCH /events/${eventId}/images/remove`);
+    
+    if (!imageUrl) {
+      throw new NotFoundException('imageUrl is required');
+    }
+    
+    // Get current event
+    const currentEvent = await this.eventsService.getById(eventId);
+    if (!currentEvent) {
+      throw new NotFoundException('Event not found');
+    }
+    
+    // Check if the image exists in the event
+    if (!currentEvent.imageUrls || !currentEvent.imageUrls.includes(imageUrl)) {
+      throw new NotFoundException('Image not found in event');
+    }
+    
+    // Delete the image from Firebase Storage
+    await this.firebaseStorageService.deleteFile(imageUrl);
+    
+    // Remove the URL from the event's imageUrls array
+    const updatedImageUrls = currentEvent.imageUrls.filter(url => url !== imageUrl);
+    
+    // Update the event
+    return this.eventsService.update(eventId, { imageUrls: updatedImageUrls });
   }
 } 

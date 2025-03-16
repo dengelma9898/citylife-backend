@@ -24,13 +24,6 @@ export class CreateBusinessDto {
   @Type(() => BusinessAddressDto)
   public readonly address: BusinessAddressDto;
 
-  @IsString()
-  public readonly logo?: string;
-
-  @IsArray()
-  @IsString({ each: true })
-  public readonly photos: string[] = [];
-
   @IsObject()
   public readonly openingHours: Record<string, string> = {};
 
