@@ -59,40 +59,42 @@ export class BlogPostsController {
   }
 
   @Patch(':id')
-  @UseInterceptors(FilesInterceptor('images'))
   public async update(
     @Param('id') id: string,
-    @Body() updatePostDto: Partial<BlogPost>,
-    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
+    @Body() updatePostDto: Partial<BlogPost>
   ): Promise<BlogPost> {
     this.logger.log(`PATCH /blog-posts/${id}`);
     
-    // Get current blog post to check for existing images
+    // Get current blog post
     const currentPost = await this.blogPostsService.getById(id);
     if (!currentPost) {
       throw new NotFoundException('Blog post not found');
     }
     
-    let blogPictures = currentPost.blogPictures || [];
-    
-    if (files && files.length > 0) {
-      this.logger.debug(`Uploading ${files.length} new images for blog post ${id}`);
+    // Handle blogPictures updates if they are provided
+    if (updatePostDto.blogPictures !== undefined) {
+      const currentPictures = currentPost.blogPictures || [];
+      const newPictures = updatePostDto.blogPictures || [];
       
-      // Upload each new file and collect URLs
-      for (const file of files) {
-        const path = `blog-posts/images/${id}/${Date.now()}-${file.originalname}`;
-        const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
-        blogPictures.push(imageUrl);
+      // Find pictures that need to be deleted (in current but not in new)
+      const picturesToDelete = currentPictures.filter(url => !newPictures.includes(url));
+      
+      if (picturesToDelete.length > 0) {
+        this.logger.debug(`Deleting ${picturesToDelete.length} images that were removed from blog post ${id}`);
+        
+        // Delete each removed image from Firebase Storage
+        const deletePromises = picturesToDelete.map(imageUrl => {
+          this.logger.debug(`Deleting image: ${imageUrl}`);
+          return this.firebaseStorageService.deleteFile(imageUrl);
+        });
+        
+        // Wait for all images to be deleted
+        await Promise.all(deletePromises);
       }
-    } else {
-      this.logger.debug('No new images provided for blog post update');
     }
     
-    // Add image URLs to the update data
-    return this.blogPostsService.update(id, {
-      ...updatePostDto,
-      blogPictures
-    });
+    // Update the blog post with all provided data
+    return this.blogPostsService.update(id, updatePostDto);
   }
 
   @Patch(':id/images/remove')
@@ -142,12 +144,12 @@ export class BlogPostsController {
   }
 
   @Patch(':id/blog-pictures')
-  @UseInterceptors(FileInterceptor('files'))
-  public async uploadBlogPicture(
+  @UseInterceptors(FilesInterceptor('images'))
+  public async uploadBlogPictures(
     @Param('id') blogId: string,
-    @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File
+    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
   ): Promise<BlogPost> {
-    this.logger.log(`POST /blog-posts/${blogId}/blog-pictures`);
+    this.logger.log(`PATCH /blog-posts/${blogId}/blog-pictures`);
 
     // Get current blog post
     const currentPost = await this.blogPostsService.getById(blogId);
@@ -155,15 +157,23 @@ export class BlogPostsController {
       throw new NotFoundException('Blog post not found');
     }
 
-    // Upload the file to Firebase Storage
-    const path = `blog-posts/images/${blogId}/${Date.now()}-${file.originalname}`;
-    const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
-
-    // Add the new URL to the blog post's blogPictures array
-    const blogPictures = currentPost.blogPictures || [];
-    blogPictures.push(imageUrl);
-
-    // Update the blog post
+    // Initialize blogPictures array if it doesn't exist
+    let blogPictures = currentPost.blogPictures || [];
+    
+    if (files && files.length > 0) {
+      this.logger.debug(`Uploading ${files.length} new images for blog post ${blogId}`);
+      
+      // Upload each file and collect URLs
+      for (const file of files) {
+        const path = `blog-posts/images/${blogId}/${Date.now()}-${file.originalname}`;
+        const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
+        blogPictures.push(imageUrl);
+      }
+    } else {
+      this.logger.debug('No new images provided for blog post');
+    }
+    
+    // Update the blog post with the new image URLs
     return this.blogPostsService.update(blogId, { blogPictures });
   }
 

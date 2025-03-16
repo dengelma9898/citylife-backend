@@ -99,8 +99,8 @@ export class BusinessesService {
         latitude: data.address.latitude,
         longitude: data.address.longitude
       },
-      logo: data.logo || '',
-      photos: data.photos,
+      logoUrl: '',
+      imageUrls: [],
       openingHours: data.openingHours,
       benefit: data.benefit,
       status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING,

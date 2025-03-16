@@ -16,8 +16,8 @@ export interface Business {
   contact: BusinessContact;
   address: BusinessAddress;
   description: string;
-  logo: string;
-  photos: string[];
+  logoUrl?: string;
+  imageUrls?: string[];
   openingHours: Record<string, string>;
   createdAt: string;
   updatedAt: string;
