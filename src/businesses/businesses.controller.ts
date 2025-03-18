@@ -1,6 +1,6 @@
-import { Controller, Get, Param, NotFoundException, Logger, UseGuards, Post, Body, Put, Patch, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Logger, UseGuards, Post, Body, Put, Patch, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException } from '@nestjs/common';
 import { BusinessesService } from './businesses.service';
-import { Business } from './interfaces/business.interface';
+import { Business, NuernbergspotsReview } from './interfaces/business.interface';
 import { BusinessCategory } from './interfaces/business-category.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { AuthGuard } from '../core/guards/auth.guard';
@@ -9,6 +9,12 @@ import { BusinessCustomerDto } from './dto/business-customer.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
+
+// Erstelle ein DTO für die NuernbergspotsReview
+class NuernbergspotsReviewDto {
+  reviewText?: string;
+  reviewImageUrls?: string[];
+}
 
 @Controller('businesses')
 @UseGuards(AuthGuard)
@@ -167,5 +173,142 @@ export class BusinessesController {
     
     // Update the business
     return this.businessesService.patch(businessId, { imageUrls: updatedImageUrls });
+  }
+
+  @Patch(':id/nuernbergspots-review')
+  public async updateNuernbergspotsReview(
+    @Param('id') businessId: string,
+    @Body() reviewData: NuernbergspotsReviewDto
+  ): Promise<Business> {
+    this.logger.log(`PATCH /businesses/${businessId}/nuernbergspots-review`);
+    
+    // Get current business
+    const currentBusiness = await this.businessesService.getById(businessId);
+    if (!currentBusiness) {
+      throw new NotFoundException('Business not found');
+    }
+    
+    // Hole die aktuelle Review, falls vorhanden
+    const currentReview = currentBusiness.nuernbergspotsReview || {};
+    
+    // Wenn reviewImageUrls in den neuen Daten vorhanden ist, vergleiche mit aktuellen Bildern
+    // und lösche alle Bilder, die nicht mehr in der neuen Liste sind
+    if (reviewData.reviewImageUrls && currentReview.reviewImageUrls) {
+      const currentImageUrls = currentReview.reviewImageUrls;
+      const newImageUrls = reviewData.reviewImageUrls;
+      
+      // Finde Bilder, die gelöscht werden sollen (im aktuellen Array, aber nicht im neuen)
+      const imagesToDelete = currentImageUrls.filter(url => !newImageUrls.includes(url));
+      
+      if (imagesToDelete.length > 0) {
+        this.logger.debug(`Deleting ${imagesToDelete.length} review images that were removed`);
+        
+        // Lösche jedes entfernte Bild aus Firebase Storage
+        const deletePromises = imagesToDelete.map(imageUrl => {
+          this.logger.debug(`Deleting review image: ${imageUrl}`);
+          return this.firebaseStorageService.deleteFile(imageUrl);
+        });
+        
+        // Warte auf den Abschluss aller Löschvorgänge
+        await Promise.all(deletePromises);
+      }
+    }
+    
+    // Erstelle das aktualisierte NuernbergspotsReview-Objekt mit aktuellem Zeitstempel
+    const updatedReview: NuernbergspotsReview = {
+      ...currentReview,
+      ...reviewData,
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Aktualisiere das Business mit den neuen Review-Daten
+    return this.businessesService.patch(businessId, { nuernbergspotsReview: updatedReview });
+  }
+
+  @Patch(':id/nuernbergspots-images')
+  @UseInterceptors(FilesInterceptor('images'))
+  public async uploadReviewImages(
+    @Param('id') businessId: string,
+    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
+  ): Promise<Business> {
+    this.logger.log(`PATCH /businesses/${businessId}/nuernbergspots-images`);
+
+    // Get current business
+    const currentBusiness = await this.businessesService.getById(businessId);
+    if (!currentBusiness) {
+      throw new NotFoundException('Business not found');
+    }
+    
+    // Initialize nuernbergspotsReview if it doesn't exist
+    const nuernbergspotsReview = currentBusiness.nuernbergspotsReview || {};
+    
+    // Initialize reviewImageUrls array if it doesn't exist
+    let reviewImageUrls = nuernbergspotsReview.reviewImageUrls || [];
+    
+    if (files && files.length > 0) {
+      this.logger.debug(`Uploading ${files.length} new review images for business ${businessId}`);
+      
+      // Upload each file and collect URLs
+      for (const file of files) {
+        const path = `businesses/review-images/${businessId}/${Date.now()}-${file.originalname}`;
+        const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
+        reviewImageUrls.push(imageUrl);
+      }
+    } else {
+      this.logger.debug('No new review images provided for business');
+    }
+    
+    // Update the nuernbergspotsReview object with the new images and timestamp
+    nuernbergspotsReview.reviewImageUrls = reviewImageUrls;
+    nuernbergspotsReview.updatedAt = new Date().toISOString();
+    
+    // Update the business with the updated nuernbergspotsReview
+    return this.businessesService.patch(businessId, { nuernbergspotsReview });
+  }
+
+  @Patch(':id/review-images/remove')
+  public async removeReviewImage(
+    @Param('id') businessId: string,
+    @Body('imageUrl') imageUrl: string
+  ): Promise<Business> {
+    this.logger.log(`PATCH /businesses/${businessId}/review-images/remove`);
+    
+    if (!imageUrl) {
+      throw new BadRequestException('imageUrl is required');
+    }
+    
+    // Get current business
+    const currentBusiness = await this.businessesService.getById(businessId);
+    if (!currentBusiness) {
+      throw new NotFoundException('Business not found');
+    }
+    
+    // Check if the nuernbergspotsReview and reviewImageUrls exist
+    if (!currentBusiness.nuernbergspotsReview || !currentBusiness.nuernbergspotsReview.reviewImageUrls) {
+      throw new NotFoundException('Review images not found for this business');
+    }
+    
+    // Check if the image exists in the review images
+    if (!currentBusiness.nuernbergspotsReview.reviewImageUrls.includes(imageUrl)) {
+      throw new NotFoundException('Image not found in review images');
+    }
+    
+    // Delete the image from Firebase Storage
+    await this.firebaseStorageService.deleteFile(imageUrl);
+    
+    // Remove the URL from the reviewImageUrls array
+    const updatedReviewImageUrls = currentBusiness.nuernbergspotsReview.reviewImageUrls.filter(
+      url => url !== imageUrl
+    );
+    
+    // Update the nuernbergspotsReview object with new image URLs and timestamp
+    const updatedNuernbergspotsReview = {
+      ...currentBusiness.nuernbergspotsReview,
+      reviewImageUrls: updatedReviewImageUrls,
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Update the business
+    return this.businessesService.patch(businessId, { nuernbergspotsReview: updatedNuernbergspotsReview });
   }
 } 
