@@ -9,6 +9,12 @@ export enum BusinessStatus {
   INACTIVE = 'INACTIVE'
 }
 
+export interface NuernbergspotsReview {
+  reviewText?: string;
+  reviewImageUrls?: string[];
+  updatedAt?: string;
+}
+
 export interface Business {
   id: string;
   name: string;
@@ -18,6 +24,7 @@ export interface Business {
   description: string;
   logoUrl?: string;
   imageUrls?: string[];
+  nuernbergspotsReview?: NuernbergspotsReview;
   openingHours: Record<string, string>;
   createdAt: string;
   updatedAt: string;
