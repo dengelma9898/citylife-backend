@@ -40,6 +40,9 @@ GET {{baseUrl}}/businesses/users
 GET {{baseUrl}}/users
 GET {{baseUrl}}/users/123
 
+### Get Business Users Needing Review
+GET {{baseUrl}}/users/business-users/needs-review
+
 ### Users Profile
 GET {{baseUrl}}/users/123/profile
 
@@ -61,6 +64,26 @@ Content-Type: application/json
 }
 
 DELETE {{baseUrl}}/users/123/profile
+
+### Toggle Favorite Event
+PATCH {{baseUrl}}/users/123/favorites/events/event456
+
+### Toggle Favorite Business
+PATCH {{baseUrl}}/users/123/favorites/businesses/business789
+
+### Get User's Favorite Events
+GET {{baseUrl}}/users/123/favorites/events
+
+### Get User's Favorite Businesses
+GET {{baseUrl}}/users/123/favorites/businesses
+
+### Update Business User NeedsReview
+PATCH {{baseUrl}}/users/123/business-profile/needs-review
+Content-Type: application/json
+
+{
+  "needsReview": false
+}
 
 ### Get Coupon Pass
 GET {{baseUrl}}/wallet/coupon
@@ -105,7 +128,8 @@ Content-Type: application/json
     "city": "Test City",
     "latitude": 49.4521,
     "longitude": 11.0767
-  }
+  },
+  "hasAccount": true
 }
 
 ### Update Business
@@ -153,6 +177,14 @@ Content-Type: application/json
   "contact": {
     "email": "new@email.com"
   }
+}
+
+### Update Business HasAccount
+PATCH {{baseUrl}}/businesses/business123/has-account
+Content-Type: application/json
+
+{
+  "hasAccount": true
 }
 
 ### Scan Customer

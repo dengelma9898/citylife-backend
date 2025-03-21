@@ -32,4 +32,5 @@ export interface Business {
   status: BusinessStatus;
   benefit: string;
   customers: BusinessCustomer[];
+  hasAccount: boolean;
 } 

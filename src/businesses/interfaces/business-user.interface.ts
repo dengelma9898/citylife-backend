@@ -5,4 +5,5 @@ export interface BusinessUser {
   createdAt: string;
   updatedAt: string;
   isDeleted: boolean;
+  needsReview: boolean;
 } 

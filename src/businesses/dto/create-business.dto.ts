@@ -34,4 +34,8 @@ export class CreateBusinessDto {
   @IsString()
   @IsNotEmpty()
   public readonly benefit: string;
+
+  @IsBoolean()
+  @IsNotEmpty()
+  public readonly hasAccount: boolean;
 } 

@@ -14,4 +14,6 @@ export interface UserProfile {
   customerId?: string;
   currentCityId?: string;
   businessHistory: BusinessHistory[];
+  favoriteEventIds?: string[];
+  favoriteBusinessIds?: string[];
 } 

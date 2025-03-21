@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, NotFoundException, Logger, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, NotFoundException, Logger, UseInterceptors, UploadedFile, Patch, BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { UserProfileDto } from './dto/user-profile.dto';
@@ -23,6 +23,12 @@ export class UsersController {
   public async getAll(): Promise<UserProfile[]> {
     this.logger.log('GET /users');
     return this.usersService.getAll();
+  }
+
+  @Get('business-users/needs-review')
+  public async getBusinessUsersNeedsReview(): Promise<BusinessUser[]> {
+    this.logger.log('GET /users/business-users/needs-review');
+    return this.usersService.getBusinessUsersNeedsReview();
   }
 
   @Get(':id/profile')
@@ -53,12 +59,12 @@ export class UsersController {
     return this.usersService.createBusinessUser(businessUserDto);
   }
 
-  @Put(':id/profile')
+  @Patch(':id/profile')
   public async updateProfile(
     @Param('id') id: string,
     @Body() userProfileDto: Partial<UserProfileDto>
   ): Promise<UserProfile> {
-    this.logger.log(`PUT /users/${id}/profile`);
+    this.logger.log(`PATCH /users/${id}/profile`);
     return this.usersService.update(id, userProfileDto);
   }
 
@@ -83,10 +89,85 @@ export class UsersController {
     return this.usersService.updateBusinessUser(id, updateUserDto);
   }
 
+  @Patch(':id/business-profile/needs-review')
+  public async updateNeedsReview(
+    @Param('id') id: string,
+    @Body('needsReview') needsReview: boolean
+  ): Promise<BusinessUser> {
+    this.logger.log(`PATCH /users/${id}/business-profile/needs-review`);
+    
+    if (needsReview === undefined) {
+      throw new BadRequestException('needsReview field is required');
+    }
+    
+    const businessUser = await this.usersService.getBusinessUser(id);
+    if (!businessUser) {
+      throw new NotFoundException('Business user not found');
+    }
+    
+    return this.usersService.updateBusinessUser(id, { needsReview });
+  }
+
   @Delete(':id/business-profile')
   public async deleteBusinessUser(@Param('id') id: string): Promise<void> {
     this.logger.log(`DELETE /users/${id}/business-profile`);
     return this.usersService.deleteBusinessUser(id);
+  }
+
+  @Patch(':id/favorites/events/:eventId')
+  public async toggleFavoriteEvent(
+    @Param('id') userId: string,
+    @Param('eventId') eventId: string
+  ): Promise<{ added: boolean }> {
+    this.logger.log(`PATCH /users/${userId}/favorites/events/${eventId}`);
+    
+    const userProfile = await this.usersService.getUserProfile(userId);
+    if (!userProfile) {
+      throw new NotFoundException('User profile not found');
+    }
+    
+    const added = await this.usersService.toggleFavoriteEvent(userId, eventId);
+    return { added };
+  }
+  
+  @Patch(':id/favorites/businesses/:businessId')
+  public async toggleFavoriteBusiness(
+    @Param('id') userId: string,
+    @Param('businessId') businessId: string
+  ): Promise<{ added: boolean }> {
+    this.logger.log(`PATCH /users/${userId}/favorites/businesses/${businessId}`);
+    
+    const userProfile = await this.usersService.getUserProfile(userId);
+    if (!userProfile) {
+      throw new NotFoundException('User profile not found');
+    }
+    
+    const added = await this.usersService.toggleFavoriteBusiness(userId, businessId);
+    return { added };
+  }
+
+  @Get(':id/favorites/events')
+  public async getFavoriteEvents(@Param('id') userId: string): Promise<string[]> {
+    this.logger.log(`GET /users/${userId}/favorites/events`);
+    
+    const userProfile = await this.usersService.getUserProfile(userId);
+    if (!userProfile) {
+      throw new NotFoundException('User profile not found');
+    }
+    
+    return userProfile.favoriteEventIds || [];
+  }
+  
+  @Get(':id/favorites/businesses')
+  public async getFavoriteBusinesses(@Param('id') userId: string): Promise<string[]> {
+    this.logger.log(`GET /users/${userId}/favorites/businesses`);
+    
+    const userProfile = await this.usersService.getUserProfile(userId);
+    if (!userProfile) {
+      throw new NotFoundException('User profile not found');
+    }
+    
+    return userProfile.favoriteBusinessIds || [];
   }
 
   @Get(':id/type')

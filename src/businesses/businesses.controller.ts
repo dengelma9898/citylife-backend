@@ -9,6 +9,7 @@ import { BusinessCustomerDto } from './dto/business-customer.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
+import { IsBoolean, IsNotEmpty } from 'class-validator';
 
 // Erstelle ein DTO für die NuernbergspotsReview
 class NuernbergspotsReviewDto {
@@ -310,5 +311,29 @@ export class BusinessesController {
     
     // Update the business
     return this.businessesService.patch(businessId, { nuernbergspotsReview: updatedNuernbergspotsReview });
+  }
+
+  @Patch(':id/has-account')
+  public async updateHasAccount(
+    @Param('id') businessId: string,
+    @Body('hasAccount') hasAccount: boolean
+  ): Promise<Business> {
+    this.logger.log(`PATCH /businesses/${businessId}/has-account`);
+    
+    if (hasAccount === undefined) {
+      throw new BadRequestException('hasAccount is required');
+    }
+    
+    // Get current business
+    const currentBusiness = await this.businessesService.getById(businessId);
+    if (!currentBusiness) {
+      throw new NotFoundException('Business not found');
+    }
+    
+    // Update the hasAccount field
+    return this.businessesService.patch(businessId, { 
+      hasAccount,
+      updatedAt: new Date().toISOString()
+    });
   }
 } 
