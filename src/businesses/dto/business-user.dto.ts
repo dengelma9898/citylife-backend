@@ -19,4 +19,7 @@ export class BusinessUserDto {
 
   @IsBoolean()
   public readonly isDeleted: boolean;
+
+  @IsBoolean()
+  public readonly needsReview: boolean;
 } 

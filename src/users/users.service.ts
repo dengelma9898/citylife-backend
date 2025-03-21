@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
@@ -18,6 +18,19 @@ export class UsersService {
     const usersCol = collection(db, 'users');
     const snapshot = await getDocs(usersCol);
     return snapshot.docs.map(doc => doc.data() as UserProfile);
+  }
+
+  public async getBusinessUsersNeedsReview(): Promise<BusinessUser[]> {
+    this.logger.debug('Getting business users that need review');
+    const db = getFirestore();
+    const businessUsersCol = collection(db, 'business_users');
+    const q = query(businessUsersCol, where('needsReview', '==', true), where('isDeleted', '==', false));
+    const snapshot = await getDocs(q);
+    
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as BusinessUser));
   }
 
   public async getById(id: string): Promise<UserProfile | BusinessUser | null> {
@@ -115,7 +128,8 @@ export class UsersService {
       businessIds: [data.businessId],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      isDeleted: false
+      isDeleted: false,
+      needsReview: data.needsReview
     };
 
     const docRef = doc(db, 'business_users', data.userId);
@@ -161,5 +175,57 @@ export class UsersService {
     }
 
     await deleteDoc(docRef);
+  }
+
+  public async toggleFavoriteEvent(userId: string, eventId: string): Promise<boolean> {
+    this.logger.debug(`Toggling favorite event ${eventId} for user ${userId}`);
+    const userProfile = await this.getUserProfile(userId);
+    
+    if (!userProfile) {
+      throw new NotFoundException('User profile not found');
+    }
+    
+    const favoriteEventIds = userProfile.favoriteEventIds || [];
+    let updatedFavorites: string[];
+    let isAdded: boolean;
+    
+    if (favoriteEventIds.includes(eventId)) {
+      // Remove from favorites
+      updatedFavorites = favoriteEventIds.filter(id => id !== eventId);
+      isAdded = false;
+    } else {
+      // Add to favorites
+      updatedFavorites = [...favoriteEventIds, eventId];
+      isAdded = true;
+    }
+    
+    await this.update(userId, { favoriteEventIds: updatedFavorites });
+    return isAdded;
+  }
+
+  public async toggleFavoriteBusiness(userId: string, businessId: string): Promise<boolean> {
+    this.logger.debug(`Toggling favorite business ${businessId} for user ${userId}`);
+    const userProfile = await this.getUserProfile(userId);
+    
+    if (!userProfile) {
+      throw new NotFoundException('User profile not found');
+    }
+    
+    const favoriteBusinessIds = userProfile.favoriteBusinessIds || [];
+    let updatedFavorites: string[];
+    let isAdded: boolean;
+    
+    if (favoriteBusinessIds.includes(businessId)) {
+      // Remove from favorites
+      updatedFavorites = favoriteBusinessIds.filter(id => id !== businessId);
+      isAdded = false;
+    } else {
+      // Add to favorites
+      updatedFavorites = [...favoriteBusinessIds, businessId];
+      isAdded = true;
+    }
+    
+    await this.update(userId, { favoriteBusinessIds: updatedFavorites });
+    return isAdded;
   }
 } 

@@ -111,7 +111,8 @@ export class BusinessesService {
       customers: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      isDeleted: false
+      isDeleted: false,
+      hasAccount: data.hasAccount
     };
 
     const docRef = await addDoc(collection(db, 'businesses'), businessData);
