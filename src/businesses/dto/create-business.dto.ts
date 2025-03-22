@@ -2,15 +2,11 @@ import { IsString, IsNotEmpty, IsArray, ValidateNested, IsObject, IsDateString, 
 import { Type } from 'class-transformer';
 import { BusinessContactDto } from './business-contact.dto';
 import { BusinessAddressDto } from './business-address.dto';
-import { BusinessCategoryDto } from './business-category.dto';
+
 export class CreateBusinessDto {
   @IsString()
   @IsNotEmpty()
   public readonly name: string;
-
-  @ValidateNested()
-  @Type(() => BusinessCategoryDto)
-  public readonly category: BusinessCategoryDto;
 
   @IsString()
   @IsNotEmpty()
@@ -26,6 +22,15 @@ export class CreateBusinessDto {
 
   @IsObject()
   public readonly openingHours: Record<string, string> = {};
+
+  @IsString()
+  @IsNotEmpty()
+  public readonly categoryId: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  public readonly keywordIds?: string[];
 
   @IsBoolean()
   @IsOptional()

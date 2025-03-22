@@ -1,6 +1,6 @@
-import { Controller, Get, Param, NotFoundException, Logger, UseGuards, Post, Body, Put, Patch, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Logger, UseGuards, Post, Body, Put, Patch, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException, Delete } from '@nestjs/common';
 import { BusinessesService } from './businesses.service';
-import { Business, NuernbergspotsReview } from './interfaces/business.interface';
+import { Business, BusinessResponse, NuernbergspotsReview } from './interfaces/business.interface';
 import { BusinessCategory } from './interfaces/business-category.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { AuthGuard } from '../core/guards/auth.guard';
@@ -34,13 +34,13 @@ export class BusinessesController {
   }
 
   @Get()
-  public async getAll(): Promise<Business[]> {
+  public async getAll(): Promise<BusinessResponse[]> {
     this.logger.log('GET /businesses');
     return this.businessesService.getAll();
   }
 
   @Get(':id')
-  public async getById(@Param('id') id: string): Promise<Business> {
+  public async getById(@Param('id') id: string): Promise<BusinessResponse> {
     this.logger.log(`GET /businesses/${id}`);
     const business = await this.businessesService.getById(id);
     if (!business) {
@@ -50,7 +50,7 @@ export class BusinessesController {
   }
 
   @Post()
-  public async create(@Body() createBusinessDto: CreateBusinessDto): Promise<Business> {
+  public async create(@Body() createBusinessDto: CreateBusinessDto): Promise<BusinessResponse> {
     this.logger.log('POST /businesses');
     return this.businessesService.create(createBusinessDto);
   }
@@ -59,16 +59,16 @@ export class BusinessesController {
   public async update(
     @Param('id') id: string,
     @Body() updateBusinessDto: Partial<CreateBusinessDto>
-  ): Promise<Business> {
+  ): Promise<BusinessResponse> {
     this.logger.log(`PUT /businesses/${id}`);
-    return this.businessesService.update(id, updateBusinessDto);
+    return this.businessesService.update(id, updateBusinessDto as Partial<Business>);
   }
 
   @Patch(':id')
   public async patchBusiness(
     @Param('id') id: string,
     @Body() patchData: Partial<Business>
-  ): Promise<Business> {
+  ): Promise<BusinessResponse> {
     this.logger.log(`PATCH /businesses/${id}`);
     return this.businessesService.patch(id, patchData);
   }
@@ -77,263 +77,244 @@ export class BusinessesController {
   public async scanCustomer(
     @Param('id') businessId: string,
     @Body() scanData: BusinessCustomerDto
-  ): Promise<Business> {
+  ): Promise<BusinessResponse> {
     this.logger.log(`PATCH /businesses/${businessId}/scan`);
     return this.businessesService.addCustomerScan(businessId, scanData);
   }
 
-  @Patch(':id/logo')
+  @Post(':id/logo')
   @UseInterceptors(FileInterceptor('file'))
   public async uploadLogo(
     @Param('id') businessId: string,
     @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File
-  ): Promise<Business> {
-    this.logger.log(`PATCH /businesses/${businessId}/logo`);
-
+  ): Promise<BusinessResponse> {
+    this.logger.log(`POST /businesses/${businessId}/logo`);
+    
     // Get current business to check for existing logo
-    const currentBusiness = await this.businessesService.getById(businessId);
-    if (!currentBusiness) {
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
       throw new NotFoundException('Business not found');
     }
 
     // Delete old logo if it exists
-    if (currentBusiness.logoUrl) {
-      this.logger.debug('Deleting old logo');
-      await this.firebaseStorageService.deleteFile(currentBusiness.logoUrl);
+    if (business.logoUrl) {
+      try {
+        await this.firebaseStorageService.deleteFile(business.logoUrl);
+      } catch (error) {
+        this.logger.error(`Failed to delete old logo: ${error.message}`);
+      }
     }
 
-    // Upload the new logo
-    const path = `businesses/logos/${businessId}/${Date.now()}-${file.originalname}`;
+    // Upload new logo
+    const path = `businesses/${businessId}/logo/${Date.now()}-${file.originalname}`;
     const logoUrl = await this.firebaseStorageService.uploadFile(file, path);
 
-    // Update the business with the new logo URL
-    return this.businessesService.patch(businessId, { logoUrl });
+    // Update business with new logo URL
+    return this.businessesService.update(businessId, { logoUrl });
   }
 
-  @Patch(':id/images')
-  @UseInterceptors(FilesInterceptor('images'))
+  @Post(':id/images')
+  @UseInterceptors(FilesInterceptor('files', 10))
   public async uploadImages(
     @Param('id') businessId: string,
     @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
-  ): Promise<Business> {
-    this.logger.log(`PATCH /businesses/${businessId}/images`);
+  ): Promise<BusinessResponse> {
+    this.logger.log(`POST /businesses/${businessId}/images`);
+    
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files uploaded');
+    }
 
-    // Get current business
-    const currentBusiness = await this.businessesService.getById(businessId);
-    if (!currentBusiness) {
+    // Get current business to get existing images
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
       throw new NotFoundException('Business not found');
     }
 
-    // Initialize imageUrls array if it doesn't exist
-    let imageUrls = currentBusiness.imageUrls || [];
+    // Upload each new image
+    const uploadPromises = files.map(file => {
+      const path = `businesses/${businessId}/images/${Date.now()}-${file.originalname}`;
+      return this.firebaseStorageService.uploadFile(file, path);
+    });
+
+    const newImageUrls = await Promise.all(uploadPromises);
     
-    if (files && files.length > 0) {
-      this.logger.debug(`Uploading ${files.length} new images for business ${businessId}`);
-      
-      // Upload each file and collect URLs
-      for (const file of files) {
-        const path = `businesses/images/${businessId}/${Date.now()}-${file.originalname}`;
-        const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
-        imageUrls.push(imageUrl);
-      }
-    } else {
-      this.logger.debug('No new images provided for business');
-    }
-    
-    // Update the business with the new image URLs
-    return this.businessesService.patch(businessId, { imageUrls });
+    // Add new image URLs to existing ones
+    const imageUrls = [...(business.imageUrls || []), ...newImageUrls];
+
+    // Update business with new image URLs
+    return this.businessesService.update(businessId, { imageUrls });
   }
 
-  @Patch(':id/images/remove')
+  @Delete(':id/images')
   public async removeImage(
     @Param('id') businessId: string,
     @Body('imageUrl') imageUrl: string
-  ): Promise<Business> {
-    this.logger.log(`PATCH /businesses/${businessId}/images/remove`);
+  ): Promise<BusinessResponse> {
+    this.logger.log(`DELETE /businesses/${businessId}/images`);
     
     if (!imageUrl) {
-      throw new NotFoundException('imageUrl is required');
+      throw new BadRequestException('Image URL is required');
     }
-    
-    // Get current business
-    const currentBusiness = await this.businessesService.getById(businessId);
-    if (!currentBusiness) {
+
+    // Get current business to get existing images
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
       throw new NotFoundException('Business not found');
     }
-    
-    // Check if the image exists in the business
-    if (!currentBusiness.imageUrls || !currentBusiness.imageUrls.includes(imageUrl)) {
-      throw new NotFoundException('Image not found in business');
+
+    // Check if image URL exists in the business
+    const imageUrls = business.imageUrls || [];
+    if (!imageUrls.includes(imageUrl)) {
+      throw new BadRequestException('Image URL not found in business');
     }
-    
+
     // Delete the image from Firebase Storage
-    await this.firebaseStorageService.deleteFile(imageUrl);
-    
-    // Remove the URL from the business's imageUrls array
-    const updatedImageUrls = currentBusiness.imageUrls.filter(url => url !== imageUrl);
-    
-    // Update the business
-    return this.businessesService.patch(businessId, { imageUrls: updatedImageUrls });
+    try {
+      await this.firebaseStorageService.deleteFile(imageUrl);
+    } catch (error) {
+      this.logger.error(`Failed to delete image from storage: ${error.message}`);
+    }
+
+    // Remove the image URL from the business
+    const updatedImageUrls = imageUrls.filter(url => url !== imageUrl);
+
+    // Update business with new image URLs
+    return this.businessesService.update(businessId, { imageUrls: updatedImageUrls });
   }
 
   @Patch(':id/nuernbergspots-review')
   public async updateNuernbergspotsReview(
     @Param('id') businessId: string,
     @Body() reviewData: NuernbergspotsReviewDto
-  ): Promise<Business> {
+  ): Promise<BusinessResponse> {
     this.logger.log(`PATCH /businesses/${businessId}/nuernbergspots-review`);
     
     // Get current business
-    const currentBusiness = await this.businessesService.getById(businessId);
-    if (!currentBusiness) {
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
       throw new NotFoundException('Business not found');
     }
-    
-    // Hole die aktuelle Review, falls vorhanden
-    const currentReview = currentBusiness.nuernbergspotsReview || {};
-    
-    // Wenn reviewImageUrls in den neuen Daten vorhanden ist, vergleiche mit aktuellen Bildern
-    // und lösche alle Bilder, die nicht mehr in der neuen Liste sind
-    if (reviewData.reviewImageUrls && currentReview.reviewImageUrls) {
-      const currentImageUrls = currentReview.reviewImageUrls;
-      const newImageUrls = reviewData.reviewImageUrls;
-      
-      // Finde Bilder, die gelöscht werden sollen (im aktuellen Array, aber nicht im neuen)
-      const imagesToDelete = currentImageUrls.filter(url => !newImageUrls.includes(url));
-      
-      if (imagesToDelete.length > 0) {
-        this.logger.debug(`Deleting ${imagesToDelete.length} review images that were removed`);
-        
-        // Lösche jedes entfernte Bild aus Firebase Storage
-        const deletePromises = imagesToDelete.map(imageUrl => {
-          this.logger.debug(`Deleting review image: ${imageUrl}`);
-          return this.firebaseStorageService.deleteFile(imageUrl);
-        });
-        
-        // Warte auf den Abschluss aller Löschvorgänge
-        await Promise.all(deletePromises);
-      }
-    }
-    
-    // Erstelle das aktualisierte NuernbergspotsReview-Objekt mit aktuellem Zeitstempel
-    const updatedReview: NuernbergspotsReview = {
-      ...currentReview,
-      ...reviewData,
+
+    // Create or update the review
+    const review: NuernbergspotsReview = {
+      reviewText: reviewData.reviewText,
+      reviewImageUrls: reviewData.reviewImageUrls,
       updatedAt: new Date().toISOString()
     };
-    
-    // Aktualisiere das Business mit den neuen Review-Daten
-    return this.businessesService.patch(businessId, { nuernbergspotsReview: updatedReview });
+
+    // Update business with the review
+    return this.businessesService.update(businessId, { nuernbergspotsReview: review });
   }
 
-  @Patch(':id/nuernbergspots-images')
-  @UseInterceptors(FilesInterceptor('images'))
+  @Post(':id/nuernbergspots-review/images')
+  @UseInterceptors(FilesInterceptor('files', 10))
   public async uploadReviewImages(
     @Param('id') businessId: string,
     @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
-  ): Promise<Business> {
-    this.logger.log(`PATCH /businesses/${businessId}/nuernbergspots-images`);
+  ): Promise<BusinessResponse> {
+    this.logger.log(`POST /businesses/${businessId}/nuernbergspots-review/images`);
+    
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files uploaded');
+    }
 
-    // Get current business
-    const currentBusiness = await this.businessesService.getById(businessId);
-    if (!currentBusiness) {
+    // Get current business to get existing review images
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
       throw new NotFoundException('Business not found');
     }
+
+    // Get current review or create a new one
+    const review = business.nuernbergspotsReview || {
+      reviewText: '',
+      reviewImageUrls: [],
+      updatedAt: new Date().toISOString()
+    };
+
+    // Upload each new image
+    const uploadPromises = files.map(file => {
+      const path = `businesses/${businessId}/review-images/${Date.now()}-${file.originalname}`;
+      return this.firebaseStorageService.uploadFile(file, path);
+    });
+
+    const newImageUrls = await Promise.all(uploadPromises);
     
-    // Initialize nuernbergspotsReview if it doesn't exist
-    const nuernbergspotsReview = currentBusiness.nuernbergspotsReview || {};
-    
-    // Initialize reviewImageUrls array if it doesn't exist
-    let reviewImageUrls = nuernbergspotsReview.reviewImageUrls || [];
-    
-    if (files && files.length > 0) {
-      this.logger.debug(`Uploading ${files.length} new review images for business ${businessId}`);
-      
-      // Upload each file and collect URLs
-      for (const file of files) {
-        const path = `businesses/review-images/${businessId}/${Date.now()}-${file.originalname}`;
-        const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
-        reviewImageUrls.push(imageUrl);
-      }
-    } else {
-      this.logger.debug('No new review images provided for business');
-    }
-    
-    // Update the nuernbergspotsReview object with the new images and timestamp
-    nuernbergspotsReview.reviewImageUrls = reviewImageUrls;
-    nuernbergspotsReview.updatedAt = new Date().toISOString();
-    
-    // Update the business with the updated nuernbergspotsReview
-    return this.businessesService.patch(businessId, { nuernbergspotsReview });
+    // Add new image URLs to existing ones
+    const reviewImageUrls = [...(review.reviewImageUrls || []), ...newImageUrls];
+
+    // Update the review with new image URLs
+    const updatedReview: NuernbergspotsReview = {
+      ...review,
+      reviewImageUrls,
+      updatedAt: new Date().toISOString()
+    };
+
+    // Update business with updated review
+    return this.businessesService.update(businessId, { nuernbergspotsReview: updatedReview });
   }
 
-  @Patch(':id/review-images/remove')
+  @Delete(':id/nuernbergspots-review/images')
   public async removeReviewImage(
     @Param('id') businessId: string,
     @Body('imageUrl') imageUrl: string
-  ): Promise<Business> {
-    this.logger.log(`PATCH /businesses/${businessId}/review-images/remove`);
+  ): Promise<BusinessResponse> {
+    this.logger.log(`DELETE /businesses/${businessId}/nuernbergspots-review/images`);
     
     if (!imageUrl) {
-      throw new BadRequestException('imageUrl is required');
+      throw new BadRequestException('Image URL is required');
     }
-    
-    // Get current business
-    const currentBusiness = await this.businessesService.getById(businessId);
-    if (!currentBusiness) {
+
+    // Get current business to get existing review
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
       throw new NotFoundException('Business not found');
     }
-    
-    // Check if the nuernbergspotsReview and reviewImageUrls exist
-    if (!currentBusiness.nuernbergspotsReview || !currentBusiness.nuernbergspotsReview.reviewImageUrls) {
-      throw new NotFoundException('Review images not found for this business');
+
+    // Check if review exists
+    const review = business.nuernbergspotsReview;
+    if (!review) {
+      throw new BadRequestException('No review found for the business');
     }
-    
-    // Check if the image exists in the review images
-    if (!currentBusiness.nuernbergspotsReview.reviewImageUrls.includes(imageUrl)) {
-      throw new NotFoundException('Image not found in review images');
+
+    // Check if image URL exists in the review
+    const reviewImageUrls = review.reviewImageUrls || [];
+    if (!reviewImageUrls.includes(imageUrl)) {
+      throw new BadRequestException('Image URL not found in the review');
     }
-    
+
     // Delete the image from Firebase Storage
-    await this.firebaseStorageService.deleteFile(imageUrl);
-    
-    // Remove the URL from the reviewImageUrls array
-    const updatedReviewImageUrls = currentBusiness.nuernbergspotsReview.reviewImageUrls.filter(
-      url => url !== imageUrl
-    );
-    
-    // Update the nuernbergspotsReview object with new image URLs and timestamp
-    const updatedNuernbergspotsReview = {
-      ...currentBusiness.nuernbergspotsReview,
+    try {
+      await this.firebaseStorageService.deleteFile(imageUrl);
+    } catch (error) {
+      this.logger.error(`Failed to delete review image from storage: ${error.message}`);
+    }
+
+    // Remove the image URL from the review
+    const updatedReviewImageUrls = reviewImageUrls.filter(url => url !== imageUrl);
+
+    // Update the review with new image URLs
+    const updatedReview: NuernbergspotsReview = {
+      ...review,
       reviewImageUrls: updatedReviewImageUrls,
       updatedAt: new Date().toISOString()
     };
-    
-    // Update the business
-    return this.businessesService.patch(businessId, { nuernbergspotsReview: updatedNuernbergspotsReview });
+
+    // Update business with updated review
+    return this.businessesService.update(businessId, { nuernbergspotsReview: updatedReview });
   }
 
   @Patch(':id/has-account')
   public async updateHasAccount(
     @Param('id') businessId: string,
     @Body('hasAccount') hasAccount: boolean
-  ): Promise<Business> {
+  ): Promise<BusinessResponse> {
     this.logger.log(`PATCH /businesses/${businessId}/has-account`);
     
     if (hasAccount === undefined) {
-      throw new BadRequestException('hasAccount is required');
+      throw new BadRequestException('hasAccount field is required');
     }
     
-    // Get current business
-    const currentBusiness = await this.businessesService.getById(businessId);
-    if (!currentBusiness) {
-      throw new NotFoundException('Business not found');
-    }
-    
-    // Update the hasAccount field
-    return this.businessesService.patch(businessId, { 
-      hasAccount,
-      updatedAt: new Date().toISOString()
-    });
+    return this.businessesService.updateHasAccount(businessId, hasAccount);
   }
 } 

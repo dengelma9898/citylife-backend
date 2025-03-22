@@ -4,11 +4,15 @@ import { BusinessesService } from './businesses.service';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { UsersModule } from '../users/users.module';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
+import { BusinessCategoriesModule } from '../business-categories/business-categories.module';
+import { KeywordsModule } from '../keywords/keywords.module';
 
 @Module({
   imports: [
     FirebaseModule,
-    UsersModule
+    UsersModule,
+    BusinessCategoriesModule,
+    KeywordsModule
   ],
   controllers: [BusinessesController],
   providers: [BusinessesService, FirebaseStorageService],
