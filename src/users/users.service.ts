@@ -1,17 +1,18 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction } from 'firebase/firestore';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { UserType } from './enums/user-type.enum';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
+import { EventsService } from '../events/events.service';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor() {}
+  constructor(private readonly eventsService: EventsService) {}
 
   public async getAll(): Promise<UserProfile[]> {
     const db = getFirestore();
@@ -199,7 +200,18 @@ export class UsersService {
       isAdded = true;
     }
     
+    // Update the user profile
     await this.update(userId, { favoriteEventIds: updatedFavorites });
+    
+    // Update the event's favorite count
+    try {
+      await this.eventsService.updateFavoriteCount(eventId, isAdded);
+    } catch (error) {
+      this.logger.error(`Error updating favorite count: ${error.message}`);
+      // We don't throw here to prevent affecting the user experience
+      // The user's favorite list was already updated
+    }
+    
     return isAdded;
   }
 

@@ -196,6 +196,35 @@ Content-Type: application/json
   "userId": "user123"
 }
 
+### Get All Business Categories
+GET {{baseUrl}}/business-categories
+
+### Get Business Category by ID
+GET {{baseUrl}}/business-categories/category123
+
+### Create Business Category
+POST {{baseUrl}}/business-categories
+Content-Type: application/json
+
+{
+  "name": "Restaurants",
+  "iconName": "restaurant",
+  "description": "Places to eat and drink",
+  "keywordIds": ["keyword123", "keyword456"]
+}
+
+### Update Business Category
+PATCH {{baseUrl}}/business-categories/category123
+Content-Type: application/json
+
+{
+  "name": "Updated Category Name",
+  "description": "Updated category description"
+}
+
+### Delete Business Category
+DELETE {{baseUrl}}/business-categories/category123
+
 ### Get All Blog Posts
 GET {{baseUrl}}/blog
 
@@ -233,6 +262,33 @@ Content-Type: application/json
 {
   "userId": "user123"
 }
+
+### Get All Keywords
+GET {{baseUrl}}/keywords
+
+### Get Keyword by ID
+GET {{baseUrl}}/keywords/keyword123
+
+### Create Keyword
+POST {{baseUrl}}/keywords
+Content-Type: application/json
+
+{
+  "name": "Test Keyword",
+  "description": "A test keyword for the system"
+}
+
+### Update Keyword
+PATCH {{baseUrl}}/keywords/keyword123
+Content-Type: application/json
+
+{
+  "name": "Updated Keyword Name",
+  "description": "Updated keyword description"
+}
+
+### Delete Keyword
+DELETE {{baseUrl}}/keywords/keyword123
 
 ### Upload Profile Picture
 POST {{baseUrl}}/users/123/profile/picture

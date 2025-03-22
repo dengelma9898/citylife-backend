@@ -12,6 +12,8 @@ import { AuthGuard } from './core/guards/auth.guard';
 import { BlogPostsModule } from './blog-posts/blog-posts.module';
 import { EventsModule } from './events/events.module';
 import { ChatroomsModule } from './chatrooms/chatrooms.module';
+import { KeywordsModule } from './keywords/keywords.module';
+import { BusinessCategoriesModule } from './business-categories/business-categories.module';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { ChatroomsModule } from './chatrooms/chatrooms.module';
     BlogPostsModule,
     EventsModule,
     ChatroomsModule,
+    KeywordsModule,
+    BusinessCategoriesModule,
   ],
   providers: [
     {

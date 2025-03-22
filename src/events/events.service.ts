@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, runTransaction } from 'firebase/firestore';
 import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 
@@ -97,5 +97,35 @@ export class EventsService {
     }
 
     await deleteDoc(docRef);
+  }
+
+  public async updateFavoriteCount(eventId: string, increment: boolean): Promise<void> {
+    this.logger.debug(`${increment ? 'Incrementing' : 'Decrementing'} favorite count for event ${eventId}`);
+    const db = getFirestore();
+    const eventRef = doc(db, 'events', eventId);
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const eventDoc = await transaction.get(eventRef);
+        
+        if (!eventDoc.exists()) {
+          throw new NotFoundException(`Event with ID ${eventId} not found`);
+        }
+        
+        const eventData = eventDoc.data();
+        const currentCount = eventData.favoriteCount || 0;
+        const newCount = increment ? currentCount + 1 : Math.max(0, currentCount - 1);
+        
+        transaction.update(eventRef, { 
+          favoriteCount: newCount,
+          updatedAt: new Date().toISOString()
+        });
+      });
+      
+      this.logger.debug(`Successfully updated favorite count for event ${eventId}`);
+    } catch (error) {
+      this.logger.error(`Error updating favorite count for event ${eventId}: ${error.message}`);
+      throw error;
+    }
   }
 } 

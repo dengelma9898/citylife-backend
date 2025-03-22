@@ -13,4 +13,5 @@ export interface Event {
   imageUrls?: string[];
   createdAt: string;
   updatedAt: string;
+  favoriteCount?: number;
 } 
