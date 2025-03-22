@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
-import { Business } from './interfaces/business.interface';
+import { Business, BusinessResponse } from './interfaces/business.interface';
 import { BusinessCategory } from './interfaces/business-category.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateBusinessDto } from './dto/create-business.dto';
@@ -8,26 +8,35 @@ import { BusinessStatus } from './interfaces/business.interface';
 import { BusinessCustomerDto } from './dto/business-customer.dto';
 import { BusinessCustomer } from './interfaces/business-customer.interface';
 import { UserAdapterService } from '../users/services/user-adapter.service';
+import { BusinessCategoriesService } from '../business-categories/business-categories.service';
+import { KeywordsService } from '../keywords/keywords.service';
 
 @Injectable()
 export class BusinessesService {
   private readonly logger = new Logger(BusinessesService.name);
 
-  constructor(private readonly userAdapter: UserAdapterService) {}
+  constructor(
+    private readonly userAdapter: UserAdapterService,
+    private readonly businessCategoriesService: BusinessCategoriesService,
+    private readonly keywordsService: KeywordsService
+  ) {}
 
-  public async getAll(): Promise<Business[]> {
+  public async getAll(): Promise<BusinessResponse[]> {
     this.logger.debug('Fetching all businesses from Firestore');
     const db = getFirestore();
     const businessesCol = collection(db, 'businesses');
     const snapshot = await getDocs(businessesCol);
     this.logger.debug(`Found ${snapshot.docs.length} businesses`);
-    return snapshot.docs.map(doc => ({
+    
+    const businesses = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as Business));
+    
+    return this.mapBusinessesToResponse(businesses);
   }
 
-  public async getById(id: string): Promise<Business | null> {
+  public async getById(id: string): Promise<BusinessResponse | null> {
     this.logger.debug(`Fetching business with id ${id} from Firestore`);
     const db = getFirestore();
     const docRef = doc(db, 'businesses', id);
@@ -39,10 +48,58 @@ export class BusinessesService {
     }
 
     this.logger.debug(`Found business with id ${id}`);
-    return {
+    const business = {
       id: docSnap.id,
       ...docSnap.data()
     } as Business;
+    
+    const [businessResponse] = await this.mapBusinessesToResponse([business]);
+    return businessResponse;
+  }
+
+  private async mapBusinessesToResponse(businesses: Business[]): Promise<BusinessResponse[]> {
+    if (businesses.length === 0) return [];
+    
+    const categoryPromises = businesses.map(business => 
+      this.businessCategoriesService.getById(business.categoryId)
+    );
+    const categories = await Promise.all(categoryPromises);
+    
+    const keywordPromises = businesses
+      .filter(business => business.keywordIds && business.keywordIds.length > 0)
+      .map(async business => {
+        const keywordIds = business.keywordIds || [];
+        const keywordPromises = keywordIds.map(id => this.keywordsService.getById(id));
+        const keywords = await Promise.all(keywordPromises);
+        return keywords
+          .filter(keyword => keyword !== null)
+          .map(keyword => ({ id: keyword.id, name: keyword.name }));
+      });
+    const keywordResults = await Promise.all(keywordPromises);
+    
+    const keywordMap = new Map<string, { id: string; name: string }[]>();
+    businesses.forEach((business, index) => {
+      if (business.keywordIds && business.keywordIds.length > 0) {
+        keywordMap.set(business.id, keywordResults.shift() || []);
+      }
+    });
+    
+    return businesses.map((business, index) => {
+      const category = categories[index];
+      
+      if (!category) {
+        this.logger.warn(`Category with id ${business.categoryId} not found for business ${business.id}`);
+      }
+      
+      const { keywordIds, ...businessWithoutKeywordIds } = business;
+      
+      return {
+        ...businessWithoutKeywordIds,
+        category: category || { id: business.categoryId, name: 'Unknown Category' },
+        keywordIds: keywordIds || [],
+        keywordNames: (keywordMap.get(business.id) || []).map(keyword => keyword.name)
+      } as BusinessResponse;
+    });
   }
 
   public async getAllCategories(): Promise<BusinessCategory[]> {
@@ -73,19 +130,29 @@ export class BusinessesService {
     } as BusinessUser));
   }
 
-  public async create(data: CreateBusinessDto): Promise<Business> {
+  public async create(data: CreateBusinessDto): Promise<BusinessResponse> {
     this.logger.debug('Creating new business');
+    
+    const category = await this.businessCategoriesService.getById(data.categoryId);
+    if (!category) {
+      throw new NotFoundException(`Business category with id ${data.categoryId} not found`);
+    }
+    
+    if (data.keywordIds && data.keywordIds.length > 0) {
+      const keywordPromises = data.keywordIds.map(id => this.keywordsService.getById(id));
+      const keywords = await Promise.all(keywordPromises);
+      const missingKeywords = keywords.findIndex(k => k === null);
+      if (missingKeywords !== -1) {
+        throw new NotFoundException(`Keyword with id ${data.keywordIds[missingKeywords]} not found`);
+      }
+    }
+    
     const db = getFirestore();
     
     const businessData: Omit<Business, 'id'> = {
       name: data.name,
-      category: {
-        name: data.category.name,
-        description: data.category.description,
-        iconName: data.category.iconName,
-        createdAt: data.category.createdAt,
-        updatedAt: data.category.updatedAt
-      },
+      categoryId: data.categoryId,
+      keywordIds: data.keywordIds || [],
       description: data.description,
       contact: {
         email: data.contact.email,
@@ -117,10 +184,13 @@ export class BusinessesService {
 
     const docRef = await addDoc(collection(db, 'businesses'), businessData);
     
-    return {
+    const business: Business = {
       id: docRef.id,
       ...businessData
     };
+    
+    const [businessResponse] = await this.mapBusinessesToResponse([business]);
+    return businessResponse;
   }
 
   private async getCategory(id: string): Promise<BusinessCategory | null> {
@@ -139,7 +209,7 @@ export class BusinessesService {
     };
   }
 
-  public async update(id: string, data: Partial<Business>): Promise<Business> {
+  public async update(id: string, data: Partial<Business>): Promise<BusinessResponse> {
     this.logger.debug(`Updating business ${id}`);
     const db = getFirestore();
     const docRef = doc(db, 'businesses', id);
@@ -149,6 +219,22 @@ export class BusinessesService {
       throw new NotFoundException('Business not found');
     }
 
+    if (data.categoryId) {
+      const category = await this.businessCategoriesService.getById(data.categoryId);
+      if (!category) {
+        throw new NotFoundException(`Business category with id ${data.categoryId} not found`);
+      }
+    }
+
+    if (data.keywordIds && data.keywordIds.length > 0) {
+      const keywordPromises = data.keywordIds.map(id => this.keywordsService.getById(id));
+      const keywords = await Promise.all(keywordPromises);
+      const missingKeywords = keywords.findIndex(k => k === null);
+      if (missingKeywords !== -1) {
+        throw new NotFoundException(`Keyword with id ${data.keywordIds[missingKeywords]} not found`);
+      }
+    }
+
     const updateData = {
       ...data,
       updatedAt: new Date().toISOString()
@@ -156,72 +242,62 @@ export class BusinessesService {
 
     await updateDoc(docRef, updateData);
     
-    const updatedDoc = await getDoc(docRef);
-    return {
-      id: updatedDoc.id,
-      ...updatedDoc.data()
-    } as Business;
+    const businessResponse = await this.getById(id);
+    if (!businessResponse) {
+      throw new NotFoundException(`Business with id ${id} not found after update`);
+    }
+    return businessResponse;
   }
 
-  public async updateStatus(id: string, status: BusinessStatus): Promise<Business> {
-    this.logger.debug(`Updating business ${id} status to ${status}`);
+  public async updateStatus(id: string, status: BusinessStatus): Promise<BusinessResponse> {
     return this.update(id, { status });
   }
 
-  public async patch(id: string, data: Partial<Business>): Promise<Business> {
-    this.logger.debug(`Patching business ${id} with data:`, data);
-    const db = getFirestore();
-    const docRef = doc(db, 'businesses', id);
-    const docSnap = await getDoc(docRef);
-    
-    if (!docSnap.exists()) {
-      this.logger.error(`Business ${id} not found`);
-      throw new NotFoundException('Business not found');
-    }
-
-    const currentData = docSnap.data() as Business;
-    const patchedData = {
-      ...currentData,
-      ...data,
-      updatedAt: new Date().toISOString()
-    };
-
-    this.logger.debug(`Updating business ${id} with patched data`);
-    await updateDoc(docRef, patchedData);
-    
-    return patchedData;
+  public async updateHasAccount(id: string, hasAccount: boolean): Promise<BusinessResponse> {
+    return this.update(id, { hasAccount });
   }
 
-  public async addCustomerScan(businessId: string, scanData: BusinessCustomerDto): Promise<Business> {
-    this.logger.debug(`Adding customer scan for business ${businessId}`);
-    const business = await this.getById(businessId);
+  public async patch(id: string, data: Partial<Business>): Promise<BusinessResponse> {
+    this.logger.debug(`Patching business ${id}`);
+    return this.update(id, data);
+  }
+
+  public async addCustomerScan(businessId: string, scanData: BusinessCustomerDto): Promise<BusinessResponse> {
+    this.logger.debug(`Adding customer scan to business ${businessId}`);
     
+    const business = await this.getById(businessId);
     if (!business) {
-      this.logger.error(`Business ${businessId} not found`);
       throw new NotFoundException('Business not found');
     }
-
-    const newCustomer: BusinessCustomer = {
-      customerId: scanData.customerId,
-      scannedAt: new Date().toISOString()
-    };
-
-    // Ensure customers is an array
-    const currentCustomers = business.customers || [];
-    const updatedCustomers = [...currentCustomers, newCustomer];
-
-    const updatedBusiness = await this.patch(businessId, { 
-      customers: updatedCustomers,
+    
+    const db = getFirestore();
+    const docRef = doc(db, 'businesses', businessId);
+    const docSnap = await getDoc(docRef);
+    const businessData = docSnap.data() as Business;
+    
+    const customers = businessData.customers || [];
+    
+    const customerIndex = customers.findIndex(c => c.customerId === scanData.customerId);
+    
+    if (customerIndex === -1) {
+      const newCustomer: BusinessCustomer = {
+        customerId: scanData.customerId,
+        scannedAt: new Date().toISOString()
+      };
+      customers.push(newCustomer);
+    } else {
+      customers[customerIndex].scannedAt = new Date().toISOString();
+    }
+    
+    await updateDoc(docRef, { 
+      customers,
       updatedAt: new Date().toISOString()
     });
-
-    await this.userAdapter.addBusinessToHistory(
-      scanData.userId, 
-      businessId, 
-      updatedBusiness.name, 
-      updatedBusiness.benefit
-    );
     
+    const updatedBusiness = await this.getById(businessId);
+    if (!updatedBusiness) {
+      throw new NotFoundException(`Business with id ${businessId} not found after scan update`);
+    }
     return updatedBusiness;
   }
 } 
