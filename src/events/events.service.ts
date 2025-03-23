@@ -50,6 +50,8 @@ export class EventsService {
       endDate: data.endDate,
       imageUrls: [],
       titleImageUrl: '',
+      ticketsNeeded: data.ticketsNeeded,
+      price: data.price,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
