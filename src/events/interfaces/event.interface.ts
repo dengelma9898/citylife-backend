@@ -14,4 +14,6 @@ export interface Event {
   createdAt: string;
   updatedAt: string;
   favoriteCount?: number;
+  ticketsNeeded?: boolean;
+  price?: string;
 } 
