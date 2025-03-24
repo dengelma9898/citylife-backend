@@ -114,7 +114,7 @@ export class BusinessesController {
   }
 
   @Post(':id/images')
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(FilesInterceptor('images', 10))
   public async uploadImages(
     @Param('id') businessId: string,
     @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]

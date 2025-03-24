@@ -9,7 +9,7 @@ import { AppSettingsModule } from './app-settings/app-settings.module';
 import { BusinessesModule } from './businesses/businesses.module';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './core/guards/auth.guard';
-import { BlogPostsModule } from './blog-posts/blog-posts.module';
+import { NewsModule } from './news/news.module';
 import { EventsModule } from './events/events.module';
 import { ChatroomsModule } from './chatrooms/chatrooms.module';
 import { KeywordsModule } from './keywords/keywords.module';
@@ -28,7 +28,7 @@ import { BusinessCategoriesModule } from './business-categories/business-categor
     CitiesModule,
     AppSettingsModule,
     BusinessesModule,
-    BlogPostsModule,
+    NewsModule,
     EventsModule,
     ChatroomsModule,
     KeywordsModule,
