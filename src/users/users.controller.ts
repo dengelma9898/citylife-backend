@@ -186,6 +186,30 @@ export class UsersController {
     throw new NotFoundException('User not found');
   }
 
+  @Get(':id/type-of-user')
+  public async getTypeOfUser(@Param('id') id: string): Promise<string> {
+    this.logger.log(`GET /users/${id}/type-of-user`);
+    try {
+      const userProfile = await this.usersService.getUserProfile(id);
+      if (userProfile) {
+        return userProfile.userType;
+      }
+
+      const businessUser = await this.usersService.getBusinessUser(id);
+      if (businessUser) {
+        return UserType.BUSINESS;
+      }
+
+      throw new NotFoundException('Benutzer nicht gefunden');
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error(`Fehler beim Abrufen des Benutzertyps: ${error.message}`);
+      throw new BadRequestException('Fehler beim Abrufen des Benutzertyps');
+    }
+  }
+
   @Post(':id/profile/picture')
   @UseInterceptors(FileInterceptor('file'))
   public async uploadProfilePicture(
