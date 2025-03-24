@@ -240,4 +240,32 @@ export class UsersService {
     await this.update(userId, { favoriteBusinessIds: updatedFavorites });
     return isAdded;
   }
+
+  /**
+   * Fügt eine Business-ID zur Liste der businessIds eines BusinessUsers hinzu
+   * 
+   * @param userId - Die ID des BusinessUsers
+   * @param businessId - Die ID des Businesses, das hinzugefügt werden soll
+   * @returns Der aktualisierte BusinessUser
+   */
+  public async addBusinessToUser(userId: string, businessId: string): Promise<BusinessUser> {
+    this.logger.debug(`Adding business ${businessId} to user ${userId}`);
+    const businessUser = await this.getBusinessUser(userId);
+    
+    if (!businessUser) {
+      throw new NotFoundException('Business user not found');
+    }
+    
+    // Überprüfen, ob die Business-ID bereits vorhanden ist
+    if (businessUser.businessIds.includes(businessId)) {
+      this.logger.debug(`Business ${businessId} already in user's list`);
+      return businessUser;
+    }
+    
+    // Business-ID hinzufügen
+    const updatedBusinessIds = [...businessUser.businessIds, businessId];
+    
+    // BusinessUser aktualisieren
+    return this.updateBusinessUser(userId, { businessIds: updatedBusinessIds });
+  }
 } 

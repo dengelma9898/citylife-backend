@@ -10,6 +10,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { IsBoolean, IsNotEmpty } from 'class-validator';
+import { UsersService } from '../users/users.service';
 
 // Erstelle ein DTO für die NuernbergspotsReview
 class NuernbergspotsReviewDto {
@@ -24,7 +25,8 @@ export class BusinessesController {
 
   constructor(
     private readonly businessesService: BusinessesService,
-    private readonly firebaseStorageService: FirebaseStorageService
+    private readonly firebaseStorageService: FirebaseStorageService,
+    private readonly usersService: UsersService
   ) {}
 
   @Get('categories')
@@ -316,5 +318,34 @@ export class BusinessesController {
     }
     
     return this.businessesService.updateHasAccount(businessId, hasAccount);
+  }
+
+  /**
+   * Erstellt ein neues Business und weist es einem bestimmten User zu
+   * 
+   * @param id - Die ID des Users, für den das Business erstellt werden soll
+   * @param createBusinessDto - Die Daten für das neue Business
+   * @returns Das erstellte Business
+   */
+  @Post('users/:id')
+  public async createBusinessForUser(
+    @Param('id') userId: string,
+    @Body() createBusinessDto: CreateBusinessDto
+  ): Promise<BusinessResponse> {
+    this.logger.log(`POST /businesses/users/${userId}`);
+    
+    // Überprüfen, ob der User existiert
+    const businessUser = await this.usersService.getBusinessUser(userId);
+    if (!businessUser) {
+      throw new NotFoundException(`Geschäftsbenutzer mit ID ${userId} wurde nicht gefunden`);
+    }
+    
+    // Business erstellen
+    const createdBusiness = await this.businessesService.create(createBusinessDto);
+    
+    // Business-ID zum User hinzufügen
+    await this.usersService.addBusinessToUser(userId, createdBusiness.id);
+    
+    return createdBusiness;
   }
 } 
