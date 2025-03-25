@@ -30,6 +30,6 @@ export class CreateEventDto {
   public readonly ticketsNeeded?: boolean;
 
   @IsOptional()
-  @IsString()
-  public readonly price?: string;
+  @IsNumber()
+  public readonly price?: number;
 } 

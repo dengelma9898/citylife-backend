@@ -50,12 +50,13 @@ export class EventsService {
       endDate: data.endDate,
       imageUrls: [],
       titleImageUrl: '',
-      ticketsNeeded: data.ticketsNeeded,
-      price: data.price,
+      ticketsNeeded: data.ticketsNeeded || false,
+      price: data.price || 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
+    console.log('eventData', eventData);
     const docRef = await addDoc(collection(db, 'events'), eventData);
     
     return {
@@ -129,5 +130,27 @@ export class EventsService {
       this.logger.error(`Error updating favorite count for event ${eventId}: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * Holt Events basierend auf einer Liste von IDs
+   * 
+   * @param ids - Array von Event-IDs
+   * @returns Liste der gefundenen Events
+   */
+  public async getByIds(ids: string[]): Promise<Event[]> {
+    this.logger.debug(`Getting events by IDs: ${ids.join(', ')}`);
+    
+    // Wenn keine IDs übergeben wurden, geben wir ein leeres Array zurück
+    if (!ids || ids.length === 0) {
+      return [];
+    }
+    
+    // Jedes Event einzeln abrufen (Firestore unterstützt kein "IN"-Query für Dokument-IDs)
+    const eventPromises = ids.map(id => this.getById(id));
+    const events = await Promise.all(eventPromises);
+    
+    // Null-Werte entfernen (für den Fall, dass einige Events nicht gefunden wurden)
+    return events.filter((event): event is Event => event !== null);
   }
 } 
