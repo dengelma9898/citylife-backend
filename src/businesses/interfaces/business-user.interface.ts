@@ -6,4 +6,5 @@ export interface BusinessUser {
   updatedAt: string;
   isDeleted: boolean;
   needsReview: boolean;
+  eventIds?: string[];
 } 

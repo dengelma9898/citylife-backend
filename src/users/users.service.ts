@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction } from 'firebase/firestore';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
@@ -12,7 +12,10 @@ import { EventsService } from '../events/events.service';
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    @Inject(forwardRef(() => EventsService))
+    private readonly eventsService: EventsService
+  ) {}
 
   public async getAll(): Promise<UserProfile[]> {
     const db = getFirestore();
@@ -267,5 +270,34 @@ export class UsersService {
     
     // BusinessUser aktualisieren
     return this.updateBusinessUser(userId, { businessIds: updatedBusinessIds });
+  }
+
+  /**
+   * Fügt eine Event-ID zur Liste der eventIds eines BusinessUsers hinzu
+   * 
+   * @param userId - Die ID des BusinessUsers
+   * @param eventId - Die ID des Events, das hinzugefügt werden soll
+   * @returns Der aktualisierte BusinessUser
+   */
+  public async addEventToUser(userId: string, eventId: string): Promise<BusinessUser> {
+    this.logger.debug(`Adding event ${eventId} to user ${userId}`);
+    const businessUser = await this.getBusinessUser(userId);
+    
+    if (!businessUser) {
+      throw new NotFoundException('Business user not found');
+    }
+    
+    // Überprüfen, ob die Event-ID bereits vorhanden ist
+    const currentEventIds = businessUser.eventIds || [];
+    if (currentEventIds.includes(eventId)) {
+      this.logger.debug(`Event ${eventId} already in user's list`);
+      return businessUser;
+    }
+    
+    // Event-ID hinzufügen
+    const updatedEventIds = [...currentEventIds, eventId];
+    
+    // BusinessUser aktualisieren
+    return this.updateBusinessUser(userId, { eventIds: updatedEventIds });
   }
 } 

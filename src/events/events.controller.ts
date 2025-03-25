@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch, UseInterceptors, UploadedFile, Delete, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch, UseInterceptors, UploadedFile, Delete, UploadedFiles, Inject, forwardRef, Query } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
+import { UsersService } from '../users/users.service';
 
 @Controller('events')
 export class EventsController {
@@ -12,7 +13,9 @@ export class EventsController {
 
   constructor(
     private readonly eventsService: EventsService,
-    private readonly firebaseStorageService: FirebaseStorageService
+    private readonly firebaseStorageService: FirebaseStorageService,
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService
   ) {}
 
   @Get()
@@ -177,5 +180,83 @@ export class EventsController {
     
     // Update the event
     return this.eventsService.update(eventId, { imageUrls: updatedImageUrls });
+  }
+
+  /**
+   * Erstellt ein neues Event für einen bestimmten Business-User
+   * 
+   * @param userId - Die ID des Business-Users, für den das Event erstellt werden soll
+   * @param createEventDto - Die Daten für das neue Event
+   * @returns Das erstellte Event
+   */
+  @Post('users/:id')
+  public async createEventForUser(
+    @Param('id') userId: string,
+    @Body() createEventDto: CreateEventDto
+  ): Promise<Event> {
+    this.logger.log(`POST /events/users/${userId}`);
+    
+    // Überprüfen, ob der User existiert
+    const businessUser = await this.usersService.getBusinessUser(userId);
+    if (!businessUser) {
+      throw new NotFoundException(`Geschäftsbenutzer mit ID ${userId} wurde nicht gefunden`);
+    }
+    
+    // Event erstellen
+    const createdEvent = await this.eventsService.create(createEventDto);
+    
+    // Event-ID zum User hinzufügen
+    await this.usersService.addEventToUser(userId, createdEvent.id);
+    
+    return createdEvent;
+  }
+
+  /**
+   * Gibt alle Events eines Business-Users zurück
+   * 
+   * @param userId - Die ID des Business-Users
+   * @returns Array von Events, die dem Business-User zugeordnet sind
+   */
+  @Get('users/:id')
+  public async getEventsByUserId(@Param('id') userId: string): Promise<Event[]> {
+    this.logger.log(`GET /events/users/${userId}`);
+    
+    // Überprüfen, ob der User existiert
+    const businessUser = await this.usersService.getBusinessUser(userId);
+    if (!businessUser) {
+      throw new NotFoundException(`Geschäftsbenutzer mit ID ${userId} wurde nicht gefunden`);
+    }
+    
+    // Wenn keine Events vorhanden sind, geben wir ein leeres Array zurück
+    if (!businessUser.eventIds || businessUser.eventIds.length === 0) {
+      return [];
+    }
+    
+    // Events basierend auf den IDs im Benutzer-Dokument abrufen
+    return this.eventsService.getByIds(businessUser.eventIds);
+  }
+
+  /**
+   * Gibt Events basierend auf einer Liste von IDs zurück
+   * 
+   * @param ids - Durch Komma getrennte Liste von Event-IDs
+   * @returns Array von Events, die den angegebenen IDs entsprechen
+   */
+  @Get('by-ids')
+  public async getByIds(@Query('ids') idsString: string): Promise<Event[]> {
+    this.logger.log(`GET /events/by-ids?ids=${idsString}`);
+    
+    if (!idsString) {
+      return [];
+    }
+    
+    // Durch Komma getrennte IDs in ein Array umwandeln
+    const ids = idsString.split(',').map(id => id.trim()).filter(id => id);
+    
+    if (ids.length === 0) {
+      return [];
+    }
+    
+    return this.eventsService.getByIds(ids);
   }
 } 

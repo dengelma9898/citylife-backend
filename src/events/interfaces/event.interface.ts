@@ -15,5 +15,5 @@ export interface Event {
   updatedAt: string;
   favoriteCount?: number;
   ticketsNeeded?: boolean;
-  price?: string;
+  price?: number;
 } 
