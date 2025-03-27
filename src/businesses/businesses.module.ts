@@ -6,13 +6,15 @@ import { UsersModule } from '../users/users.module';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { BusinessCategoriesModule } from '../business-categories/business-categories.module';
 import { KeywordsModule } from '../keywords/keywords.module';
+import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [
     FirebaseModule,
     forwardRef(() => UsersModule),
     BusinessCategoriesModule,
-    KeywordsModule
+    KeywordsModule,
+    forwardRef(() => EventsModule)
   ],
   controllers: [BusinessesController],
   providers: [BusinessesService, FirebaseStorageService],

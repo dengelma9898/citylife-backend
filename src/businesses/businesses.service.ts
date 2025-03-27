@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
-import { Business, BusinessResponse } from './interfaces/business.interface';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { Business, BusinessResponse, BusinessListResponse } from './interfaces/business.interface';
 import { BusinessCategory } from './interfaces/business-category.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateBusinessDto } from './dto/create-business.dto';
@@ -10,6 +10,7 @@ import { BusinessCustomer } from './interfaces/business-customer.interface';
 import { UserAdapterService } from '../users/services/user-adapter.service';
 import { BusinessCategoriesService } from '../business-categories/business-categories.service';
 import { KeywordsService } from '../keywords/keywords.service';
+import { EventsService } from '../events/events.service';
 
 interface BusinessStatusFilter {
   hasAccount: boolean;
@@ -23,43 +24,77 @@ export class BusinessesService {
   constructor(
     private readonly userAdapter: UserAdapterService,
     private readonly businessCategoriesService: BusinessCategoriesService,
-    private readonly keywordsService: KeywordsService
+    private readonly keywordsService: KeywordsService,
+    private readonly eventsService: EventsService
   ) {}
 
-  public async getAll(): Promise<BusinessResponse[]> {
-    this.logger.debug('Fetching all businesses from Firestore');
+  public async getAll(): Promise<BusinessListResponse[]> {
+    this.logger.debug('Getting all businesses');
     const db = getFirestore();
     const businessesCol = collection(db, 'businesses');
     const snapshot = await getDocs(businessesCol);
-    this.logger.debug(`Found ${snapshot.docs.length} businesses`);
     
     const businesses = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as Business));
-    
-    return this.mapBusinessesToResponse(businesses);
+
+    // Kategorien und Keywords für alle Businesses laden
+    const businessesWithDetails = await Promise.all(
+      businesses.map(async (business) => {
+        const category = await this.businessCategoriesService.getById(business.categoryId);
+        const keywordNames = await this.getKeywordNames(business.keywordIds || []);
+
+        return {
+          ...business,
+          category: {
+            id: category?.id || '',
+            name: category?.name || '',
+            iconName: category?.iconName || ''
+          },
+          keywordNames
+        } as BusinessListResponse;
+      })
+    );
+
+    return businessesWithDetails;
   }
 
   public async getById(id: string): Promise<BusinessResponse | null> {
-    this.logger.debug(`Fetching business with id ${id} from Firestore`);
+    this.logger.debug(`Getting business ${id}`);
     const db = getFirestore();
     const docRef = doc(db, 'businesses', id);
     const docSnap = await getDoc(docRef);
     
     if (!docSnap.exists()) {
-      this.logger.debug(`Business with id ${id} not found`);
       return null;
     }
 
-    this.logger.debug(`Found business with id ${id}`);
     const business = {
       id: docSnap.id,
       ...docSnap.data()
     } as Business;
-    
-    const [businessResponse] = await this.mapBusinessesToResponse([business]);
-    return businessResponse;
+
+    // Kategorie und Keywords laden
+    const category = await this.businessCategoriesService.getById(business.categoryId);
+    const keywordNames = await this.getKeywordNames(business.keywordIds || []);
+
+    // Events laden, wenn vorhanden
+    let events;
+    if (business.eventIds && business.eventIds.length > 0) {
+      events = await this.eventsService.getByIds(business.eventIds);
+    }
+
+    return {
+      ...business,
+      category: {
+        id: category?.id || '',
+        name: category?.name || '',
+        iconName: category?.iconName || ''
+      },
+      keywordNames,
+      events
+    } as BusinessResponse;
   }
 
   private async mapBusinessesToResponse(businesses: Business[]): Promise<BusinessResponse[]> {
@@ -318,5 +353,13 @@ export class BusinessesService {
       business.hasAccount === filter.hasAccount && 
       business.status === filter.status
     );
+  }
+
+  private async getKeywordNames(keywordIds: string[]): Promise<string[]> {
+    const keywordPromises = keywordIds.map(id => this.keywordsService.getById(id));
+    const keywords = await Promise.all(keywordPromises);
+    return keywords
+      .filter(keyword => keyword !== null)
+      .map(keyword => keyword.name);
   }
 } 

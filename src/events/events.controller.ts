@@ -6,6 +6,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersService } from '../users/users.service';
+import { BusinessesService } from '../businesses/businesses.service';
 
 @Controller('events')
 export class EventsController {
@@ -15,7 +16,8 @@ export class EventsController {
     private readonly eventsService: EventsService,
     private readonly firebaseStorageService: FirebaseStorageService,
     @Inject(forwardRef(() => UsersService))
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
+    private readonly businessesService: BusinessesService
   ) {}
 
   @Get()
@@ -258,5 +260,60 @@ export class EventsController {
     }
     
     return this.eventsService.getByIds(ids);
+  }
+
+  /**
+   * Erstellt ein neues Event für ein bestimmtes Business
+   * 
+   * @param businessId - Die ID des Businesses, für das das Event erstellt werden soll
+   * @param createEventDto - Die Daten für das neue Event
+   * @returns Das erstellte Event
+   */
+  @Post('businesses/:id')
+  public async createEventForBusiness(
+    @Param('id') businessId: string,
+    @Body() createEventDto: CreateEventDto
+  ): Promise<Event> {
+    this.logger.log(`POST /events/businesses/${businessId}`);
+    
+    // Überprüfen, ob das Business existiert
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
+      throw new NotFoundException(`Business mit ID ${businessId} wurde nicht gefunden`);
+    }
+    
+    // Event erstellen
+    const createdEvent = await this.eventsService.create(createEventDto);
+    
+    // Event-ID zum Business hinzufügen
+    const eventIds = [...(business.eventIds || []), createdEvent.id];
+    await this.businessesService.update(businessId, { eventIds });
+    
+    return createdEvent;
+  }
+
+  /**
+   * Gibt alle Events eines Businesses zurück
+   * 
+   * @param businessId - Die ID des Businesses
+   * @returns Array von Events, die dem Business zugeordnet sind
+   */
+  @Get('businesses/:id')
+  public async getEventsByBusinessId(@Param('id') businessId: string): Promise<Event[]> {
+    this.logger.log(`GET /events/businesses/${businessId}`);
+    
+    // Überprüfen, ob das Business existiert
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
+      throw new NotFoundException(`Business mit ID ${businessId} wurde nicht gefunden`);
+    }
+    
+    // Wenn keine Events vorhanden sind, geben wir ein leeres Array zurück
+    if (!business.eventIds || business.eventIds.length === 0) {
+      return [];
+    }
+    
+    // Events basierend auf den IDs im Business-Dokument abrufen
+    return this.eventsService.getByIds(business.eventIds);
   }
 } 
