@@ -31,6 +31,15 @@ export class UsersController {
     return this.usersService.getBusinessUsersNeedsReview();
   }
 
+  @Get('business-users/needs-review/count')
+  public async getPendingBusinessUserReviewsCount(): Promise<{ count: number }> {
+    this.logger.log('GET /users/business-users/needs-review/count');
+    
+    const count = await this.usersService.getBusinessUsersNeedsReviewCount();
+    
+    return { count };
+  }
+
   @Get(':id/profile')
   public async getProfile(@Param('id') id: string): Promise<UserProfile | BusinessUser> {
     this.logger.log(`GET /users/${id}/profile`);

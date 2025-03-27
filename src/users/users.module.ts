@@ -6,12 +6,14 @@ import { CitiesModule } from '../cities/cities.module';
 import { UserAdapterService } from './services/user-adapter.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { EventsModule } from '../events/events.module';
+import { BusinessesModule } from '../businesses/businesses.module';
 
 @Module({
   imports: [
     FirebaseModule,
     CitiesModule,
     forwardRef(() => EventsModule),
+    forwardRef(() => BusinessesModule),
   ],
   providers: [
     UsersService,

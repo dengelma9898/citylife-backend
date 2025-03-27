@@ -3,10 +3,13 @@ import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, dele
 import { BusinessCategory } from './interfaces/business-category.interface';
 import { CreateBusinessCategoryDto } from './dto/create-business-category.dto';
 import { UpdateBusinessCategoryDto } from './dto/update-business-category.dto';
+import { KeywordsService } from '../keywords/keywords.service';
 
 @Injectable()
 export class BusinessCategoriesService {
   private readonly logger = new Logger(BusinessCategoriesService.name);
+
+  constructor(private readonly keywordsService: KeywordsService) {}
 
   public async getAll(): Promise<BusinessCategory[]> {
     this.logger.debug('Getting all business categories');
@@ -91,5 +94,35 @@ export class BusinessCategoriesService {
     }
 
     await deleteDoc(docRef);
+  }
+
+  /**
+   * Holt alle Business-Kategorien und lädt die zugehörigen Keywords
+   */
+  public async getAllWithKeywords(): Promise<BusinessCategory[]> {
+    const categories = await this.getAll();
+    console.log('getAllWithKeywords categories', categories);
+    // Kategorien mit Keywords anreichern
+    const categoriesWithKeywords = await Promise.all(
+      categories.map(async (category) => {
+        if (category.keywordIds && category.keywordIds.length > 0) {
+          // Keywords über den KeywordsService laden
+          const keywords = await Promise.all(
+            category.keywordIds.map(id => this.keywordsService.getById(id))
+          );
+
+          return {
+            ...category,
+            keywords: keywords.filter(keyword => keyword !== null)
+          };
+        }
+        return {
+          ...category,
+          keywords: []
+        };
+      })
+    );
+
+    return categoriesWithKeywords;
   }
 } 

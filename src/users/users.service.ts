@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { UserType } from './enums/user-type.enum';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { EventsService } from '../events/events.service';
+import { BusinessesService } from '../businesses/businesses.service';
 
 @Injectable()
 export class UsersService {
@@ -14,7 +15,9 @@ export class UsersService {
 
   constructor(
     @Inject(forwardRef(() => EventsService))
-    private readonly eventsService: EventsService
+    private readonly eventsService: EventsService,
+    @Inject(forwardRef(() => BusinessesService))
+    private readonly businessesService: BusinessesService
   ) {}
 
   public async getAll(): Promise<UserProfile[]> {
@@ -24,17 +27,48 @@ export class UsersService {
     return snapshot.docs.map(doc => doc.data() as UserProfile);
   }
 
-  public async getBusinessUsersNeedsReview(): Promise<BusinessUser[]> {
+  public async getBusinessUsersNeedsReview(): Promise<(BusinessUser & { businessNames: string[] })[]> {
     this.logger.debug('Getting business users that need review');
     const db = getFirestore();
     const businessUsersCol = collection(db, 'business_users');
     const q = query(businessUsersCol, where('needsReview', '==', true), where('isDeleted', '==', false));
     const snapshot = await getDocs(q);
     
-    return snapshot.docs.map(doc => ({
+    const businessUsers = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as BusinessUser));
+
+    // Für jeden BusinessUser die Business-Namen laden
+    const businessUsersWithNames = await Promise.all(
+      businessUsers.map(async (user) => {
+        const businessNames = await Promise.all(
+          user.businessIds.map(async (businessId) => {
+            const business = await this.businessesService.getById(businessId);
+            return business?.name || 'Unbekanntes Business';
+          })
+        );
+
+        return {
+          ...user,
+          businessNames
+        };
+      })
+    );
+
+    return businessUsersWithNames;
+  }
+
+  public async getBusinessUsersNeedsReviewCount(): Promise<number> {
+    this.logger.debug('Getting count of business users that need review');
+    const db = getFirestore();
+    const businessUsersCol = collection(db, 'business_users');
+    const snapshot = await getDocs(businessUsersCol);
+    
+    return snapshot.docs.filter(doc => {
+      const data = doc.data();
+      return data.needsReview === true && !data.isDeleted;
+    }).length;
   }
 
   public async getById(id: string): Promise<UserProfile | BusinessUser | null> {

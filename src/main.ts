@@ -10,6 +10,16 @@ async function bootstrap(): Promise<void> {
     transform: true,
   }));
   
+  app.enableCors({
+    origin: [
+      'https://citylife-fe75a.web.app',  // Production Frontend
+      'http://localhost:5174',           // Local Frontend (falls benötigt)
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
+  
   await app.listen(3000);
 }
 

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BusinessesController } from './businesses.controller';
 import { BusinessesService } from './businesses.service';
 import { FirebaseModule } from '../firebase/firebase.module';
@@ -10,7 +10,7 @@ import { KeywordsModule } from '../keywords/keywords.module';
 @Module({
   imports: [
     FirebaseModule,
-    UsersModule,
+    forwardRef(() => UsersModule),
     BusinessCategoriesModule,
     KeywordsModule
   ],

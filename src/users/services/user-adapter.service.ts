@@ -1,12 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { UsersService } from '../../users/users.service';
-import { BusinessHistory } from '../../users/interfaces/business-history.interface';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { UsersService } from '../users.service';
+import { BusinessHistory } from '../interfaces/business-history.interface';
 
 @Injectable()
 export class UserAdapterService {
   private readonly logger = new Logger(UserAdapterService.name);
 
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService
+  ) {}
 
   public async addBusinessToHistory(userId: string, businessId: string, businessName: string, benefit: string): Promise<void> {
     this.logger.debug(`Adding business ${businessId} to history of user ${userId}`);
