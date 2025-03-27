@@ -11,6 +11,11 @@ import { UserAdapterService } from '../users/services/user-adapter.service';
 import { BusinessCategoriesService } from '../business-categories/business-categories.service';
 import { KeywordsService } from '../keywords/keywords.service';
 
+interface BusinessStatusFilter {
+  hasAccount: boolean;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+}
+
 @Injectable()
 export class BusinessesService {
   private readonly logger = new Logger(BusinessesService.name);
@@ -155,12 +160,12 @@ export class BusinessesService {
       keywordIds: data.keywordIds || [],
       description: data.description,
       contact: {
-        email: data.contact.email,
-        phoneNumber: data.contact.phoneNumber,
-        instagram: data.contact.instagram,
-        facebook: data.contact.facebook,
-        tiktok: data.contact.tiktok,
-        website: data.contact.website
+        email: data.contact.email || '',
+        phoneNumber: data.contact.phoneNumber || '',
+        instagram: data.contact.instagram || '',
+        facebook: data.contact.facebook || '',
+        tiktok: data.contact.tiktok || '',
+        website: data.contact.website || ''
       },
       address: {
         street: data.address.street,
@@ -172,7 +177,7 @@ export class BusinessesService {
       },
       logoUrl: '',
       imageUrls: [],
-      openingHours: data.openingHours,
+      openingHours: data.openingHours || {},
       benefit: data.benefit,
       status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING,
       customers: [],
@@ -234,7 +239,7 @@ export class BusinessesService {
         throw new NotFoundException(`Keyword with id ${data.keywordIds[missingKeywords]} not found`);
       }
     }
-
+    console.log('update data', data);
     const updateData = {
       ...data,
       updatedAt: new Date().toISOString()
@@ -299,5 +304,19 @@ export class BusinessesService {
       throw new NotFoundException(`Business with id ${businessId} not found after scan update`);
     }
     return updatedBusiness;
+  }
+
+  /**
+   * Holt alle Businesses mit bestimmtem Status und hasAccount-Wert
+   */
+  public async getBusinessesByStatus(filter: BusinessStatusFilter): Promise<BusinessResponse[]> {
+    this.logger.debug(`Getting businesses with status ${filter.status} and hasAccount ${filter.hasAccount}`);
+    
+    const businesses = await this.getAll();
+    
+    return businesses.filter(business => 
+      business.hasAccount === filter.hasAccount && 
+      business.status === filter.status
+    );
   }
 } 

@@ -11,12 +11,7 @@ import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { IsBoolean, IsNotEmpty } from 'class-validator';
 import { UsersService } from '../users/users.service';
-
-// Erstelle ein DTO für die NuernbergspotsReview
-class NuernbergspotsReviewDto {
-  reviewText?: string;
-  reviewImageUrls?: string[];
-}
+import { NuernbergspotsReviewDto } from './dto/nuernbergspots-review.dto';
 
 @Controller('businesses')
 @UseGuards(AuthGuard)
@@ -72,6 +67,7 @@ export class BusinessesController {
     @Body() patchData: Partial<Business>
   ): Promise<BusinessResponse> {
     this.logger.log(`PATCH /businesses/${id}`);
+    console.log('patchData', patchData);
     return this.businessesService.patch(id, patchData);
   }
 
@@ -188,10 +184,10 @@ export class BusinessesController {
   @Patch(':id/nuernbergspots-review')
   public async updateNuernbergspotsReview(
     @Param('id') businessId: string,
-    @Body() reviewData: NuernbergspotsReviewDto
+    @Body() reviewData: Partial<NuernbergspotsReviewDto>
   ): Promise<BusinessResponse> {
     this.logger.log(`PATCH /businesses/${businessId}/nuernbergspots-review`);
-    
+    console.log('reviewData', reviewData);
     // Get current business
     const business = await this.businessesService.getById(businessId);
     if (!business) {
@@ -200,8 +196,8 @@ export class BusinessesController {
 
     // Create or update the review
     const review: NuernbergspotsReview = {
-      reviewText: reviewData.reviewText,
-      reviewImageUrls: reviewData.reviewImageUrls,
+      reviewText: reviewData.reviewText || '',
+      reviewImageUrls: reviewData.reviewImageUrls || [],
       updatedAt: new Date().toISOString()
     };
 
@@ -210,7 +206,7 @@ export class BusinessesController {
   }
 
   @Post(':id/nuernbergspots-review/images')
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(FilesInterceptor('images', 10))
   public async uploadReviewImages(
     @Param('id') businessId: string,
     @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
@@ -262,7 +258,7 @@ export class BusinessesController {
     @Body('imageUrl') imageUrl: string
   ): Promise<BusinessResponse> {
     this.logger.log(`DELETE /businesses/${businessId}/nuernbergspots-review/images`);
-    
+    console.log('removeReviewImage imageUrl', imageUrl);
     if (!imageUrl) {
       throw new BadRequestException('Image URL is required');
     }
@@ -347,5 +343,25 @@ export class BusinessesController {
     await this.usersService.addBusinessToUser(userId, createdBusiness.id);
     
     return createdBusiness;
+  }
+
+  /**
+   * Gibt die Anzahl der Businesses zurück, die auf Freigabe warten
+   * (hasAccount = true und status = PENDING)
+   * 
+   * @returns Die Anzahl der wartenden Business-Genehmigungen
+   */
+  @Get('pending-approvals/count')
+  public async getPendingApprovalsCount(): Promise<{ count: number }> {
+    this.logger.log('GET /businesses/pending-approvals/count');
+    
+    const pendingBusinesses = await this.businessesService.getBusinessesByStatus({
+      hasAccount: true,
+      status: 'PENDING'
+    });
+    
+    return { 
+      count: pendingBusinesses.length 
+    };
   }
 } 

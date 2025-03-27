@@ -16,6 +16,16 @@ export class BusinessCategoriesController {
     return this.businessCategoriesService.getAll();
   }
 
+  /**
+   * Temporärer Endpunkt, der Business-Kategorien inklusive ihrer Keywords zurückgibt
+   * @deprecated Dieser Endpunkt ist temporär und wird in Zukunft entfernt
+   */
+  @Get('with-keywords')
+  public async getAllWithKeywords(): Promise<BusinessCategory[]> {
+    this.logger.log('GET /business-categories/with-keywords');
+    return this.businessCategoriesService.getAllWithKeywords();
+  }
+
   @Get(':id')
   public async getById(@Param('id') id: string): Promise<BusinessCategory> {
     this.logger.log(`GET /business-categories/${id}`);
@@ -46,4 +56,6 @@ export class BusinessCategoriesController {
     this.logger.log(`DELETE /business-categories/${id}`);
     return this.businessCategoriesService.delete(id);
   }
+
+
 } 
