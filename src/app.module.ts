@@ -15,6 +15,7 @@ import { ChatroomsModule } from './chatrooms/chatrooms.module';
 import { KeywordsModule } from './keywords/keywords.module';
 import { BusinessCategoriesModule } from './business-categories/business-categories.module';
 import { LocationModule } from './location/location.module';
+import { EventCategoriesModule } from './event-categories/event-categories.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { LocationModule } from './location/location.module';
     KeywordsModule,
     BusinessCategoriesModule,
     LocationModule,
+    EventCategoriesModule
   ],
   providers: [
     {
