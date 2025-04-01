@@ -52,6 +52,7 @@ export class EventsService {
       titleImageUrl: '',
       ticketsNeeded: data.ticketsNeeded || false,
       price: data.price || 0,
+      categoryId: data.categoryId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -74,7 +75,7 @@ export class EventsService {
     if (!docSnap.exists()) {
       throw new NotFoundException('Event not found');
     }
-
+    console.log('update event data', data);
     const updateData = {
       ...data,
       updatedAt: new Date().toISOString()

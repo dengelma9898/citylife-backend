@@ -16,4 +16,5 @@ export interface Event {
   favoriteCount?: number;
   ticketsNeeded?: boolean;
   price?: number;
+  categoryId: string;
 } 
