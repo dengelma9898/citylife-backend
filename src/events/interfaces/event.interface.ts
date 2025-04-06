@@ -17,4 +17,12 @@ export interface Event {
   ticketsNeeded?: boolean;
   price?: number;
   categoryId: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  website?: string;
+  socialMedia?: {
+    instagram?: string;
+    facebook?: string;
+    tiktok?: string;
+  };
 } 

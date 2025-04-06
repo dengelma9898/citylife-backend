@@ -53,6 +53,14 @@ export class EventsService {
       ticketsNeeded: data.ticketsNeeded || false,
       price: data.price || 0,
       categoryId: data.categoryId,
+      contactEmail: data.contactEmail,
+      contactPhone: data.contactPhone,
+      website: data.website,
+      socialMedia: {
+        instagram: data.instagram,
+        facebook: data.facebook,
+        tiktok: data.tiktok
+      },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

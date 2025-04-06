@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, IsDateString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsDateString, IsOptional, IsBoolean, IsEmail, IsUrl, Matches } from 'class-validator';
 
 export class CreateEventDto {
   @IsString()
@@ -36,4 +36,40 @@ export class CreateEventDto {
   @IsString()
   @IsNotEmpty()
   public readonly categoryId: string;
+
+  @IsOptional()
+  @IsEmail()
+  public readonly contactEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/, {
+    message: 'Ungültiges Telefonnummer-Format'
+  })
+  public readonly contactPhone?: string;
+
+  @IsOptional()
+  @IsUrl()
+  public readonly website?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-zA-Z0-9._]{1,30}$/, {
+    message: 'Ungültiges Instagram-Format'
+  })
+  public readonly instagram?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-zA-Z0-9.]{5,50}$/, {
+    message: 'Ungültiges Facebook-Format'
+  })
+  public readonly facebook?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-zA-Z0-9._]{2,24}$/, {
+    message: 'Ungültiges TikTok-Format'
+  })
+  public readonly tiktok?: string;
 } 
