@@ -316,19 +316,16 @@ export class BusinessesService {
     const businessData = docSnap.data() as Business;
     
     const customers = businessData.customers || [];
-    
-    const customerIndex = customers.findIndex(c => c.customerId === scanData.customerId);
-    
-    if (customerIndex === -1) {
-      const newCustomer: BusinessCustomer = {
-        customerId: scanData.customerId,
-        scannedAt: new Date().toISOString()
-      };
-      customers.push(newCustomer);
-    } else {
-      customers[customerIndex].scannedAt = new Date().toISOString();
-    }
-    
+  
+    customers.push({
+      customerId: scanData.customerId,
+      scannedAt: new Date().toISOString(),
+      benefit: businessData.benefit,
+      price: scanData.price,
+      numberOfPeople: scanData.numberOfPeople,
+      additionalInfo: scanData.additionalInfo
+    });
+
     await updateDoc(docRef, { 
       customers,
       updatedAt: new Date().toISOString()
