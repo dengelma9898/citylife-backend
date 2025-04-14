@@ -9,6 +9,8 @@ on:
 env:
   REGISTRY: docker.io
   IMAGE_NAME: dengelma/nuernbergspots-test
+  SERVER_HOST: 87.106.208.51
+  SERVER_USER: root
 
 jobs:
   build-and-push:
@@ -46,4 +48,22 @@ jobs:
           build-args: |
             NODE_ENV=test
             PORT=3000
-          platforms: linux/amd64 
+          platforms: linux/amd64
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker stop nuernbergspots-test
+            docker rm nuernbergspots-test
+            docker pull ${{ env.IMAGE_NAME }}:latest
+            docker run -d \
+              --name nuernbergspots-test \
+              -p 3000:3000 \
+              --restart unless-stopped \
+              -e PORT=3000 \
+              -e NODE_ENV=test \
+              ${{ env.IMAGE_NAME }}:latest 
