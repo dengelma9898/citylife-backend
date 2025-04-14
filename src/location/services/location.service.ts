@@ -5,17 +5,9 @@ import { LocationResult } from '../interfaces/location-result.interface';
 @Injectable()
 export class LocationService {
   private readonly logger = new Logger(LocationService.name);
-  private readonly hereAppId: string;
-  private readonly hereApiKey: string;
+  private readonly HERE_API_URL = 'https://geocode.search.hereapi.com/v1/geocode';
 
-  constructor(private readonly configService: ConfigService) {
-    this.hereAppId = this.configService.get<string>('HERE_APP_ID') || '';
-    this.hereApiKey = this.configService.get<string>('HERE_API_KEY') || '';
-    
-    if (!this.hereApiKey) {
-      this.logger.warn('HERE_API_KEY is not set in environment variables');
-    }
-  }
+  constructor(private readonly configService: ConfigService) {}
 
   /**
    * Sucht nach Adressen basierend auf dem Suchbegriff
@@ -24,36 +16,31 @@ export class LocationService {
    * @returns Array von LocationResults mit gefundenen Adressen
    */
   public async searchLocations(searchQuery: string): Promise<LocationResult[]> {
-    this.logger.debug(`Searching for locations with query: ${searchQuery}`);
-    
-    if (!this.hereApiKey) {
-      this.logger.error('HERE_API_KEY is missing. Cannot perform location search.');
-      return [];
+    this.logger.log(`Searching locations for query: ${searchQuery}`);
+
+    const appId = this.configService.get<string>('HERE_APP_ID');
+    const apiKey = this.configService.get<string>('HERE_API_KEY');
+
+    if (!appId || !apiKey) {
+      throw new Error('HERE API credentials are not configured');
     }
-    
+
+    const url = new URL(this.HERE_API_URL);
+    url.searchParams.append('q', searchQuery);
+    url.searchParams.append('apiKey', apiKey);
+
     try {
-      const response = await fetch(
-        `https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(searchQuery)}&apiKey=${this.hereApiKey}&lang=de`,
-        {
-          headers: {
-            'Accept-Language': 'de'
-          }
-        }
-      );
-      
+      const response = await fetch(url.toString());
       if (!response.ok) {
-        this.logger.error(`HERE API error: ${response.status} ${response.statusText}`);
-        return [];
+        throw new Error(`HERE API responded with status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
       this.logger.debug(`Found ${data.items?.length || 0} location results`);
-      
       return data.items || [];
     } catch (error) {
       this.logger.error(`Error searching locations: ${error.message}`);
-      return [];
+      throw error;
     }
   }
 } 

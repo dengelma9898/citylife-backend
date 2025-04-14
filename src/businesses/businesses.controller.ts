@@ -1,9 +1,8 @@
-import { Controller, Get, Param, NotFoundException, Logger, UseGuards, Post, Body, Put, Patch, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException, Delete } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Logger, Post, Body, Put, Patch, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException, Delete } from '@nestjs/common';
 import { BusinessesService } from './businesses.service';
 import { Business, BusinessResponse, NuernbergspotsReview } from './interfaces/business.interface';
 import { BusinessCategory } from './interfaces/business-category.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
-import { AuthGuard } from '../core/guards/auth.guard';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { BusinessCustomerDto } from './dto/business-customer.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
@@ -14,7 +13,6 @@ import { UsersService } from '../users/users.service';
 import { NuernbergspotsReviewDto } from './dto/nuernbergspots-review.dto';
 
 @Controller('businesses')
-@UseGuards(AuthGuard)
 export class BusinessesController {
   private readonly logger = new Logger(BusinessesController.name);
 
