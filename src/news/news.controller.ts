@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch, BadRequestException, UseInterceptors, UploadedFiles, UploadedFile, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch, BadRequestException, UseInterceptors, UploadedFiles, UploadedFile, Delete, Request } from '@nestjs/common';
 import { NewsService } from './news.service';
 import { NewsItem, TextNewsItem, ImageNewsItem, PollNewsItem, AudioNewsItem, SurveyNewsItem } from './interfaces/news-item.interface';
 import { CreateReactionDto } from './dto/create-reaction.dto';
@@ -11,10 +11,7 @@ import { VoteSurveyDto } from './dto/vote-survey.dto';
 import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
-import { AuthGuard } from '../core/guards/auth.guard';
 import { CreateTextNewsDto } from './dto/create-text-news.dto';
-import { UpdateImagesDto } from './dto/update-images.dto';
-
 
 @Controller('news')
 export class NewsController {
@@ -49,7 +46,6 @@ export class NewsController {
   }
 
   @Post('text')
-  @UseGuards(AuthGuard)
   public async createTextNews(
     @Body() createTextNewsDto: CreateTextNewsDto
   ): Promise<TextNewsItem> {
@@ -58,7 +54,6 @@ export class NewsController {
   }
 
   @Post('image')
-  @UseGuards(AuthGuard)
   public async createImageNews(
     @Body() createImageNewsDto: CreateImageNewsDto
   ): Promise<ImageNewsItem> {
@@ -69,7 +64,6 @@ export class NewsController {
   }
 
   @Post('audio')
-  @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('audio'))
   public async createAudioNews(
     @Body() createAudioNewsDto: CreateAudioNewsDto,
@@ -90,7 +84,6 @@ export class NewsController {
   }
 
   @Post('poll')
-  @UseGuards(AuthGuard)
   public async createPollNews(
     @Body() createPollNewsDto: CreatePollNewsDto,
   ): Promise<PollNewsItem> {
@@ -99,7 +92,6 @@ export class NewsController {
   }
 
   @Post('survey')
-  @UseGuards(AuthGuard)
   public async createSurveyNews(
     @Body() createSurveyNewsDto: CreateSurveyNewsDto,
   ): Promise<SurveyNewsItem> {
@@ -108,7 +100,6 @@ export class NewsController {
   }
 
   @Patch(':id/poll-vote')
-  @UseGuards(AuthGuard)
   public async votePoll(
     @Param('id') id: string,
     @Body() voteData: VotePollDto,
@@ -118,7 +109,6 @@ export class NewsController {
   }
 
   @Post(':id/survey-vote')
-  @UseGuards(AuthGuard)
   public async voteSurvey(
     @Param('id') id: string,
     @Body() voteData: VoteSurveyDto,
@@ -128,7 +118,6 @@ export class NewsController {
   }
 
   @Patch(':id/react')
-  @UseGuards(AuthGuard)
   public async postReaction(
     @Param('id') id: string,
     @Body() createReactionDto: CreateReactionDto
@@ -138,14 +127,12 @@ export class NewsController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard)
   public async delete(@Param('id') id: string): Promise<void> {
     this.logger.log(`DELETE /news/${id}`);
     return this.newsService.delete(id);
   }
 
   @Put(':id')
-  @UseGuards(AuthGuard)
   public async update(
     @Param('id') id: string,
     @Body() updateData: Partial<NewsItem>
@@ -161,7 +148,6 @@ export class NewsController {
   }
 
   @Patch(':id/images')
-  @UseGuards(AuthGuard)
   @UseInterceptors(FilesInterceptor('images', 5))
   public async updateNewsImages(
     @Param('id') id: string,

@@ -1,5 +1,4 @@
 import { Injectable, CanActivate, ExecutionContext, Logger, UnauthorizedException } from '@nestjs/common';
-import { Observable } from 'rxjs';
 import * as admin from 'firebase-admin';
 
 @Injectable()
