@@ -108,3 +108,9 @@ Die folgenden Umgebungsvariablen können beim Start des Containers übergeben we
 - `ENV_FILE`: Die zu verwendende .env-Datei (.env für Test, .env.prod für Produktion)
 
 Alle anderen Umgebungsvariablen werden aus der angegebenen .env-Datei geladen.
+
+## Check container logs
+
+```bash
+docker logs nuernbergspots-test
+```
