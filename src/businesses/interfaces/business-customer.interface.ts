@@ -12,17 +12,17 @@ export interface BusinessCustomer {
   /**
    * Optionaler Preis, der bezahlt wurde
    */
-  price?: number;
+  price?: number | null;
 
   /**
    * Optionale Anzahl der Personen
    */
-  numberOfPeople?: number;
+  numberOfPeople?: number | null;
 
   /**
    * Optionale Zusatzinformationen
    */
-  additionalInfo?: string;
+  additionalInfo?: string | null;
 
   /**
    * Das aktuelle Benefit des Businesses zum Zeitpunkt des Scans

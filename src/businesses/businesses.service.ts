@@ -317,14 +317,18 @@ export class BusinessesService {
     
     const customers = businessData.customers || [];
   
-    customers.push({
+    const newCustomer: BusinessCustomer = {
       customerId: scanData.customerId,
       scannedAt: new Date().toISOString(),
       benefit: businessData.benefit,
-      price: scanData.price,
-      numberOfPeople: scanData.numberOfPeople,
-      additionalInfo: scanData.additionalInfo
-    });
+      price: scanData.price || null,
+      numberOfPeople: scanData.numberOfPeople || null,
+      additionalInfo: scanData.additionalInfo || null
+    }
+
+    console.log('newCustomer', newCustomer);
+
+    customers.push(newCustomer);
 
     await updateDoc(docRef, { 
       customers,
