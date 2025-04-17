@@ -6,7 +6,7 @@ import { CreateEventCategoryDto } from '../dto/create-event-category.dto';
 @Injectable()
 export class EventCategoriesService {
   private readonly logger = new Logger(EventCategoriesService.name);
-  private readonly collectionName = 'event-categories';
+  private readonly collectionName = 'event_categories';
 
   public async findAll(): Promise<EventCategory[]> {
     this.logger.debug('Getting all event categories');
