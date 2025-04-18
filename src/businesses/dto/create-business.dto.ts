@@ -43,4 +43,8 @@ export class CreateBusinessDto {
   @IsBoolean()
   @IsNotEmpty()
   public readonly hasAccount: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  public readonly isPromoted?: boolean = false;
 } 
