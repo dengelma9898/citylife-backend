@@ -61,6 +61,7 @@ export class EventsService {
         facebook: data.facebook,
         tiktok: data.tiktok
       },
+      isPromoted: data.isPromoted,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

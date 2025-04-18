@@ -36,6 +36,7 @@ export interface Business {
   benefit: string;
   customers: BusinessCustomer[];
   hasAccount: boolean;
+  isPromoted?: boolean;
 }
 
 /**

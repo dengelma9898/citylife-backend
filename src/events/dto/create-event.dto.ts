@@ -72,4 +72,8 @@ export class CreateEventDto {
     message: 'Ungültiges TikTok-Format'
   })
   public readonly tiktok?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  public readonly isPromoted?: boolean = false;
 } 

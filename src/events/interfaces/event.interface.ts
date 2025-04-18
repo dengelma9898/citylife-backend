@@ -25,4 +25,5 @@ export interface Event {
     facebook?: string;
     tiktok?: string;
   };
+  isPromoted?: boolean;
 } 
