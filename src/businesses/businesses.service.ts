@@ -218,7 +218,7 @@ export class BusinessesService {
       customers: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      isPromoted: data.isPromoted,
+      isPromoted: data.isPromoted || false,
       isDeleted: false,
       hasAccount: data.hasAccount
     };

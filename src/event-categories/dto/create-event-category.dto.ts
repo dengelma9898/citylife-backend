@@ -12,4 +12,8 @@ export class CreateEventCategoryDto {
   @IsString()
   @IsNotEmpty()
   colorCode: string;
+
+  @IsString()
+  @IsNotEmpty()
+  iconName: string;
 } 

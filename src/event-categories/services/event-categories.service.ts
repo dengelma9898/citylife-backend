@@ -43,6 +43,7 @@ export class EventCategoriesService {
       name: data.name,
       description: data.description,
       colorCode: data.colorCode,
+      iconName: data.iconName,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

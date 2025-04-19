@@ -3,6 +3,7 @@ export interface EventCategory {
   name: string;
   description: string;
   colorCode: string;
+  iconName: string;
   createdAt: string;
   updatedAt: string;
 } 
