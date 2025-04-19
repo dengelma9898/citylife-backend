@@ -8,6 +8,9 @@ export class UpdateEventCategoryDto extends PartialType(CreateEventCategoryDto) 
   @ApiProperty({ required: false, description: 'The description of the event category' })
   description?: string;
 
-  @ApiProperty({ required: false, description: 'The icon of the event category' })
-  icon?: string;
+  @ApiProperty({ required: false, description: 'The color code of the event category' })
+  colorCode?: string;
+
+  @ApiProperty({ required: false, description: 'The icon name of the event category' })
+  iconName?: string;
 } 

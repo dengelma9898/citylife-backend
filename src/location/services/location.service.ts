@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LocationResult } from '../interfaces/location-result.interface';
+import fetch from 'node-fetch';
 
 @Injectable()
 export class LocationService {
