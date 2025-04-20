@@ -28,4 +28,23 @@ export interface BusinessCustomer {
    * Das aktuelle Benefit des Businesses zum Zeitpunkt des Scans
    */
   benefit: string;
+}
+
+export interface BusinessCustomerScans {
+  /**
+   * Der Name des Businesses
+   */
+  businessName: string;
+
+  /**
+   * Die Liste der Kunden-Scans für dieses Business
+   */
+  scans: BusinessCustomer[];
+}
+
+export interface BusinessCustomerWithBusinessName extends BusinessCustomer {
+  /**
+   * Der Name des Businesses, bei dem der Scan durchgeführt wurde
+   */
+  businessName: string;
 } 
