@@ -1,12 +1,12 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { Business, BusinessResponse, BusinessListResponse } from './interfaces/business.interface';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { Business, BusinessResponse, BusinessListResponse, NuernbergspotsReview } from './interfaces/business.interface';
 import { BusinessCategory } from './interfaces/business-category.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { BusinessStatus } from './interfaces/business.interface';
 import { BusinessCustomerDto } from './dto/business-customer.dto';
-import { BusinessCustomer } from './interfaces/business-customer.interface';
+import { BusinessCustomer, BusinessCustomerScans, BusinessCustomerWithBusinessName } from './interfaces/business-customer.interface';
 import { UserAdapterService } from '../users/services/user-adapter.service';
 import { BusinessCategoriesService } from '../business-categories/business-categories.service';
 import { KeywordsService } from '../keywords/keywords.service';
@@ -363,5 +363,33 @@ export class BusinessesService {
     return keywords
       .filter(keyword => keyword !== null)
       .map(keyword => keyword.name);
+  }
+
+  public async getAllCustomerScans(): Promise<BusinessCustomerScans[]> {
+    this.logger.debug('Getting all customer scans from all businesses');
+    const db = getFirestore();
+    const businessesCol = collection(db, 'businesses');
+    const snapshot = await getDocs(businessesCol);
+    
+    const businessScans: BusinessCustomerScans[] = [];
+    
+    for (const businessDoc of snapshot.docs) {
+      const businessData = businessDoc.data() as Business;
+      const customers = businessData.customers || [];
+      
+      if (customers.length > 0) {
+        businessScans.push({
+          businessName: businessData.name,
+          scans: customers.sort((a, b) => new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime())
+        });
+      }
+    }
+    
+    // Sort businesses by most recent scan
+    return businessScans.sort((a, b) => {
+      const aLatestScan = new Date(a.scans[0].scannedAt).getTime();
+      const bLatestScan = new Date(b.scans[0].scannedAt).getTime();
+      return bLatestScan - aLatestScan;
+    });
   }
 } 

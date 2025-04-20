@@ -11,6 +11,8 @@ import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { IsBoolean, IsNotEmpty } from 'class-validator';
 import { UsersService } from '../users/users.service';
 import { NuernbergspotsReviewDto } from './dto/nuernbergspots-review.dto';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { BusinessCustomer, BusinessCustomerScans } from './interfaces/business-customer.interface';
 
 @Controller('businesses')
 export class BusinessesController {
@@ -32,6 +34,17 @@ export class BusinessesController {
   public async getAll(): Promise<BusinessResponse[]> {
     this.logger.log('GET /businesses');
     return this.businessesService.getAll();
+  }
+
+  @Get('customer-scans')
+  @ApiOperation({ summary: 'Get all customer scans from all businesses' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Returns a list of all customer scans grouped by business'
+  })
+  public async getAllCustomerScans(): Promise<BusinessCustomerScans[]> {
+    this.logger.log('GET /businesses/customer-scans');
+    return this.businessesService.getAllCustomerScans();
   }
 
   @Get(':id')
