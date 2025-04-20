@@ -53,13 +53,13 @@ export class EventsService {
       ticketsNeeded: data.ticketsNeeded || false,
       price: data.price || 0,
       categoryId: data.categoryId,
-      contactEmail: data.contactEmail,
-      contactPhone: data.contactPhone,
-      website: data.website,
+      contactEmail: data.contactEmail || '',
+      contactPhone: data.contactPhone || '',
+      website: data.website || '',
       socialMedia: {
-        instagram: data.instagram,
-        facebook: data.facebook,
-        tiktok: data.tiktok
+        instagram: data.instagram || '',
+        facebook: data.facebook || '',
+        tiktok: data.tiktok || ''
       },
       isPromoted: data.isPromoted,
       createdAt: new Date().toISOString(),
