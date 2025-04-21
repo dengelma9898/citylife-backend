@@ -1,4 +1,3 @@
-import { BusinessCategory } from './business-category.interface';
 import { BusinessContact } from './business-contact.interface';
 import { BusinessAddress } from './business-address.interface';
 import { BusinessCustomer } from './business-customer.interface';
@@ -34,6 +33,7 @@ export interface Business {
   isDeleted: boolean;
   status: BusinessStatus;
   benefit: string;
+  previousBenefits?: string[];
   customers: BusinessCustomer[];
   hasAccount: boolean;
   isPromoted?: boolean;
