@@ -8,11 +8,10 @@ import { BusinessCustomerDto } from './dto/business-customer.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
-import { IsBoolean, IsNotEmpty } from 'class-validator';
 import { UsersService } from '../users/users.service';
 import { NuernbergspotsReviewDto } from './dto/nuernbergspots-review.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { BusinessCustomer, BusinessCustomerScans } from './interfaces/business-customer.interface';
+import { BusinessCustomerScans } from './interfaces/business-customer.interface';
 
 @Controller('businesses')
 export class BusinessesController {

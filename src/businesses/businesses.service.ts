@@ -1,12 +1,12 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
-import { Business, BusinessResponse, BusinessListResponse, NuernbergspotsReview } from './interfaces/business.interface';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
+import { Business, BusinessResponse, BusinessListResponse } from './interfaces/business.interface';
 import { BusinessCategory } from './interfaces/business-category.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { BusinessStatus } from './interfaces/business.interface';
 import { BusinessCustomerDto } from './dto/business-customer.dto';
-import { BusinessCustomer, BusinessCustomerScans, BusinessCustomerWithBusinessName } from './interfaces/business-customer.interface';
+import { BusinessCustomer, BusinessCustomerScans } from './interfaces/business-customer.interface';
 import { UserAdapterService } from '../users/services/user-adapter.service';
 import { BusinessCategoriesService } from '../business-categories/business-categories.service';
 import { KeywordsService } from '../keywords/keywords.service';
@@ -214,6 +214,7 @@ export class BusinessesService {
       imageUrls: [],
       openingHours: data.openingHours || {},
       benefit: data.benefit,
+      previousBenefits: [],
       status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING,
       customers: [],
       createdAt: new Date().toISOString(),
@@ -275,11 +276,23 @@ export class BusinessesService {
         throw new NotFoundException(`Keyword with id ${data.keywordIds[missingKeywords]} not found`);
       }
     }
-    console.log('update data', data);
-    const updateData = {
+
+    const currentBusiness = docSnap.data() as Business;
+    const updateData: Partial<Business> = {
       ...data,
       updatedAt: new Date().toISOString()
     };
+
+    // Wenn sich der Benefit ändert, füge den alten Benefit zu previousBenefits hinzu
+    if (data.benefit && data.benefit !== currentBusiness.benefit) {
+      const previousBenefits = currentBusiness.previousBenefits || [];
+      if (!previousBenefits.includes(currentBusiness.benefit)) {
+        updateData.previousBenefits = [...previousBenefits, currentBusiness.benefit];
+      }
+    } else if (!currentBusiness.previousBenefits) {
+      // Wenn previousBenefits noch nicht existiert, initialisiere es als leeres Array
+      updateData.previousBenefits = [];
+    }
 
     await updateDoc(docRef, updateData);
     
