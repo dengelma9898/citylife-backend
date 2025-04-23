@@ -16,6 +16,7 @@ import { KeywordsModule } from './keywords/keywords.module';
 import { BusinessCategoriesModule } from './business-categories/business-categories.module';
 import { LocationModule } from './location/location.module';
 import { EventCategoriesModule } from './event-categories/event-categories.module';
+import { ContactModule } from './contact/contact.module';
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { EventCategoriesModule } from './event-categories/event-categories.modul
     KeywordsModule,
     BusinessCategoriesModule,
     LocationModule,
-    EventCategoriesModule
+    EventCategoriesModule,
+    ContactModule
   ],
   providers: [
     {
