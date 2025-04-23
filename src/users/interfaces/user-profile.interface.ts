@@ -16,4 +16,5 @@ export interface UserProfile {
   businessHistory: BusinessHistory[];
   favoriteEventIds?: string[];
   favoriteBusinessIds?: string[];
+  contactRequestIds?: string[];
 } 
