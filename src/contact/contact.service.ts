@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef, UnauthorizedException } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where } from 'firebase/firestore';
 import { ContactRequest, ContactRequestType } from './interfaces/contact-request.interface';
 import { ContactMessage } from './interfaces/contact-message.interface';
@@ -8,6 +8,8 @@ import { BusinessClaimRequestDto } from './dto/business-claim-request.dto';
 import { BusinessRequestDto } from './dto/business-request.dto';
 import { AdminResponseDto } from './dto/admin-response.dto';
 import { UsersService } from '../users/users.service';
+import { UserType } from '../users/enums/user-type.enum';
+import { AddMessageDto } from './dto/add-message.dto';
 
 @Injectable()
 export class ContactService {
@@ -135,9 +137,22 @@ export class ContactService {
       return null;
     }
 
-    // Prüfe, ob die Anfrage dem Benutzer gehört
+    // Prüfe den Benutzertyp
     const user = await this.usersService.getById(userId);
-    if (!user || !user.contactRequestIds || !user.contactRequestIds.includes(id)) {
+    if (!user) {
+      return null;
+    }
+
+    // SUPER_ADMIN hat Zugriff auf alle Kontaktanfragen
+    if ('userType' in user && user.userType === UserType.SUPER_ADMIN) {
+      return {
+        id: docSnap.id,
+        ...docSnap.data()
+      } as ContactRequest;
+    }
+
+    // Für normale Benutzer: Prüfe, ob die Anfrage dem Benutzer gehört
+    if (!user.contactRequestIds || !user.contactRequestIds.includes(id)) {
       return null;
     }
 
@@ -190,5 +205,55 @@ export class ContactService {
     return contactRequests.sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+  }
+
+  public async getOpenRequestsCount(): Promise<number> {
+    this.logger.debug('Getting count of open contact requests');
+    const db = getFirestore();
+    const contactRequestsRef = collection(db, 'contact_requests');
+    const q = query(contactRequestsRef, where('responded', '==', false));
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.size;
+  }
+
+  public async addMessage(id: string, userId: string, messageDto: AddMessageDto): Promise<ContactRequest> {
+    this.logger.debug(`Adding message to contact request ${id} from user ${userId}`);
+    
+    // Prüfe zuerst, ob der Benutzer Zugriff auf die Anfrage hat
+    const contactRequest = await this.getById(id, userId);
+    if (!contactRequest) {
+      throw new UnauthorizedException('Sie haben keine Berechtigung, diese Kontaktanfrage zu bearbeiten');
+    }
+
+    const user = await this.usersService.getById(userId);
+    if (!user) {
+      throw new UnauthorizedException('Benutzer nicht gefunden');
+    }
+
+    const newMessage: ContactMessage = {
+      userId,
+      message: messageDto.message,
+      createdAt: new Date().toISOString(),
+      isAdminResponse: 'userType' in user && user.userType === UserType.SUPER_ADMIN
+    };
+
+    const db = getFirestore();
+    const docRef = doc(db, 'contact_requests', id);
+    
+    await updateDoc(docRef, {
+      messages: [...contactRequest.messages, newMessage],
+      updatedAt: new Date().toISOString(),
+      // Wenn es eine Admin-Antwort ist, setzen wir responded auf true
+      ...(newMessage.isAdminResponse && { responded: true })
+    });
+
+    // Hole die aktualisierte Anfrage
+    const updatedRequest = await this.getById(id, userId);
+    if (!updatedRequest) {
+      throw new Error('Kontaktanfrage konnte nach dem Update nicht gefunden werden');
+    }
+
+    return updatedRequest;
   }
 } 

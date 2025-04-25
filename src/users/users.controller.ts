@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, NotFoundException, Logger, UseInterceptors, UploadedFile, Patch, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, NotFoundException, Logger, UseInterceptors, UploadedFile, Patch, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { UserProfileDto } from './dto/user-profile.dto';
@@ -9,6 +9,7 @@ import { UserType } from './enums/user-type.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
+import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
 @Controller('users')
 export class UsersController {
@@ -238,5 +239,64 @@ export class UsersController {
     const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
 
     return this.usersService.update(userId, { profilePictureUrl: imageUrl });
+  }
+
+  @Get(':userId/business-users')
+  @ApiOperation({ summary: 'Gibt alle Business-User zurück (nur für SUPER_ADMIN)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Liste aller Business-User',
+    isArray: true
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen'
+  })
+  @ApiParam({
+    name: 'userId',
+    description: 'ID des anfragenden Benutzers (muss SUPER_ADMIN sein)'
+  })
+  public async getAllBusinessUsers(
+    @Param('userId') userId: string
+  ): Promise<BusinessUser[]> {
+    this.logger.log(`GET /users/${userId}/business-users`);
+    
+    // Überprüfe, ob der Benutzer ein SUPER_ADMIN ist
+    const requestingUser = await this.usersService.getUserProfile(userId);
+    if (!requestingUser || requestingUser.userType !== UserType.SUPER_ADMIN) {
+      throw new UnauthorizedException('Nur SUPER_ADMINs können diese Resource aufrufen');
+    }
+
+    return this.usersService.getAllBusinessUsers();
+  }
+
+  @Post(':userId/business-user/businesses/:businessId')
+  @ApiOperation({ summary: 'Fügt ein Business zu einem Business-User hinzu' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Das Business wurde erfolgreich dem User zugeordnet'
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Business-User oder Business wurde nicht gefunden'
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Business ist bereits dem User zugeordnet'
+  })
+  @ApiParam({
+    name: 'userId',
+    description: 'ID des Business-Users'
+  })
+  @ApiParam({
+    name: 'businessId',
+    description: 'ID des Businesses, das hinzugefügt werden soll'
+  })
+  public async addBusinessToUser(
+    @Param('userId') userId: string,
+    @Param('businessId') businessId: string
+  ): Promise<BusinessUser> {
+    this.logger.log(`POST /users/${userId}/business-user/businesses/${businessId}`);
+    return this.usersService.addBusinessIdToUser(userId, businessId);
   }
 } 
