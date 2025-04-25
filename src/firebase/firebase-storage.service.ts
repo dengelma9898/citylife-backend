@@ -21,7 +21,9 @@ export class FirebaseStorageService {
     try {
       this.logger.debug(`Deleting file from URL: ${url}`);
       const storage = getStorage();
+      console.log(storage);
       const fileRef = ref(storage, url);
+      console.log(fileRef);
       await deleteObject(fileRef);
       this.logger.debug('File deleted successfully');
     } catch (error) {

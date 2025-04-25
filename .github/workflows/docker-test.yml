@@ -11,6 +11,7 @@ env:
   IMAGE_NAME: dengelma/nuernbergspots-test
   SERVER_HOST: 87.106.208.51
   SERVER_USER: root
+  BASE_URL: /dev
 
 jobs:
   build-and-push:
@@ -28,6 +29,7 @@ jobs:
         run: |
           cat << EOF > .env
           NODE_ENV=test
+          BASE_URL=${BASE_URL}
           
           # HERE API
           HERE_APP_ID=${{ secrets.HERE_APP_ID }}
@@ -67,6 +69,7 @@ jobs:
           build-args: |
             NODE_ENV=test
             PORT=3000
+            BASE_URL=${{ env.BASE_URL }}
           platforms: linux/amd64
 
       - name: Deploy to server
@@ -86,4 +89,7 @@ jobs:
               --name nuernbergspots-test \
               -p 3000:3000 \
               --restart unless-stopped \
+              -e NODE_ENV=test \
+              -e PORT=3000 \
+              -e BASE_URL=${{ env.BASE_URL }} \
               ${{ env.IMAGE_NAME }}:latest
