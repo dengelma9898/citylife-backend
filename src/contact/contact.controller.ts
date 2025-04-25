@@ -6,8 +6,8 @@ import { FeedbackRequestDto } from './dto/feedback-request.dto';
 import { BusinessClaimRequestDto } from './dto/business-claim-request.dto';
 import { BusinessRequestDto } from './dto/business-request.dto';
 import { AdminResponseDto } from './dto/admin-response.dto';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
-
+import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { AddMessageDto } from './dto/add-message.dto';
 
 @Controller('contact')
 export class ContactController {
@@ -129,5 +129,44 @@ export class ContactController {
   public async getContactRequestsByUserId(@Param('userId') userId: string): Promise<ContactRequest[]> {
     this.logger.log(`GET /contact/user/${userId}`);
     return this.contactService.getContactRequestsByUserId(userId);
+  }
+
+  @Get('open-requests/count')
+  @ApiOperation({ summary: 'Get the number of open (unresponded) contact requests' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Returns the number of contact requests that have not been responded to yet',
+    type: Number
+  })
+  public async getOpenRequestsCount(): Promise<number> {
+    this.logger.log('GET /contact/open-requests/count');
+    return this.contactService.getOpenRequestsCount();
+  }
+
+  @Patch('user/:userId/request/:id')
+  @ApiOperation({ summary: 'Fügt eine neue Nachricht zu einer Kontaktanfrage hinzu' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Die Nachricht wurde erfolgreich zur Kontaktanfrage hinzugefügt'
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Nicht autorisiert - Sie haben keine Berechtigung, diese Kontaktanfrage zu bearbeiten'
+  })
+  @ApiParam({
+    name: 'userId',
+    description: 'ID des Benutzers'
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID der Kontaktanfrage'
+  })
+  public async addMessage(
+    @Param('userId') userId: string,
+    @Param('id') id: string,
+    @Body() messageDto: AddMessageDto
+  ): Promise<ContactRequest> {
+    this.logger.log(`PATCH /contact/user/${userId}/request/${id}/message`);
+    return this.contactService.addMessage(id, userId, messageDto);
   }
 } 

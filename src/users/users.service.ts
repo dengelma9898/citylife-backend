@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, Inject, forwardRef, BadRequestException } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction } from 'firebase/firestore';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
@@ -333,5 +333,74 @@ export class UsersService {
     
     // BusinessUser aktualisieren
     return this.updateBusinessUser(userId, { eventIds: updatedEventIds });
+  }
+
+  public async getAllBusinessUsers(): Promise<BusinessUser[]> {
+    this.logger.debug('Getting all business users');
+    const db = getFirestore();
+    const businessUsersCol = collection(db, 'business_users');
+    const snapshot = await getDocs(businessUsersCol);
+    
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as BusinessUser));
+  }
+
+  /**
+   * Fügt eine Business-ID zu einem Business-User hinzu und aktualisiert den hasAccount-Status des Businesses
+   * 
+   * @param userId - Die ID des Business-Users
+   * @param businessId - Die ID des Businesses
+   * @returns Der aktualisierte Business-User
+   */
+  public async addBusinessIdToUser(userId: string, businessId: string): Promise<BusinessUser> {
+    this.logger.debug(`Adding business ${businessId} to user ${userId}`);
+    
+    // Prüfe, ob das Business existiert
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
+      throw new NotFoundException(`Business mit ID ${businessId} wurde nicht gefunden`);
+    }
+
+    // Prüfe, ob der Business-User existiert
+    const businessUser = await this.getBusinessUser(userId);
+    if (!businessUser) {
+      throw new NotFoundException(`Business-User mit ID ${userId} wurde nicht gefunden`);
+    }
+
+    // Prüfe, ob das Business bereits dem User zugeordnet ist
+    if (businessUser.businessIds.includes(businessId)) {
+      throw new BadRequestException(`Business ${businessId} ist bereits dem User ${userId} zugeordnet`);
+    }
+
+    const db = getFirestore();
+    
+    try {
+      // Führe die Aktualisierungen in einer Transaktion durch
+      await runTransaction(db, async (transaction) => {
+        // Update Business-User
+        const businessUserRef = doc(db, 'business_users', userId);
+        const updatedBusinessIds = [...businessUser.businessIds, businessId];
+        transaction.update(businessUserRef, { 
+          businessIds: updatedBusinessIds,
+          updatedAt: new Date().toISOString()
+        });
+
+        // Update Business hasAccount Status
+        await this.businessesService.updateHasAccount(businessId, true);
+      });
+
+      // Hole den aktualisierten Business-User
+      const updatedBusinessUser = await this.getBusinessUser(userId);
+      if (!updatedBusinessUser) {
+        throw new Error('Business-User konnte nach dem Update nicht gefunden werden');
+      }
+
+      return updatedBusinessUser;
+    } catch (error) {
+      this.logger.error(`Fehler beim Hinzufügen des Businesses: ${error.message}`);
+      throw new Error('Fehler beim Hinzufügen des Businesses zum User');
+    }
   }
 } 
