@@ -23,7 +23,7 @@ import { ContactModule } from './contact/contact.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
-        process.env.NODE_ENV === 'production' ? '.env.prd' : '.env.dev',
+        process.env.NODE_ENV === 'prd' ? '.env.prd' : '.env.dev',
       ],
     }),
     CoreModule,

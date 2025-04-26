@@ -59,10 +59,10 @@ Die Anwendung kann mit Docker Compose in verschiedenen Umgebungen gestartet werd
 
 ```bash
 # Test-Umgebung
-ENV_FILE=.env PORT=3000 NODE_ENV=test BASE_URL=/dev docker-compose up
+ENV_FILE=.env PORT=3000 NODE_ENV=dev BASE_URL=/dev docker-compose up
 
 # Produktionsumgebung
-ENV_FILE=.env.prod PORT=3100 NODE_ENV=production BASE_URL=/prd docker-compose up
+ENV_FILE=.env.prod PORT=3100 NODE_ENV=prd BASE_URL=/prd docker-compose up
 ```
 
 ### Docker Build
@@ -70,7 +70,7 @@ ENV_FILE=.env.prod PORT=3100 NODE_ENV=production BASE_URL=/prd docker-compose up
 #### Test-Umgebung
 ```bash
 docker buildx build --platform linux/amd64 \
-  --build-arg NODE_ENV=test \
+  --build-arg NODE_ENV=dev \
   --build-arg PORT=3000 \
   --build-arg BASE_URL=/dev \
   -t dengelma/nuernbergspots-test \
@@ -80,7 +80,7 @@ docker buildx build --platform linux/amd64 \
 #### Produktionsumgebung
 ```bash
 docker buildx build --platform linux/amd64 \
-  --build-arg NODE_ENV=production \
+  --build-arg NODE_ENV=prd \
   --build-arg PORT=3100 \
   --build-arg BASE_URL=/prd \
   -t dengelma/nuernbergspots \
@@ -96,7 +96,7 @@ docker buildx build --platform linux/amd64 \
 4. `docker pull dengelma/nuernbergspots-test`
 5. `docker run -d --name nuernbergspots-test -p 3000:3000 --restart unless-stopped \
     -e PORT=3000 \
-    -e NODE_ENV=test \
+    -e NODE_ENV=dev \
     -e BASE_URL=/dev \
     dengelma/nuernbergspots-test`
 
@@ -107,7 +107,7 @@ docker buildx build --platform linux/amd64 \
 4. `docker pull dengelma/nuernbergspots`
 5. `docker run -d --name nuernbergspots -p 3100:3100 --restart unless-stopped \
     -e PORT=3100 \
-    -e NODE_ENV=production \
+    -e NODE_ENV=prd \
     -e BASE_URL=/prd \
     dengelma/nuernbergspots`
 

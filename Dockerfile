@@ -17,7 +17,7 @@ COPY . .
 COPY pass-templates ./pass-templates
 
 # Build the app
-RUN npm run build
+RUN npm run build:${NODE_ENV}
 
 # Set environment variables
 ENV NODE_ENV=${NODE_ENV}
