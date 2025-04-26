@@ -1,8 +1,8 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { initializeApp } from 'firebase/app';
-
+import { Firestore, getFirestore } from 'firebase/firestore';
 @Injectable()
 export class FirebaseService implements OnModuleInit {
   constructor(private configService: ConfigService) {}
@@ -23,16 +23,22 @@ export class FirebaseService implements OnModuleInit {
       projectId: firebaseConfig.projectId,
       storageBucket: firebaseConfig.storageBucket,
     });
-
     // Initialize Firebase App
     initializeApp(firebaseConfig);
   }
 
   public getFirestore(): FirebaseFirestore.Firestore {
-    return admin.firestore();
+      return admin.firestore();
   }
 
   public getAuth(): admin.auth.Auth {
     return admin.auth();
+  }
+
+  public getClientFirestore(): Firestore {
+    if (process.env.NODE_ENV === 'production') {
+      return getFirestore(this.configService.get<string>('FIREBASE_STORAGE_ID')!);
+    }
+    return getFirestore();
   }
 } 

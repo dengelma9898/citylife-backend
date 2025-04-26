@@ -4,16 +4,16 @@ import { BusinessCategory } from './interfaces/business-category.interface';
 import { CreateBusinessCategoryDto } from './dto/create-business-category.dto';
 import { UpdateBusinessCategoryDto } from './dto/update-business-category.dto';
 import { KeywordsService } from '../keywords/keywords.service';
-
+import { FirebaseService } from 'src/firebase/firebase.service';
 @Injectable()
 export class BusinessCategoriesService {
   private readonly logger = new Logger(BusinessCategoriesService.name);
 
-  constructor(private readonly keywordsService: KeywordsService) {}
+  constructor(private readonly keywordsService: KeywordsService, private readonly firebaseService: FirebaseService) {}
 
   public async getAll(): Promise<BusinessCategory[]> {
     this.logger.debug('Getting all business categories');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const categoriesCol = collection(db, 'business_categories');
     const snapshot = await getDocs(categoriesCol);
     return snapshot.docs.map(doc => ({
@@ -24,7 +24,7 @@ export class BusinessCategoriesService {
 
   public async getById(id: string): Promise<BusinessCategory | null> {
     this.logger.debug(`Getting business category ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'business_categories', id);
     const docSnap = await getDoc(docRef);
     
@@ -40,7 +40,7 @@ export class BusinessCategoriesService {
 
   public async create(data: CreateBusinessCategoryDto): Promise<BusinessCategory> {
     this.logger.debug('Creating business category');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     
     const categoryData: Omit<BusinessCategory, 'id'> = {
       name: data.name,
@@ -61,7 +61,7 @@ export class BusinessCategoriesService {
 
   public async update(id: string, data: UpdateBusinessCategoryDto): Promise<BusinessCategory> {
     this.logger.debug(`Updating business category ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'business_categories', id);
     const docSnap = await getDoc(docRef);
     
@@ -85,7 +85,7 @@ export class BusinessCategoriesService {
 
   public async delete(id: string): Promise<void> {
     this.logger.debug(`Deleting business category ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'business_categories', id);
     const docSnap = await getDoc(docRef);
     

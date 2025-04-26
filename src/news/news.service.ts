@@ -11,17 +11,18 @@ import { VoteSurveyDto } from './dto/vote-survey.dto';
 import { CreateTextNewsDto } from './dto/create-text-news.dto';
 import { CreateReactionDto } from './dto/create-reaction.dto';
 import { UsersService } from '../users/users.service';
+import { FirebaseService } from 'src/firebase/firebase.service';
 
 @Injectable()
 export class NewsService {
   private readonly logger = new Logger(NewsService.name);
   private readonly collectionName = 'news';
 
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService, private readonly firebaseService: FirebaseService) {}
 
   public async getAll(): Promise<NewsItem[]> {
     this.logger.debug('Getting all news items');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const newsCol = collection(db, this.collectionName);
     const snapshot = await getDocs(newsCol);
     
@@ -35,7 +36,7 @@ export class NewsService {
 
   public async getById(id: string): Promise<NewsItem | null> {
     this.logger.debug(`Getting news item ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, this.collectionName, id);
     const docSnap = await getDoc(docRef);
     
@@ -225,7 +226,7 @@ export class NewsService {
   }
 
   private async saveNewsItem(newsItem: Omit<NewsItem, 'id'>): Promise<NewsItem> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = await addDoc(collection(db, this.collectionName), newsItem);
     
     return {
@@ -236,7 +237,7 @@ export class NewsService {
 
   public async update(id: string, data: Partial<NewsItem>): Promise<NewsItem> {
     this.logger.debug(`Updating news item ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, this.collectionName, id);
     const docSnap = await getDoc(docRef);
     
@@ -260,7 +261,7 @@ export class NewsService {
 
   public async delete(id: string): Promise<void> {
     this.logger.debug(`Deleting news item ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, this.collectionName, id);
     const docSnap = await getDoc(docRef);
     
@@ -273,7 +274,7 @@ export class NewsService {
 
   public async postReaction(newsId: string, createReactionDto: CreateReactionDto): Promise<NewsItem> {
     this.logger.debug(`Adding reaction ${createReactionDto.reactionType} for news item ${newsId} by user ${createReactionDto.userId}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const newsRef = doc(db, this.collectionName, newsId);
     
     try {
@@ -350,7 +351,7 @@ export class NewsService {
 
   public async votePoll(newsId: string, voteData: VotePollDto): Promise<PollNewsItem> {
     this.logger.debug(`User ${voteData.userId} voting on poll ${newsId} for option: ${voteData.optionId}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const newsRef = doc(db, this.collectionName, newsId);
     
     try {
@@ -427,7 +428,7 @@ export class NewsService {
 
   public async voteSurvey(newsId: string, voteData: VoteSurveyDto): Promise<SurveyNewsItem> {
     this.logger.debug(`User ${voteData.userId} voting on survey ${newsId}, options: ${voteData.optionIds.join(', ')}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const newsRef = doc(db, this.collectionName, newsId);
     
     try {
@@ -509,7 +510,7 @@ export class NewsService {
 
   public async incrementViewCount(newsId: string): Promise<void> {
     this.logger.debug(`Incrementing view count for news ${newsId}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const newsRef = doc(db, this.collectionName, newsId);
     
     try {

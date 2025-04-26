@@ -8,6 +8,7 @@ import { UserType } from './enums/user-type.enum';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { EventsService } from '../events/events.service';
 import { BusinessesService } from '../businesses/businesses.service';
+import { FirebaseService } from 'src/firebase/firebase.service';
 
 @Injectable()
 export class UsersService {
@@ -17,11 +18,12 @@ export class UsersService {
     @Inject(forwardRef(() => EventsService))
     private readonly eventsService: EventsService,
     @Inject(forwardRef(() => BusinessesService))
-    private readonly businessesService: BusinessesService
+    private readonly businessesService: BusinessesService,
+    private readonly firebaseService: FirebaseService
   ) {}
 
   public async getAll(): Promise<UserProfile[]> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const usersCol = collection(db, 'users');
     const snapshot = await getDocs(usersCol);
     return snapshot.docs.map(doc => doc.data() as UserProfile);
@@ -29,7 +31,7 @@ export class UsersService {
 
   public async getBusinessUsersNeedsReview(): Promise<(BusinessUser & { businessNames: string[] })[]> {
     this.logger.debug('Getting business users that need review');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const businessUsersCol = collection(db, 'business_users');
     const q = query(businessUsersCol, where('needsReview', '==', true), where('isDeleted', '==', false));
     const snapshot = await getDocs(q);
@@ -61,7 +63,7 @@ export class UsersService {
 
   public async getBusinessUsersNeedsReviewCount(): Promise<number> {
     this.logger.debug('Getting count of business users that need review');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const businessUsersCol = collection(db, 'business_users');
     const snapshot = await getDocs(businessUsersCol);
     
@@ -84,7 +86,7 @@ export class UsersService {
 
   public async getUserProfile(id: string): Promise<UserProfile | null> {
     this.logger.debug(`Getting user profile for id: ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const userDocRef = doc(db, 'users', id);
     const userDocSnap = await getDoc(userDocRef);
     
@@ -98,7 +100,7 @@ export class UsersService {
 
   public async getBusinessUser(id: string): Promise<BusinessUser | null> {
     this.logger.debug(`Getting business user for id: ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const businessUserDocRef = doc(db, 'business_users', id);
     const businessUserDocSnap = await getDoc(businessUserDocRef);
     
@@ -123,7 +125,7 @@ export class UsersService {
       memberSince: `${new Date().getFullYear()}-${new Date().getMonth() + 1}`,
       businessHistory: [],
     };
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'users', id);
     await setDoc(docRef, userProfile);
 
@@ -131,7 +133,7 @@ export class UsersService {
   }
 
   public async update(id: string, profile: Partial<UserProfile>): Promise<UserProfile> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'users', id);
     const docSnap = await getDoc(docRef);
     
@@ -146,7 +148,7 @@ export class UsersService {
   }
 
   public async delete(id: string): Promise<void> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'users', id);
     const docSnap = await getDoc(docRef);
     
@@ -159,7 +161,7 @@ export class UsersService {
 
   public async createBusinessUser(data: CreateBusinessUserDto): Promise<BusinessUser> {
     this.logger.debug('Creating business user');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     
     const userData: Omit<BusinessUser, 'id'> = {
       email: data.email,
@@ -181,7 +183,7 @@ export class UsersService {
 
   public async updateBusinessUser(id: string, data: Partial<BusinessUser>): Promise<BusinessUser> {
     this.logger.debug(`Updating business user ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'business_users', id);
     const docSnap = await getDoc(docRef);
     
@@ -204,7 +206,7 @@ export class UsersService {
 
   public async deleteBusinessUser(id: string): Promise<void> {
     this.logger.debug(`Deleting business user ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'business_users', id);
     const docSnap = await getDoc(docRef);
     
@@ -337,7 +339,7 @@ export class UsersService {
 
   public async getAllBusinessUsers(): Promise<BusinessUser[]> {
     this.logger.debug('Getting all business users');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const businessUsersCol = collection(db, 'business_users');
     const snapshot = await getDocs(businessUsersCol);
     
@@ -374,7 +376,7 @@ export class UsersService {
       throw new BadRequestException(`Business ${businessId} ist bereits dem User ${userId} zugeordnet`);
     }
 
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     
     try {
       // Führe die Aktualisierungen in einer Transaktion durch

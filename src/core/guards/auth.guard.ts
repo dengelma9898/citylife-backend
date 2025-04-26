@@ -1,9 +1,12 @@
 import { Injectable, CanActivate, ExecutionContext, Logger, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name);
+
+  constructor(private readonly configService: ConfigService) {}
 
   async canActivate(
     context: ExecutionContext,
@@ -31,13 +34,14 @@ export class AuthGuard implements CanActivate {
     try {
       const decodedToken = await admin.auth().verifyIdToken(token);
       
-      // Prüfe Firebase Audience
-      if (decodedToken.aud !== 'citylife-fe75a') {
+      // Prüfe Firebase Audience gegen Umgebungsvariable
+      const expectedAudience = this.configService.get<string>('FIREBASE_PROJECT_ID');
+      if (decodedToken.aud !== expectedAudience) {
         this.logger.warn(`Invalid token audience: ${decodedToken.aud}`);
         throw new UnauthorizedException('Invalid token audience');
       }
 
-      // Prüfe Firebase Property
+      // Prüfe Firebase Property  
       if (!decodedToken.firebase) {
         this.logger.warn('Token is not a Firebase token');
         throw new UnauthorizedException('Invalid token type');

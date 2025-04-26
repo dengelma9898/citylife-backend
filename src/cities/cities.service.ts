@@ -4,11 +4,13 @@ import { City } from './interfaces/city.interface';
 import { Chatroom } from './interfaces/chatroom.interface';
 import { Event } from './interfaces/event.interface';
 import { Message } from './interfaces/message.interface';
-
+import { FirebaseService } from 'src/firebase/firebase.service';
 @Injectable()
 export class CitiesService {
+  constructor(private readonly firebaseService: FirebaseService) {}
+
   public async getAll(): Promise<City[]> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const citiesCol = collection(db, 'cities');
     const snapshot = await getDocs(citiesCol);
     return snapshot.docs.map(doc => ({
@@ -22,7 +24,7 @@ export class CitiesService {
   }
 
   public async getById(id: string): Promise<City | null> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'cities', id);
     const docSnap = await getDoc(docRef);
     
@@ -42,7 +44,7 @@ export class CitiesService {
   }
 
   public async getSubcollectionData(cityId: string, subcollectionName: string): Promise<any[]> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const subcollectionRef = collection(db, 'cities', cityId, subcollectionName);
     const snapshot = await getDocs(subcollectionRef);
     return snapshot.docs.map(doc => ({
@@ -52,7 +54,7 @@ export class CitiesService {
   }
 
   public async queryAllSubcollections(subcollectionName: string): Promise<any[]> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const groupRef = collectionGroup(db, subcollectionName);
     const snapshot = await getDocs(groupRef);
     return snapshot.docs.map(doc => ({
@@ -63,7 +65,7 @@ export class CitiesService {
   }
 
   public async getChatrooms(cityId: string): Promise<Chatroom[]> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const chatroomsRef = collection(db, 'cities', cityId, 'chatrooms');
     const snapshot = await getDocs(chatroomsRef);
     return snapshot.docs.map(doc => ({
@@ -75,7 +77,7 @@ export class CitiesService {
   }
 
   public async getAllChatrooms(): Promise<Chatroom[]> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const groupRef = collectionGroup(db, 'chatrooms');
     const snapshot = await getDocs(groupRef);
     return snapshot.docs.map(doc => ({
@@ -87,7 +89,7 @@ export class CitiesService {
   }
 
   public async getEvents(cityId: string): Promise<Event[]> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const eventsRef = collection(db, 'cities', cityId, 'events');
     const snapshot = await getDocs(eventsRef);
     return snapshot.docs.map(doc => ({
@@ -104,7 +106,7 @@ export class CitiesService {
   }
 
   public async getAllEvents(): Promise<Event[]> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const groupRef = collectionGroup(db, 'events');
     const snapshot = await getDocs(groupRef);
     return snapshot.docs.map(doc => ({
@@ -121,7 +123,7 @@ export class CitiesService {
   }
 
   public async getChatroomMessages(cityId: string, chatroomId: string): Promise<Message[]> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const messagesRef = collection(db, 'cities', cityId, 'chatrooms', chatroomId, 'messages');
     const snapshot = await getDocs(messagesRef);
     return snapshot.docs.map(doc => ({
@@ -138,7 +140,7 @@ export class CitiesService {
   }
 
   public async getAllMessages(): Promise<Message[]> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const groupRef = collectionGroup(db, 'messages');
     const snapshot = await getDocs(groupRef);
     return snapshot.docs.map(doc => {

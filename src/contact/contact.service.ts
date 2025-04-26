@@ -10,14 +10,15 @@ import { AdminResponseDto } from './dto/admin-response.dto';
 import { UsersService } from '../users/users.service';
 import { UserType } from '../users/enums/user-type.enum';
 import { AddMessageDto } from './dto/add-message.dto';
-
+import { FirebaseService } from 'src/firebase/firebase.service';
 @Injectable()
 export class ContactService {
   private readonly logger = new Logger(ContactService.name);
 
   constructor(
     @Inject(forwardRef(() => UsersService))
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
+    private readonly firebaseService: FirebaseService
   ) {}
 
   private async createContactRequest(
@@ -25,7 +26,7 @@ export class ContactService {
     type: ContactRequestType
   ): Promise<ContactRequest> {
     this.logger.debug(`Creating new ${type} contact request`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     
     const initialMessage: ContactMessage = {
       userId: data.userId,
@@ -85,7 +86,7 @@ export class ContactService {
 
   public async addAdminResponse(id: string, data: AdminResponseDto): Promise<ContactRequest> {
     this.logger.debug(`Adding admin response to contact request ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'contact_requests', id);
     const docSnap = await getDoc(docRef);
     
@@ -117,7 +118,7 @@ export class ContactService {
 
   public async getAll(): Promise<ContactRequest[]> {
     this.logger.debug('Getting all contact requests');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const contactRequestsCol = collection(db, 'contact_requests');
     const snapshot = await getDocs(contactRequestsCol);
     
@@ -129,7 +130,7 @@ export class ContactService {
 
   public async getById(id: string, userId: string): Promise<ContactRequest | null> {
     this.logger.debug(`Getting contact request ${id} for user ${userId}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'contact_requests', id);
     const docSnap = await getDoc(docRef);
     
@@ -164,7 +165,7 @@ export class ContactService {
 
   public async markAsProcessed(id: string): Promise<ContactRequest> {
     this.logger.debug(`Marking contact request ${id} as processed`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'contact_requests', id);
     
     await updateDoc(docRef, {
@@ -182,7 +183,7 @@ export class ContactService {
 
   public async getContactRequestsByUserId(userId: string): Promise<ContactRequest[]> {
     this.logger.debug(`Getting contact requests for user ${userId}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     
     // Hole zuerst die Kontaktanfrage-IDs vom Benutzer
     const user = await this.usersService.getById(userId);
@@ -209,7 +210,7 @@ export class ContactService {
 
   public async getOpenRequestsCount(): Promise<number> {
     this.logger.debug('Getting count of open contact requests');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const contactRequestsRef = collection(db, 'contact_requests');
     const q = query(contactRequestsRef, where('responded', '==', false));
     const querySnapshot = await getDocs(q);
@@ -238,7 +239,7 @@ export class ContactService {
       isAdminResponse: 'userType' in user && user.userType === UserType.SUPER_ADMIN
     };
 
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'contact_requests', id);
     
     await updateDoc(docRef, {
