@@ -2,14 +2,17 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
 import { Chatroom } from './interfaces/chatroom.interface';
 import { CreateChatroomDto } from './dto/create-chatroom.dto';
+import { FirebaseService } from 'src/firebase/firebase.service';
 
 @Injectable()
 export class ChatroomsService {
   private readonly logger = new Logger(ChatroomsService.name);
 
+  constructor(private readonly firebaseService: FirebaseService) {}
+
   public async getAll(): Promise<Chatroom[]> {
     this.logger.debug('Getting all chatrooms');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const chatroomsCol = collection(db, 'chatrooms');
     const snapshot = await getDocs(chatroomsCol);
     return snapshot.docs.map(doc => ({
@@ -20,7 +23,7 @@ export class ChatroomsService {
 
   public async getById(id: string): Promise<Chatroom | null> {
     this.logger.debug(`Getting chatroom ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'chatrooms', id);
     const docSnap = await getDoc(docRef);
     
@@ -36,7 +39,7 @@ export class ChatroomsService {
 
   public async create(data: CreateChatroomDto): Promise<Chatroom> {
     this.logger.debug('Creating chatroom');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     
     const chatroomData: Omit<Chatroom, 'id'> = {
       name: data.name,
@@ -57,7 +60,7 @@ export class ChatroomsService {
 
   public async update(id: string, data: Partial<Chatroom>): Promise<Chatroom> {
     this.logger.debug(`Updating chatroom ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'chatrooms', id);
     const docSnap = await getDoc(docRef);
     

@@ -2,14 +2,16 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, runTransaction } from 'firebase/firestore';
 import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
+import { FirebaseService } from 'src/firebase/firebase.service';
 
 @Injectable()
 export class EventsService {
   private readonly logger = new Logger(EventsService.name);
+  constructor(private readonly firebaseService: FirebaseService) {}
 
   public async getAll(): Promise<Event[]> {
     this.logger.debug('Getting all events');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const eventsCol = collection(db, 'events');
     const snapshot = await getDocs(eventsCol);
     return snapshot.docs.map(doc => ({
@@ -20,7 +22,7 @@ export class EventsService {
 
   public async getById(id: string): Promise<Event | null> {
     this.logger.debug(`Getting event ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'events', id);
     const docSnap = await getDoc(docRef);
     
@@ -36,7 +38,7 @@ export class EventsService {
 
   public async create(data: CreateEventDto): Promise<Event> {
     this.logger.debug('Creating event');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     
     const eventData: Omit<Event, 'id'> = {
       title: data.title,
@@ -77,7 +79,7 @@ export class EventsService {
 
   public async update(id: string, data: Partial<Event>): Promise<Event> {
     this.logger.debug(`Updating event ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'events', id);
     const docSnap = await getDoc(docRef);
     
@@ -101,7 +103,7 @@ export class EventsService {
 
   public async delete(id: string): Promise<void> {
     this.logger.debug(`Deleting event ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'events', id);
     const docSnap = await getDoc(docRef);
     
@@ -114,7 +116,7 @@ export class EventsService {
 
   public async updateFavoriteCount(eventId: string, increment: boolean): Promise<void> {
     this.logger.debug(`${increment ? 'Incrementing' : 'Decrementing'} favorite count for event ${eventId}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const eventRef = doc(db, 'events', eventId);
 
     try {

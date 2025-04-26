@@ -22,7 +22,9 @@ import { ContactModule } from './contact/contact.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.docker'],
+      envFilePath: [
+        process.env.NODE_ENV === 'production' ? '.env.prd' : '.env.dev',
+      ],
     }),
     CoreModule,
     FirebaseModule,

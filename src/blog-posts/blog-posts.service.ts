@@ -2,14 +2,15 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { BlogPost } from './interfaces/blog-post.interface';
 import { CreateBlogPostDto } from './dto/create-blog-post.dto';
-
+import { FirebaseService } from 'src/firebase/firebase.service';
 @Injectable()
 export class BlogPostsService {
+  constructor(private readonly firebaseService: FirebaseService) {}
   private readonly logger = new Logger(BlogPostsService.name);
 
   public async getAll(): Promise<BlogPost[]> {
     this.logger.debug('Getting all blog posts');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const postsCol = collection(db, 'blog_posts');
     const snapshot = await getDocs(postsCol);
     return snapshot.docs.map(doc => ({
@@ -20,7 +21,7 @@ export class BlogPostsService {
 
   public async getById(id: string): Promise<BlogPost | null> {
     this.logger.debug(`Getting blog post ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'blog_posts', id);
     const docSnap = await getDoc(docRef);
     
@@ -36,7 +37,7 @@ export class BlogPostsService {
 
   public async create(data: CreateBlogPostDto, blogPictures: string[]): Promise<BlogPost> {
     this.logger.debug('Creating blog post');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     
     const postData: Omit<BlogPost, 'id'> = {
       ...data,
@@ -57,7 +58,7 @@ export class BlogPostsService {
 
   public async update(id: string, data: Partial<BlogPost>): Promise<BlogPost> {
     this.logger.debug(`Updating blog post ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'blog_posts', id);
     const docSnap = await getDoc(docRef);
     
@@ -101,7 +102,7 @@ export class BlogPostsService {
 
   public async delete(id: string): Promise<void> {
     this.logger.debug(`Deleting blog post ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'blog_posts', id);
     const docSnap = await getDoc(docRef);
     

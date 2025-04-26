@@ -11,7 +11,7 @@ import { UserAdapterService } from '../users/services/user-adapter.service';
 import { BusinessCategoriesService } from '../business-categories/business-categories.service';
 import { KeywordsService } from '../keywords/keywords.service';
 import { EventsService } from '../events/events.service';
-
+import { FirebaseService } from 'src/firebase/firebase.service';
 interface BusinessStatusFilter {
   hasAccount: boolean;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -25,12 +25,13 @@ export class BusinessesService {
     private readonly userAdapter: UserAdapterService,
     private readonly businessCategoriesService: BusinessCategoriesService,
     private readonly keywordsService: KeywordsService,
-    private readonly eventsService: EventsService
+    private readonly eventsService: EventsService,
+    private readonly firebaseService: FirebaseService
   ) {}
 
   public async getAll(): Promise<BusinessListResponse[]> {
     this.logger.debug('Getting all businesses');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const businessesCol = collection(db, 'businesses');
     const snapshot = await getDocs(businessesCol);
     
@@ -62,7 +63,7 @@ export class BusinessesService {
 
   public async getById(id: string): Promise<BusinessResponse | null> {
     this.logger.debug(`Getting business ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'businesses', id);
     const docSnap = await getDoc(docRef);
     
@@ -144,7 +145,7 @@ export class BusinessesService {
 
   public async getAllCategories(): Promise<BusinessCategory[]> {
     this.logger.debug('Fetching all business categories from Firestore');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const categoriesCol = collection(db, 'business_categories');
     const snapshot = await getDocs(categoriesCol);
     this.logger.debug(`Found ${snapshot.docs.length} categories`);
@@ -160,7 +161,7 @@ export class BusinessesService {
 
   public async getAllBusinessUsers(): Promise<BusinessUser[]> {
     this.logger.debug('Fetching all business users from Firestore');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const usersCol = collection(db, 'business_users');
     const snapshot = await getDocs(usersCol);
     this.logger.debug(`Found ${snapshot.docs.length} business users`);
@@ -187,7 +188,7 @@ export class BusinessesService {
       }
     }
     
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     
     const businessData: Omit<Business, 'id'> = {
       name: data.name,
@@ -236,7 +237,7 @@ export class BusinessesService {
   }
 
   private async getCategory(id: string): Promise<BusinessCategory | null> {
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'business_categories', id);
     const docSnap = await getDoc(docRef);
     
@@ -253,7 +254,7 @@ export class BusinessesService {
 
   public async update(id: string, data: Partial<Business>): Promise<BusinessResponse> {
     this.logger.debug(`Updating business ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'businesses', id);
     const docSnap = await getDoc(docRef);
     
@@ -324,7 +325,7 @@ export class BusinessesService {
       throw new NotFoundException('Business not found');
     }
     
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'businesses', businessId);
     const docSnap = await getDoc(docRef);
     const businessData = docSnap.data() as Business;
@@ -380,7 +381,7 @@ export class BusinessesService {
 
   public async getAllCustomerScans(): Promise<BusinessCustomerScans[]> {
     this.logger.debug('Getting all customer scans from all businesses');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const businessesCol = collection(db, 'businesses');
     const snapshot = await getDocs(businessesCol);
     

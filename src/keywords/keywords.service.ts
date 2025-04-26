@@ -3,14 +3,15 @@ import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, dele
 import { Keyword } from './interfaces/keyword.interface';
 import { CreateKeywordDto } from './dto/create-keyword.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
-
+import { FirebaseService } from 'src/firebase/firebase.service';
 @Injectable()
 export class KeywordsService {
   private readonly logger = new Logger(KeywordsService.name);
+  constructor(private readonly firebaseService: FirebaseService) {}
 
   public async getAll(): Promise<Keyword[]> {
     this.logger.debug('Getting all keywords');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const keywordsCol = collection(db, 'keywords');
     const snapshot = await getDocs(keywordsCol);
     return snapshot.docs.map(doc => ({
@@ -21,7 +22,7 @@ export class KeywordsService {
 
   public async getById(id: string): Promise<Keyword | null> {
     this.logger.debug(`Getting keyword ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'keywords', id);
     const docSnap = await getDoc(docRef);
     
@@ -37,7 +38,7 @@ export class KeywordsService {
 
   public async create(data: CreateKeywordDto): Promise<Keyword> {
     this.logger.debug('Creating keyword');
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     
     const keywordData: Omit<Keyword, 'id'> = {
       name: data.name,
@@ -56,7 +57,7 @@ export class KeywordsService {
 
   public async update(id: string, data: UpdateKeywordDto): Promise<Keyword> {
     this.logger.debug(`Updating keyword ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'keywords', id);
     const docSnap = await getDoc(docRef);
     
@@ -80,7 +81,7 @@ export class KeywordsService {
 
   public async delete(id: string): Promise<void> {
     this.logger.debug(`Deleting keyword ${id}`);
-    const db = getFirestore();
+    const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'keywords', id);
     const docSnap = await getDoc(docRef);
     
