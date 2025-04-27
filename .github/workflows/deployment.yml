@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 env:
   REGISTRY: docker.io
@@ -81,8 +82,8 @@ jobs:
               -e BASE_URL=${{ env.BASE_URL_DEV }} \
               ${{ env.IMAGE_NAME_DEV }}:latest
 
-  build-and-push-prod:
-    environment: production
+  build-and-push-prd:
+    environment: prd
     needs: build-and-push-dev
     runs-on: ubuntu-latest
     permissions:
