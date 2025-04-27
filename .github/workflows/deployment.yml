@@ -1,4 +1,4 @@
-name: Docker Build Test
+name: Docker Build and Deploy
 
 on:
   push:
@@ -8,13 +8,15 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: dengelma/nuernbergspots-test
+  IMAGE_NAME_DEV: dengelma/nuernbergspots-test
+  IMAGE_NAME_PRD: dengelma/nuernbergspots
   SERVER_HOST: 87.106.208.51
   SERVER_USER: root
-  BASE_URL: /dev
+  BASE_URL_DEV: /dev
+  BASE_URL_PRD: /prd
 
 jobs:
-  build-and-push:
+  build-and-push-dev:
     environment: dev
     runs-on: ubuntu-latest
     permissions:
@@ -39,7 +41,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE_NAME_DEV }}
           tags: |
             type=raw,value=latest
             type=sha,format=short
@@ -54,7 +56,7 @@ jobs:
           build-args: |
             NODE_ENV=dev
             PORT=3000
-            BASE_URL=${{ env.BASE_URL }}
+            BASE_URL=${{ env.BASE_URL_DEV }}
           platforms: linux/amd64
 
       - name: Deploy to server
@@ -69,12 +71,78 @@ jobs:
             docker rm nuernbergspots-test || true
             
             # Pull und starte neuen Container
-            docker pull ${{ env.IMAGE_NAME }}:latest
+            docker pull ${{ env.IMAGE_NAME_DEV }}:latest
             docker run -d \
               --name nuernbergspots-test \
               -p 3000:3000 \
               --restart unless-stopped \
               -e NODE_ENV=dev \
               -e PORT=3000 \
-              -e BASE_URL=${{ env.BASE_URL }} \
-              ${{ env.IMAGE_NAME }}:latest
+              -e BASE_URL=${{ env.BASE_URL_DEV }} \
+              ${{ env.IMAGE_NAME_DEV }}:latest
+
+  build-and-push-prod:
+    environment: production
+    needs: build-and-push-dev
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create .env file for build
+        run: |
+          echo "${{ secrets.ENV_FILE_PRD }}" > .env.prd
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME_PRD }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NODE_ENV=prd
+            PORT=3100
+            BASE_URL=${{ env.BASE_URL_PRD }}
+          platforms: linux/amd64
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Stoppe und entferne alten Container
+            docker stop nuernbergspots || true
+            docker rm nuernbergspots || true
+            
+            # Pull und starte neuen Container
+            docker pull ${{ env.IMAGE_NAME_PRD }}:latest
+            docker run -d \
+              --name nuernbergspots \
+              -p 3100:3100 \
+              --restart unless-stopped \
+              -e NODE_ENV=prd \
+              -e PORT=3100 \
+              -e BASE_URL=${{ env.BASE_URL_PRD }} \
+              ${{ env.IMAGE_NAME_PRD }}:latest
