@@ -11,7 +11,7 @@ async function bootstrap() {
   // Enable CORS
   app.enableCors({
     origin: [
-      'https://citylife-fe75a.web.app',  // Production Frontend
+      configService.get<string>('FRONTEND_URL'),
       'http://localhost:5173',           // Local Frontend (falls benötigt)
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
