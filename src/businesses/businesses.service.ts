@@ -12,6 +12,8 @@ import { BusinessCategoriesService } from '../business-categories/business-categ
 import { KeywordsService } from '../keywords/keywords.service';
 import { EventsService } from '../events/events.service';
 import { FirebaseService } from 'src/firebase/firebase.service';
+import { OpeningHourInterval } from './interfaces/business.interface';
+
 interface BusinessStatusFilter {
   hasAccount: boolean;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -86,6 +88,24 @@ export class BusinessesService {
       events = await this.eventsService.getByIds(business.eventIds);
     }
 
+    // --- Öffnungszeiten-Logik ---
+    let detailedOpeningHours: Record<string, OpeningHourInterval[]> | undefined = business.detailedOpeningHours;
+
+    if (!detailedOpeningHours || Object.keys(detailedOpeningHours).length === 0) {
+      // Fallback: aus openingHours generieren
+      detailedOpeningHours = {};
+      if (business.openingHours) {
+        for (const [day, value] of Object.entries(business.openingHours)) {
+          // Beispiel: "08:00 - 12:00; 14:00 - 22:00"
+          const intervals = value.split(';').map(interval => {
+            const [start, end] = interval.split('-').map(str => str.trim());
+            return { from: start, to: end };
+          }).filter(interval => interval.from && interval.to);
+          detailedOpeningHours[day] = intervals;
+        }
+      }
+    }
+
     return {
       ...business,
       category: {
@@ -94,7 +114,8 @@ export class BusinessesService {
         iconName: category?.iconName || ''
       },
       keywordNames,
-      events
+      events,
+      detailedOpeningHours
     } as BusinessResponse;
   }
 
@@ -189,7 +210,7 @@ export class BusinessesService {
     }
     
     const db = this.firebaseService.getClientFirestore();
-    
+
     const businessData: Omit<Business, 'id'> = {
       name: data.name,
       categoryId: data.categoryId,
@@ -213,7 +234,7 @@ export class BusinessesService {
       },
       logoUrl: '',
       imageUrls: [],
-      openingHours: data.openingHours || {},
+      detailedOpeningHours: data.detailedOpeningHours || {},
       benefit: data.benefit,
       previousBenefits: [],
       status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING,
