@@ -1,7 +1,7 @@
 FROM node:18-alpine
 
 # Build arguments
-ARG NODE_ENV=production
+ARG NODE_ENV=prd
 ARG PORT=3000
 
 WORKDIR /app

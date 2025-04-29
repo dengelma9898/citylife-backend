@@ -36,7 +36,7 @@ export class FirebaseService implements OnModuleInit {
   }
 
   public getClientFirestore(): Firestore {
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'prd') {
       return getFirestore(this.configService.get<string>('FIREBASE_STORAGE_ID')!);
     }
     return getFirestore();
