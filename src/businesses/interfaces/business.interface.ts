@@ -15,6 +15,21 @@ export interface NuernbergspotsReview {
   updatedAt: string;
 }
 
+/**
+ * Öffnungszeiten-Intervall für einen Tag.
+ * Beispiel: { from: '08:00', to: '12:00' }
+ */
+export type OpeningHourInterval = {
+  /**
+   * Startzeit im Format HH:mm
+   */
+  from: string;
+  /**
+   * Endzeit im Format HH:mm
+   */
+  to: string;
+};
+
 export interface Business {
   id: string;
   name: string;
@@ -27,7 +42,12 @@ export interface Business {
   logoUrl?: string;
   imageUrls?: string[];
   nuernbergspotsReview?: NuernbergspotsReview;
-  openingHours: Record<string, string>;
+  openingHours?: Record<string, string>;
+  /**
+   * Detaillierte Öffnungszeiten mit mehreren Intervallen pro Tag.
+   * Beispiel: { Montag: [{ from: '08:00', to: '12:00' }, { from: '14:00', to: '22:00' }] }
+   */
+  detailedOpeningHours?: Record<string, OpeningHourInterval[]>;
   createdAt: string;
   updatedAt: string;
   isDeleted: boolean;

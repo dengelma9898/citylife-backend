@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsArray, IsBoolean, IsDateString, ValidateNested, IsObject } from 'class-validator';
+import { IsString, IsNotEmpty, IsArray, IsBoolean, IsDateString, ValidateNested, IsObject, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BusinessCategoryDto } from './business-category.dto';
 import { BusinessContactDto } from './business-contact.dto';
@@ -31,6 +31,14 @@ export class BusinessDto {
 
   @IsObject()
   public readonly openingHours: Record<string, string>;
+
+  /**
+   * Detaillierte Öffnungszeiten mit mehreren Intervallen pro Tag.
+   * Beispiel: { Montag: [{ from: '08:00', to: '12:00' }, { from: '14:00', to: '22:00' }] }
+   */
+  @IsOptional()
+  @IsObject()
+  public readonly detailedOpeningHours?: Record<string, { from: string; to: string }[]>;
 
   @IsDateString()
   public readonly createdAt: string;
