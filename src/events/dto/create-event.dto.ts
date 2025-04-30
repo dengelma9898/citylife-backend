@@ -1,4 +1,7 @@
-import { IsString, IsNotEmpty, IsNumber, IsDateString, IsOptional, IsBoolean, IsEmail, IsUrl, Matches } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsNotEmpty, IsNumber, IsDateString, IsOptional, IsBoolean, IsEmail, IsUrl, Matches, IsArray, ValidateNested } from 'class-validator';
+import { DailyTimeSlot } from '../interfaces/event.interface';
+import { DailyTimeSlotDTO } from './daily-time-slot.dto';
 
 export class CreateEventDto {
   @IsString()
@@ -18,12 +21,6 @@ export class CreateEventDto {
 
   @IsNumber()
   public readonly longitude: number;
-
-  @IsDateString()
-  public readonly startDate: string;
-
-  @IsDateString()
-  public readonly endDate: string;
 
   @IsOptional()
   @IsBoolean()
@@ -76,4 +73,9 @@ export class CreateEventDto {
   @IsOptional()
   @IsBoolean()
   public readonly isPromoted?: boolean = false;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DailyTimeSlotDTO)
+  public readonly dailyTimeSlots: DailyTimeSlot[];
 } 
