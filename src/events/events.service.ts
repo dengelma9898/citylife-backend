@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, runTransaction } from 'firebase/firestore';
-import { Event } from './interfaces/event.interface';
+import { Event, DailyTimeSlot } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 import { FirebaseService } from 'src/firebase/firebase.service';
 
@@ -9,15 +9,49 @@ export class EventsService {
   private readonly logger = new Logger(EventsService.name);
   constructor(private readonly firebaseService: FirebaseService) {}
 
+  private convertDateRangeToDailyTimeSlots(startDate: string, endDate: string, dailyTimeSlots: DailyTimeSlot[]): DailyTimeSlot[] {
+    if (!startDate || !endDate) return dailyTimeSlots;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const timeSlots: DailyTimeSlot[] = [];
+
+    // Extrahiere die Uhrzeit aus dem Start- und Enddatum
+    const startTime = startDate.split('T')[1]?.substring(0, 5) || '00:00';
+    const endTime = endDate.split('T')[1]?.substring(0, 5) || '23:59';
+
+    // Erstelle einen Eintrag für jeden Tag im Zeitraum
+    for (let currentDate = new Date(start); currentDate <= end; currentDate.setDate(currentDate.getDate() + 1)) {
+      const dateString = currentDate.toISOString().split('T')[0];
+      
+      timeSlots.push({
+        date: dateString,
+        from: startTime,
+        to: endTime
+      });
+    }
+
+    return timeSlots;
+  }
+
   public async getAll(): Promise<Event[]> {
     this.logger.debug('Getting all events');
     const db = this.firebaseService.getClientFirestore();
     const eventsCol = collection(db, 'events');
     const snapshot = await getDocs(eventsCol);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Event));
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      const { startDate, endDate, ...rest } = data;
+      
+
+      const dailyTimeSlots = this.convertDateRangeToDailyTimeSlots(startDate, endDate, data.dailyTimeSlots);
+
+      return {
+        id: doc.id,
+        ...rest,
+        dailyTimeSlots
+      } as Event;
+    });
   }
 
   public async getById(id: string): Promise<Event | null> {
@@ -30,9 +64,15 @@ export class EventsService {
       return null;
     }
 
+    const data = docSnap.data();
+    const { startDate, endDate, ...rest } = data;
+
+    const dailyTimeSlots = this.convertDateRangeToDailyTimeSlots(startDate, endDate, data.dailyTimeSlots);
+
     return {
       id: docSnap.id,
-      ...docSnap.data()
+      ...rest,
+      dailyTimeSlots
     } as Event;
   }
 
@@ -48,8 +88,6 @@ export class EventsService {
         latitude: data.latitude,
         longitude: data.longitude
       },
-      startDate: data.startDate,
-      endDate: data.endDate,
       imageUrls: [],
       titleImageUrl: '',
       ticketsNeeded: data.ticketsNeeded || false,
@@ -64,6 +102,7 @@ export class EventsService {
         tiktok: data.tiktok || ''
       },
       isPromoted: data.isPromoted,
+      dailyTimeSlots: data.dailyTimeSlots,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

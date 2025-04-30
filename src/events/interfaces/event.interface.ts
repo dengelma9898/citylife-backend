@@ -1,3 +1,23 @@
+
+
+/**
+ * Täglicher Zeitslot für ein Event
+ */
+export interface DailyTimeSlot {
+  /**
+   * Datum im ISO-Format (YYYY-MM-DD)
+   */
+  date: string;
+  /**
+   * Optionale Startzeit (HH:mm)
+   */
+  from?: string;
+  /**
+   * Optionale Endzeit (HH:mm)
+   */
+  to?: string;
+}
+
 export interface Event {
   id: string;
   title: string;
@@ -7,8 +27,8 @@ export interface Event {
     latitude: number;
     longitude: number;
   };
-  startDate: string;
-  endDate: string;
+  startDate?: string;
+  endDate?: string;
   titleImageUrl?: string;
   imageUrls?: string[];
   createdAt: string;
@@ -26,4 +46,5 @@ export interface Event {
     tiktok?: string;
   };
   isPromoted?: boolean;
+  dailyTimeSlots?: DailyTimeSlot[];
 } 
