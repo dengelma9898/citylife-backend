@@ -35,7 +35,8 @@ export interface Business {
   name: string;
   contact: BusinessContact;
   address: BusinessAddress;
-  categoryId: string;
+  categoryId?: string;
+  categoryIds: string[];
   keywordIds?: string[];
   eventIds?: string[];
   description: string;
@@ -63,12 +64,12 @@ export interface Business {
  * Basis-Response für Business-Liste
  * Enthält nur die Event-IDs
  */
-export interface BusinessListResponse extends Omit<Business, 'eventIds'> {
-  category: {
+export interface BusinessListResponse extends Omit<Business, 'eventIds' | 'categoryIds'> {
+  categories: Array<{
     id: string;
     name: string;
     iconName: string;
-  };
+  }>;
   keywordNames: string[];
   eventIds?: string[];
 }
