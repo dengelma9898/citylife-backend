@@ -31,9 +31,10 @@ export class CreateBusinessDto {
   @IsObject()
   public readonly detailedOpeningHours?: Record<string, { from: string; to: string }[]>;
 
-  @IsString()
+  @IsArray()
+  @IsString({ each: true })
   @IsNotEmpty()
-  public readonly categoryId: string;
+  public readonly categoryIds: string[];
 
   @IsArray()
   @IsString({ each: true })

@@ -31,6 +31,49 @@ export class BusinessesService {
     private readonly firebaseService: FirebaseService
   ) {}
 
+  private async loadCategories(categoryId: string | undefined, categoryIds: string[]): Promise<Array<{
+    id: string;
+    name: string;
+    iconName: string;
+  }>> {
+    if (!categoryId && !categoryIds) {
+      this.logger.warn('No categoryIds provided');
+      return [];
+    }
+
+    if (categoryId && (!categoryIds || categoryIds.length === 0)) {
+      categoryIds = [categoryId];
+    }
+
+    const categoryPromises = categoryIds.map(id => 
+      this.businessCategoriesService.getById(id)
+    );
+    const categories = await Promise.all(categoryPromises);
+
+    return categories
+      .filter(category => category !== null)
+      .map(category => ({
+        id: category.id,
+        name: category.name,
+        iconName: category.iconName
+      }));
+  }
+
+  private getMainCategory(categories: Array<{
+    id: string;
+    name: string;
+    iconName: string;
+  }>): {
+    id: string;
+    name: string;
+    iconName: string;
+  } {
+    if (categories.length === 0) {
+      return { id: '', name: 'Unknown Category', iconName: '' };
+    }
+    return categories[0];
+  }
+
   public async getAll(): Promise<BusinessListResponse[]> {
     this.logger.debug('Getting all businesses');
     const db = this.firebaseService.getClientFirestore();
@@ -45,16 +88,14 @@ export class BusinessesService {
     // Kategorien und Keywords für alle Businesses laden
     const businessesWithDetails = await Promise.all(
       businesses.map(async (business) => {
-        const category = await this.businessCategoriesService.getById(business.categoryId);
+        const categories = await this.loadCategories(business.categoryId, business.categoryIds);
         const keywordNames = await this.getKeywordNames(business.keywordIds || []);
-
+        const categoryIds = business.categoryIds || [business.categoryId];
+        business.categoryId = undefined;
         return {
           ...business,
-          category: {
-            id: category?.id || '',
-            name: category?.name || '',
-            iconName: category?.iconName || ''
-          },
+          categories,
+          categoryIds,
           keywordNames
         } as BusinessListResponse;
       })
@@ -78,10 +119,10 @@ export class BusinessesService {
       ...docSnap.data()
     } as Business;
 
-    // Kategorie und Keywords laden
-    const category = await this.businessCategoriesService.getById(business.categoryId);
+    const categories = await this.loadCategories(business.categoryId, business.categoryIds);
+    const mainCategory = this.getMainCategory(categories);
     const keywordNames = await this.getKeywordNames(business.keywordIds || []);
-
+    const categoryIds = business.categoryIds || [business.categoryId];
     // Events laden, wenn vorhanden
     let events;
     if (business.eventIds && business.eventIds.length > 0) {
@@ -105,14 +146,11 @@ export class BusinessesService {
         }
       }
     }
-
+    business.categoryId = undefined;
     return {
       ...business,
-      category: {
-        id: category?.id || '',
-        name: category?.name || '',
-        iconName: category?.iconName || ''
-      },
+      categories,
+      categoryIds,
       keywordNames,
       events,
       detailedOpeningHours
@@ -122,10 +160,11 @@ export class BusinessesService {
   private async mapBusinessesToResponse(businesses: Business[]): Promise<BusinessResponse[]> {
     if (businesses.length === 0) return [];
     
-    const categoryPromises = businesses.map(business => 
-      this.businessCategoriesService.getById(business.categoryId)
+    // Lade alle Kategorien für alle Businesses
+    const categoriesPromises = businesses.map(business => 
+      this.loadCategories(business.categoryId, business.categoryIds)
     );
-    const categories = await Promise.all(categoryPromises);
+    const categoriesResults = await Promise.all(categoriesPromises);
     
     const keywordPromises = businesses
       .filter(business => business.keywordIds && business.keywordIds.length > 0)
@@ -147,17 +186,20 @@ export class BusinessesService {
     });
     
     return businesses.map((business, index) => {
-      const category = categories[index];
+      const categories = categoriesResults[index];
+      const mainCategory = this.getMainCategory(categories);
       
-      if (!category) {
-        this.logger.warn(`Category with id ${business.categoryId} not found for business ${business.id}`);
+      if (categories.length === 0) {
+        this.logger.warn(`No categories found for business ${business.id}`);
       }
       
       const { keywordIds, ...businessWithoutKeywordIds } = business;
       
       return {
         ...businessWithoutKeywordIds,
-        category: category || { id: business.categoryId, name: 'Unknown Category' },
+        category: mainCategory,
+        categories,
+        categoryIds: business.categoryIds,
         keywordIds: keywordIds || [],
         keywordNames: (keywordMap.get(business.id) || []).map(keyword => keyword.name)
       } as BusinessResponse;
@@ -194,10 +236,11 @@ export class BusinessesService {
 
   public async create(data: CreateBusinessDto): Promise<BusinessResponse> {
     this.logger.debug('Creating new business');
-    
-    const category = await this.businessCategoriesService.getById(data.categoryId);
-    if (!category) {
-      throw new NotFoundException(`Business category with id ${data.categoryId} not found`);
+    console.log('data', data);
+    // Überprüfe, ob die erste Kategorie existiert (wird für die Hauptkategorie verwendet)
+    const mainCategory = await this.businessCategoriesService.getById(data.categoryIds[0]);
+    if (!mainCategory) {
+      throw new NotFoundException(`Business category with id ${data.categoryIds[0]} not found`);
     }
     
     if (data.keywordIds && data.keywordIds.length > 0) {
@@ -213,7 +256,7 @@ export class BusinessesService {
 
     const businessData: Omit<Business, 'id'> = {
       name: data.name,
-      categoryId: data.categoryId,
+      categoryIds: data.categoryIds,
       keywordIds: data.keywordIds || [],
       description: data.description,
       contact: {
@@ -245,7 +288,7 @@ export class BusinessesService {
       isDeleted: false,
       hasAccount: data.hasAccount
     };
-
+    console.log('businessData', businessData);
     const docRef = await addDoc(collection(db, 'businesses'), businessData);
     
     const business: Business = {
@@ -255,22 +298,6 @@ export class BusinessesService {
     
     const [businessResponse] = await this.mapBusinessesToResponse([business]);
     return businessResponse;
-  }
-
-  private async getCategory(id: string): Promise<BusinessCategory | null> {
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'business_categories', id);
-    const docSnap = await getDoc(docRef);
-    
-    if (!docSnap.exists()) return null;
-    
-    return {
-      name: docSnap.data().name,
-      description: docSnap.data().description,
-      iconName: docSnap.data().iconName,
-      createdAt: docSnap.data().createdAt,
-      updatedAt: docSnap.data().updatedAt
-    };
   }
 
   public async update(id: string, data: Partial<Business>): Promise<BusinessResponse> {
