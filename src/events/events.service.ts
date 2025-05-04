@@ -10,7 +10,7 @@ export class EventsService {
   constructor(private readonly firebaseService: FirebaseService) {}
 
   private convertDateRangeToDailyTimeSlots(startDate: string, endDate: string, dailyTimeSlots: DailyTimeSlot[]): DailyTimeSlot[] {
-    if (!startDate || !endDate) return dailyTimeSlots;
+    if (dailyTimeSlots?.length > 0) return dailyTimeSlots;
 
     const start = new Date(startDate);
     const end = new Date(endDate);
