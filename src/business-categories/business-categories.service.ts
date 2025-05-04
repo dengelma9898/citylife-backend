@@ -5,6 +5,7 @@ import { CreateBusinessCategoryDto } from './dto/create-business-category.dto';
 import { UpdateBusinessCategoryDto } from './dto/update-business-category.dto';
 import { KeywordsService } from '../keywords/keywords.service';
 import { FirebaseService } from 'src/firebase/firebase.service';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 @Injectable()
 export class BusinessCategoriesService {
   private readonly logger = new Logger(BusinessCategoriesService.name);
@@ -41,14 +42,15 @@ export class BusinessCategoriesService {
   public async create(data: CreateBusinessCategoryDto): Promise<BusinessCategory> {
     this.logger.debug('Creating business category');
     const db = this.firebaseService.getClientFirestore();
-    
+    console.log('data', data);
+    console.log('DateTimeUtils.getBerlinTime()', DateTimeUtils.getBerlinTime());
     const categoryData: Omit<BusinessCategory, 'id'> = {
       name: data.name,
       iconName: data.iconName,
       description: data.description,
       keywordIds: data.keywordIds || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     const docRef = await addDoc(collection(db, 'business_categories'), categoryData);
@@ -71,7 +73,7 @@ export class BusinessCategoriesService {
 
     const updateData = {
       ...data,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     await updateDoc(docRef, updateData);

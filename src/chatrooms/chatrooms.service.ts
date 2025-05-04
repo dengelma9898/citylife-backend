@@ -3,6 +3,7 @@ import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc } fro
 import { Chatroom } from './interfaces/chatroom.interface';
 import { CreateChatroomDto } from './dto/create-chatroom.dto';
 import { FirebaseService } from 'src/firebase/firebase.service';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 
 @Injectable()
 export class ChatroomsService {
@@ -46,8 +47,8 @@ export class ChatroomsService {
       description: data.description,
       imageUrl: data.imageUrl,
       participants: data.participants,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     const docRef = await addDoc(collection(db, 'chatrooms'), chatroomData);
@@ -70,7 +71,7 @@ export class ChatroomsService {
 
     const updateData = {
       ...data,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     await updateDoc(docRef, updateData);
@@ -88,7 +89,7 @@ export class ChatroomsService {
     const lastMessage = {
       content,
       authorId,
-      sentAt: new Date().toISOString()
+      sentAt: DateTimeUtils.getBerlinTime()
     };
 
     return this.update(id, { lastMessage });

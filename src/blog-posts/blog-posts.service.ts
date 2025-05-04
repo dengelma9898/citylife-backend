@@ -3,6 +3,7 @@ import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, dele
 import { BlogPost } from './interfaces/blog-post.interface';
 import { CreateBlogPostDto } from './dto/create-blog-post.dto';
 import { FirebaseService } from 'src/firebase/firebase.service';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 @Injectable()
 export class BlogPostsService {
   constructor(private readonly firebaseService: FirebaseService) {}
@@ -42,8 +43,8 @@ export class BlogPostsService {
     const postData: Omit<BlogPost, 'id'> = {
       ...data,
       blogPictures: blogPictures || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime(),
       likedByUsers: [],
       views: 0
     };
@@ -68,7 +69,7 @@ export class BlogPostsService {
 
     const updateData = {
       ...data,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     await updateDoc(docRef, updateData);

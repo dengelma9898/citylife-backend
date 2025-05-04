@@ -12,6 +12,7 @@ import { UsersService } from '../users/users.service';
 import { NuernbergspotsReviewDto } from './dto/nuernbergspots-review.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { BusinessCustomerScans } from './interfaces/business-customer.interface';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 
 @Controller('businesses')
 export class BusinessesController {
@@ -208,7 +209,7 @@ export class BusinessesController {
     const review: NuernbergspotsReview = {
       reviewText: reviewData.reviewText || '',
       reviewImageUrls: reviewData.reviewImageUrls || [],
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     // Update business with the review
@@ -237,7 +238,7 @@ export class BusinessesController {
     const review = business.nuernbergspotsReview || {
       reviewText: '',
       reviewImageUrls: [],
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     // Upload each new image
@@ -255,7 +256,7 @@ export class BusinessesController {
     const updatedReview: NuernbergspotsReview = {
       ...review,
       reviewImageUrls,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     // Update business with updated review
@@ -305,7 +306,7 @@ export class BusinessesController {
     const updatedReview: NuernbergspotsReview = {
       ...review,
       reviewImageUrls: updatedReviewImageUrls,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     // Update business with updated review

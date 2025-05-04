@@ -4,6 +4,7 @@ import { Keyword } from './interfaces/keyword.interface';
 import { CreateKeywordDto } from './dto/create-keyword.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
 import { FirebaseService } from 'src/firebase/firebase.service';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 @Injectable()
 export class KeywordsService {
   private readonly logger = new Logger(KeywordsService.name);
@@ -43,8 +44,8 @@ export class KeywordsService {
     const keywordData: Omit<Keyword, 'id'> = {
       name: data.name,
       description: data.description,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     const docRef = await addDoc(collection(db, 'keywords'), keywordData);
@@ -67,7 +68,7 @@ export class KeywordsService {
 
     const updateData = {
       ...data,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     await updateDoc(docRef, updateData);
