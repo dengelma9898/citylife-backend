@@ -12,6 +12,7 @@ import { CreateTextNewsDto } from './dto/create-text-news.dto';
 import { CreateReactionDto } from './dto/create-reaction.dto';
 import { UsersService } from '../users/users.service';
 import { FirebaseService } from 'src/firebase/firebase.service';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 
 @Injectable()
 export class NewsService {
@@ -128,8 +129,8 @@ export class NewsService {
     const newsItem: Omit<TextNewsItem, 'id'> = {
       type: 'text',
       content: data.content,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime(),
       createdBy: data.authorId,
       reactions: [],
       views: 0
@@ -145,8 +146,8 @@ export class NewsService {
       type: 'image',
       imageUrls: data.imageUrls,
       content: data.content,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime(),
       createdBy: data.authorId,
       reactions: [],
       views: 0
@@ -163,8 +164,8 @@ export class NewsService {
       audioUrl: data.audioUrl,
       duration: data.duration,
       caption: data.caption,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime(),
       createdBy: data.authorId,
       reactions: [],
       views: 0
@@ -188,8 +189,8 @@ export class NewsService {
       options,
       expiresAt: data.pollInfo.endDate,
       allowMultipleAnswers: data.pollInfo.allowMultipleChoices,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime(),
       createdBy: data.authorId,
       reactions: [],
       views: 0,
@@ -215,8 +216,8 @@ export class NewsService {
       options,
       allowMultipleAnswers: data.allowMultipleAnswers,
       expiresAt: data.expiresAt,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime(),
       createdBy: data.authorId,
       reactions: [],
       views: 0
@@ -247,7 +248,7 @@ export class NewsService {
 
     const updateData = {
       ...data,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     await updateDoc(docRef, updateData);
@@ -330,7 +331,7 @@ export class NewsService {
         
         transaction.update(newsRef, { 
           reactions: updatedReactions,
-          updatedAt: new Date().toISOString()
+          updatedAt: DateTimeUtils.getBerlinTime()
         });
       });
       
@@ -409,7 +410,7 @@ export class NewsService {
         transaction.update(newsRef, { 
           options: updatedOptions,
           votes: totalVotes,
-          updatedAt: new Date().toISOString()
+          updatedAt: DateTimeUtils.getBerlinTime()
         });
       });
       
@@ -491,7 +492,7 @@ export class NewsService {
         
         transaction.update(newsRef, { 
           options: finalOptions,
-          updatedAt: new Date().toISOString()
+          updatedAt: DateTimeUtils.getBerlinTime()
         });
       });
       
@@ -526,7 +527,7 @@ export class NewsService {
         
         transaction.update(newsRef, { 
           views: currentCount + 1,
-          updatedAt: new Date().toISOString()
+          updatedAt: DateTimeUtils.getBerlinTime()
         });
       });
     } catch (error) {

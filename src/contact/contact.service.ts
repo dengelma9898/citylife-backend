@@ -11,6 +11,7 @@ import { UsersService } from '../users/users.service';
 import { UserType } from '../users/enums/user-type.enum';
 import { AddMessageDto } from './dto/add-message.dto';
 import { FirebaseService } from 'src/firebase/firebase.service';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 @Injectable()
 export class ContactService {
   private readonly logger = new Logger(ContactService.name);
@@ -31,7 +32,7 @@ export class ContactService {
     const initialMessage: ContactMessage = {
       userId: data.userId,
       message: data.message,
-      createdAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getBerlinTime(),
       isAdminResponse: false
     };
 
@@ -39,8 +40,8 @@ export class ContactService {
       type,
       businessId: 'businessId' in data ? data.businessId : '',
       messages: [initialMessage],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime(),
       isProcessed: false,
       responded: false
     };
@@ -98,14 +99,14 @@ export class ContactService {
     const newMessage: ContactMessage = {
       userId: data.userId,
       message: data.message,
-      createdAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getBerlinTime(),
       isAdminResponse: true
     };
 
     await updateDoc(docRef, {
       messages: [...contactRequest.messages, newMessage],
       responded: true,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     });
     
     const updatedRequest = await this.getById(id, data.userId);
@@ -170,7 +171,7 @@ export class ContactService {
     
     await updateDoc(docRef, {
       isProcessed: true,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     });
     
     const updatedRequest = await this.getById(id, '');
@@ -235,7 +236,7 @@ export class ContactService {
     const newMessage: ContactMessage = {
       userId,
       message: messageDto.message,
-      createdAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getBerlinTime(),
       isAdminResponse: 'userType' in user && user.userType === UserType.SUPER_ADMIN
     };
 
@@ -244,7 +245,7 @@ export class ContactService {
     
     await updateDoc(docRef, {
       messages: [...contactRequest.messages, newMessage],
-      updatedAt: new Date().toISOString(),
+      updatedAt: DateTimeUtils.getBerlinTime(),
       // Wenn es eine Admin-Antwort ist, setzen wir responded auf true
       ...(newMessage.isAdminResponse && { responded: true })
     });

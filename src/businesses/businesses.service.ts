@@ -13,6 +13,7 @@ import { KeywordsService } from '../keywords/keywords.service';
 import { EventsService } from '../events/events.service';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { OpeningHourInterval } from './interfaces/business.interface';
+import { DateTimeUtils } from '../utils/date-time.utils';
 
 interface BusinessStatusFilter {
   hasAccount: boolean;
@@ -235,7 +236,7 @@ export class BusinessesService {
 
   public async create(data: CreateBusinessDto): Promise<BusinessResponse> {
     this.logger.debug('Creating new business');
-    console.log('data', data);
+    
     // Überprüfe, ob die erste Kategorie existiert (wird für die Hauptkategorie verwendet)
     const mainCategory = await this.businessCategoriesService.getById(data.categoryIds[0]);
     if (!mainCategory) {
@@ -281,13 +282,13 @@ export class BusinessesService {
       previousBenefits: [],
       status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING,
       customers: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getUTCTime(),
+      updatedAt: DateTimeUtils.getUTCTime(),
       isPromoted: data.isPromoted || false,
       isDeleted: false,
       hasAccount: data.hasAccount
     };
-    console.log('businessData', businessData);
+
     const docRef = await addDoc(collection(db, 'businesses'), businessData);
     
     const business: Business = {
@@ -328,7 +329,7 @@ export class BusinessesService {
     const currentBusiness = docSnap.data() as Business;
     const updateData: Partial<Business> = {
       ...data,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getUTCTime()
     };
 
     // Wenn sich der Benefit ändert, füge den alten Benefit zu previousBenefits hinzu
@@ -381,7 +382,7 @@ export class BusinessesService {
   
     const newCustomer: BusinessCustomer = {
       customerId: scanData.customerId,
-      scannedAt: new Date().toISOString(),
+      scannedAt: DateTimeUtils.getUTCTime(),
       benefit: businessData.benefit,
       price: scanData.price || null,
       numberOfPeople: scanData.numberOfPeople || null,
@@ -394,7 +395,7 @@ export class BusinessesService {
 
     await updateDoc(docRef, { 
       customers,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getUTCTime()
     });
     
     const updatedBusiness = await this.getById(businessId);

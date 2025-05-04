@@ -9,6 +9,7 @@ import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { EventsService } from '../events/events.service';
 import { BusinessesService } from '../businesses/businesses.service';
 import { FirebaseService } from 'src/firebase/firebase.service';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 
 @Injectable()
 export class UsersService {
@@ -166,8 +167,8 @@ export class UsersService {
     const userData: Omit<BusinessUser, 'id'> = {
       email: data.email,
       businessIds: [data.businessId],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime(),
       isDeleted: false,
       needsReview: data.needsReview
     };
@@ -193,7 +194,7 @@ export class UsersService {
 
     const updateData = {
       ...data,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     await updateDoc(docRef, updateData);
@@ -386,7 +387,7 @@ export class UsersService {
         const updatedBusinessIds = [...businessUser.businessIds, businessId];
         transaction.update(businessUserRef, { 
           businessIds: updatedBusinessIds,
-          updatedAt: new Date().toISOString()
+          updatedAt: DateTimeUtils.getBerlinTime()
         });
 
         // Update Business hasAccount Status

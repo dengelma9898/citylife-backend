@@ -1,6 +1,7 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { UsersService } from '../users.service';
 import { BusinessHistory } from '../interfaces/business-history.interface';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 
 @Injectable()
 export class UserAdapterService {
@@ -18,7 +19,7 @@ export class UserAdapterService {
       businessId: businessId,
       businessName: businessName,
       benefit: benefit,
-      visitedAt: new Date().toISOString()
+      visitedAt: DateTimeUtils.getBerlinTime()
     };
 
     const user = await this.usersService.getUserProfile(userId);

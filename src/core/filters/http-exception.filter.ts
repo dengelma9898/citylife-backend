@@ -1,5 +1,6 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
 import { Response } from 'express';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 
 interface ExceptionResponse {
   message: string;
@@ -16,7 +17,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     response.status(status).json({
       statusCode: status,
-      timestamp: new Date().toISOString(),
+      timestamp: DateTimeUtils.getBerlinTime(),
       message: exceptionResponse.message || exception.message,
     });
   }

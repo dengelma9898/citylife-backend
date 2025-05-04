@@ -3,6 +3,7 @@ import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, dele
 import { EventCategory } from '../interfaces/event-category.interface';
 import { CreateEventCategoryDto } from '../dto/create-event-category.dto';
 import { FirebaseService } from 'src/firebase/firebase.service';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 
 @Injectable()
 export class EventCategoriesService {
@@ -46,8 +47,8 @@ export class EventCategoriesService {
       description: data.description,
       colorCode: data.colorCode,
       iconName: data.iconName,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     const docRef = await addDoc(collection(db, this.collectionName), categoryData);
@@ -70,7 +71,7 @@ export class EventCategoriesService {
 
     const updateData = {
       ...data,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     await updateDoc(docRef, updateData);

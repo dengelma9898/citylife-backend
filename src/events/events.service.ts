@@ -3,6 +3,7 @@ import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, dele
 import { Event, DailyTimeSlot } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 import { FirebaseService } from 'src/firebase/firebase.service';
+import { DateTimeUtils } from 'src/utils/date-time.utils';
 
 @Injectable()
 export class EventsService {
@@ -103,8 +104,8 @@ export class EventsService {
       },
       isPromoted: data.isPromoted,
       dailyTimeSlots: data.dailyTimeSlots,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: DateTimeUtils.getBerlinTime(),
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     console.log('eventData', eventData);
@@ -128,7 +129,7 @@ export class EventsService {
     console.log('update event data', data);
     const updateData = {
       ...data,
-      updatedAt: new Date().toISOString()
+      updatedAt: DateTimeUtils.getBerlinTime()
     };
 
     await updateDoc(docRef, updateData);
@@ -172,7 +173,7 @@ export class EventsService {
         
         transaction.update(eventRef, { 
           favoriteCount: newCount,
-          updatedAt: new Date().toISOString()
+          updatedAt: DateTimeUtils.getBerlinTime()
         });
       });
       

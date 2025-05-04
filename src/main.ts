@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { TimezoneInterceptor } from './core/interceptors/timezone.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,6 +22,9 @@ async function bootstrap() {
 
   // Global validation pipe
   app.useGlobalPipes(new ValidationPipe());
+
+  // Globalen TimezoneInterceptor hinzufügen
+  app.useGlobalInterceptors(new TimezoneInterceptor());
 
   // Swagger configuration
   const config = new DocumentBuilder()
