@@ -24,7 +24,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
 
   // Globalen TimezoneInterceptor hinzufügen
-  app.useGlobalInterceptors(new TimezoneInterceptor());
+  // app.useGlobalInterceptors(new TimezoneInterceptor());
 
   // Swagger configuration
   const config = new DocumentBuilder()

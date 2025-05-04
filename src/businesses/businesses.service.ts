@@ -85,7 +85,7 @@ export class BusinessesService {
       id: doc.id,
       ...doc.data()
     } as Business));
-
+    console.log('businesses', businesses);
     // Kategorien und Keywords für alle Businesses laden
     const businessesWithDetails = await Promise.all(
       businesses.map(async (business) => {
@@ -446,7 +446,7 @@ export class BusinessesService {
         });
       }
     }
-    
+    console.log('businessScans', businessScans);
     // Sort businesses by most recent scan
     return businessScans.sort((a, b) => {
       const aLatestScan = new Date(a.scans[0].scannedAt).getTime();
