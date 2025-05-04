@@ -131,7 +131,6 @@ export class BusinessesService {
 
     // --- Öffnungszeiten-Logik ---
     let detailedOpeningHours: Record<string, OpeningHourInterval[]> | undefined = business.detailedOpeningHours;
-
     if (!detailedOpeningHours || Object.keys(detailedOpeningHours).length === 0) {
       // Fallback: aus openingHours generieren
       detailedOpeningHours = {};
