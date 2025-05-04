@@ -45,6 +45,7 @@ export class UsersController {
   public async getProfile(@Param('id') id: string): Promise<UserProfile | BusinessUser> {
     this.logger.log(`GET /users/${id}/profile`);
     const user = await this.usersService.getById(id);
+    console.log('user', user);
     if (!user) {
       throw new NotFoundException('User profile not found');
     }
