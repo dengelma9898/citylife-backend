@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, runTransaction, where, query } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
-import { NewsItem, TextNewsItem, ImageNewsItem, PollNewsItem, AudioNewsItem, PollOption, SurveyNewsItem, SurveyOption, Reaction } from './interfaces/news-item.interface';
+import { NewsItem, TextNewsItem, ImageNewsItem, PollNewsItem, PollOption, Reaction } from './interfaces/news-item.interface';
 import { CreateImageNewsDto } from './dto/create-image-news.dto';
 import { CreatePollNewsDto, PollOptionDto } from './dto/create-poll-news.dto';
 import { CreateAudioNewsDto } from './dto/create-audio-news.dto';
@@ -73,7 +73,6 @@ export class NewsService {
       // Transform poll items for client format
       if (item.type === 'poll') {
         this.transformPollForClient(item as PollNewsItem);
-        console.log('item', item);
       }
       
       enrichedItems.push(item);
@@ -156,24 +155,6 @@ export class NewsService {
     return this.saveNewsItem(newsItem) as Promise<ImageNewsItem>;
   }
 
-  public async createAudioNews(data: CreateAudioNewsDto): Promise<AudioNewsItem> {
-    this.logger.debug('Creating audio news item');
-    
-    const newsItem: Omit<AudioNewsItem, 'id'> = {
-      type: 'audio',
-      audioUrl: data.audioUrl,
-      duration: data.duration,
-      caption: data.caption,
-      createdAt: DateTimeUtils.getBerlinTime(),
-      updatedAt: DateTimeUtils.getBerlinTime(),
-      createdBy: data.authorId,
-      reactions: [],
-      views: 0
-    };
-
-    return this.saveNewsItem(newsItem) as Promise<AudioNewsItem>;
-  }
-
   public async createPollNews(data: CreatePollNewsDto): Promise<PollNewsItem> {
     this.logger.debug('Creating poll news item');
     
@@ -199,33 +180,7 @@ export class NewsService {
 
     return this.saveNewsItem(newsItem) as Promise<PollNewsItem>;
   }
-
-  public async createSurveyNews(data: CreateSurveyNewsDto): Promise<SurveyNewsItem> {
-    this.logger.debug('Creating survey news item');
-    
-    const options: SurveyOption[] = data.options.map(option => ({
-      id: uuidv4(),
-      text: option.text,
-      votes: 0,
-      voters: []
-    }));
-    
-    const newsItem: Omit<SurveyNewsItem, 'id'> = {
-      type: 'survey',
-      question: data.question,
-      options,
-      allowMultipleAnswers: data.allowMultipleAnswers,
-      expiresAt: data.expiresAt,
-      createdAt: DateTimeUtils.getBerlinTime(),
-      updatedAt: DateTimeUtils.getBerlinTime(),
-      createdBy: data.authorId,
-      reactions: [],
-      views: 0
-    };
-
-    return this.saveNewsItem(newsItem) as Promise<SurveyNewsItem>;
-  }
-
+  
   private async saveNewsItem(newsItem: Omit<NewsItem, 'id'>): Promise<NewsItem> {
     const db = this.firebaseService.getClientFirestore();
     const docRef = await addDoc(collection(db, this.collectionName), newsItem);
@@ -423,88 +378,6 @@ export class NewsService {
       return updatedPoll;
     } catch (error) {
       this.logger.error(`Error voting on poll ${newsId}: ${error.message}`);
-      throw error;
-    }
-  }
-
-  public async voteSurvey(newsId: string, voteData: VoteSurveyDto): Promise<SurveyNewsItem> {
-    this.logger.debug(`User ${voteData.userId} voting on survey ${newsId}, options: ${voteData.optionIds.join(', ')}`);
-    const db = this.firebaseService.getClientFirestore();
-    const newsRef = doc(db, this.collectionName, newsId);
-    
-    try {
-      let updatedSurvey: SurveyNewsItem;
-      
-      await runTransaction(db, async (transaction) => {
-        const newsDoc = await transaction.get(newsRef);
-        
-        if (!newsDoc.exists()) {
-          throw new NotFoundException(`News item ${newsId} not found`);
-        }
-        
-        const newsData = newsDoc.data() as SurveyNewsItem;
-        
-        if (newsData.type !== 'survey') {
-          throw new BadRequestException('News item is not a survey');
-        }
-        
-        // Check if survey has expired
-        if (newsData.expiresAt && new Date(newsData.expiresAt) < new Date()) {
-          throw new BadRequestException('Survey has expired');
-        }
-        
-        // Validate that all optionIds exist
-        const optionIds = newsData.options.map(option => option.id);
-        for (const optionId of voteData.optionIds) {
-          if (!optionIds.includes(optionId)) {
-            throw new BadRequestException(`Option with ID ${optionId} not found`);
-          }
-        }
-        
-        // If not allowing multiple answers and user tries to select more than one
-        if (!newsData.allowMultipleAnswers && voteData.optionIds.length > 1) {
-          throw new BadRequestException('This survey does not allow multiple answers');
-        }
-        
-        // Remove any previous votes by this user
-        const updatedOptions = newsData.options.map(option => {
-          if (option.voters.includes(voteData.userId)) {
-            return {
-              ...option,
-              votes: option.votes - 1,
-              voters: option.voters.filter(voterId => voterId !== voteData.userId)
-            };
-          }
-          return option;
-        });
-        
-        // Add the new votes
-        const finalOptions = updatedOptions.map(option => {
-          if (voteData.optionIds.includes(option.id)) {
-            return {
-              ...option,
-              votes: option.votes + 1,
-              voters: [...option.voters, voteData.userId]
-            };
-          }
-          return option;
-        });
-        
-        transaction.update(newsRef, { 
-          options: finalOptions,
-          updatedAt: DateTimeUtils.getBerlinTime()
-        });
-      });
-      
-      const updatedNewsDoc = await getDoc(newsRef);
-      updatedSurvey = {
-        id: updatedNewsDoc.id,
-        ...updatedNewsDoc.data()
-      } as SurveyNewsItem;
-      
-      return updatedSurvey;
-    } catch (error) {
-      this.logger.error(`Error voting on survey ${newsId}: ${error.message}`);
       throw error;
     }
   }

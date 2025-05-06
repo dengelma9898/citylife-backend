@@ -119,7 +119,7 @@ export class BusinessesService {
       id: docSnap.id,
       ...docSnap.data()
     } as Business;
-
+    console.log('business before', business);
     const categories = await this.loadCategories(business.categoryId, business.categoryIds);
     const mainCategory = this.getMainCategory(categories);
     const keywordNames = await this.getKeywordNames(business.keywordIds || []);

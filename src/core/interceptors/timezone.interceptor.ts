@@ -5,18 +5,25 @@ import { DateTimeUtils } from '../../utils/date-time.utils';
 
 @Injectable()
 export class TimezoneInterceptor implements NestInterceptor {
+  private readonly dateFields = [
+    'createdAt',
+    'updatedAt',
+    'visitedAt',
+    'scannedAt',
+  ];
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
-      map(data => this.convertSpecificDatesToBerlinTime(data))
+      map(data => this.convertDatesToBerlinTime(data))
     );
   }
 
-  private convertSpecificDatesToBerlinTime(data: any): any {
+  private convertDatesToBerlinTime(data: any): any {
     if (!data) return data;
 
     // Wenn es ein Array ist, rekursiv für jedes Element aufrufen
     if (Array.isArray(data)) {
-      return data.map(item => this.convertSpecificDatesToBerlinTime(item));
+      return data.map(item => this.convertDatesToBerlinTime(item));
     }
 
     // Wenn es ein Objekt ist, rekursiv für jede Property aufrufen
@@ -25,19 +32,18 @@ export class TimezoneInterceptor implements NestInterceptor {
       for (const key in data) {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
           const value = data[key];
-          
-          // Nur createdAt und updatedAt Felder konvertieren
-          if ((key === 'createdAt' || key === 'updatedAt') && 
-              (this.isISODateString(value) || value instanceof Date)) {
-            result[key] = DateTimeUtils.convertUTCToBerlinTime(value);
-          } else {
-            result[key] = this.convertSpecificDatesToBerlinTime(value);
+          if (value !== null) {
+            if (this.dateFields.includes(key) && 
+                (this.isISODateString(value) || value instanceof Date)) {
+              result[key] = DateTimeUtils.convertUTCToBerlinTime(value);
+            } else {
+              result[key] = this.convertDatesToBerlinTime(value);
+            }
           }
         }
       }
       return result;
     }
-
     return data;
   }
 
