@@ -10,6 +10,7 @@ import { EventsService } from '../events/events.service';
 import { BusinessesService } from '../businesses/businesses.service';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { DateTimeUtils } from 'src/utils/date-time.utils';
+import { BusinessStatus } from '../businesses/interfaces/business.interface';
 
 @Injectable()
 export class UsersService {
@@ -215,7 +216,33 @@ export class UsersService {
       throw new NotFoundException('Business user not found');
     }
 
-    await deleteDoc(docRef);
+    const businessUser = docSnap.data() as BusinessUser;
+
+    try {
+      // Führe die Aktualisierungen in einer Transaktion durch
+      await runTransaction(db, async (transaction) => {
+        // Setze alle zugehörigen Businesses auf INACTIVE
+        for (const businessId of businessUser.businessIds) {
+          const businessRef = doc(db, 'businesses', businessId);
+          const businessDoc = await transaction.get(businessRef);
+          
+          if (businessDoc.exists()) {
+            transaction.update(businessRef, {
+              status: BusinessStatus.INACTIVE,
+              updatedAt: DateTimeUtils.getBerlinTime()
+            });
+          }
+        }
+
+        // Lösche den Business-User
+        transaction.delete(docRef);
+      });
+
+      this.logger.debug(`Successfully deleted business user ${id} and set associated businesses to INACTIVE`);
+    } catch (error) {
+      this.logger.error(`Error deleting business user ${id}: ${error.message}`);
+      throw new Error(`Failed to delete business user: ${error.message}`);
+    }
   }
 
   public async toggleFavoriteEvent(userId: string, eventId: string): Promise<boolean> {

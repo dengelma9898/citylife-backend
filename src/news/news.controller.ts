@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Body, Param, NotFoundException, Logger, Patch, BadRequestException, UseInterceptors, UploadedFiles, UploadedFile, Delete, Request } from '@nestjs/common';
 import { NewsService } from './news.service';
-import { NewsItem, TextNewsItem, ImageNewsItem, PollNewsItem, AudioNewsItem, SurveyNewsItem } from './interfaces/news-item.interface';
+import { NewsItem, TextNewsItem, ImageNewsItem, PollNewsItem } from './interfaces/news-item.interface';
 import { CreateReactionDto } from './dto/create-reaction.dto';
 import { CreateImageNewsDto } from './dto/create-image-news.dto';
 import { CreatePollNewsDto } from './dto/create-poll-news.dto';
@@ -63,40 +63,12 @@ export class NewsController {
     return this.newsService.createImageNews(createImageNewsDto);
   }
 
-  @Post('audio')
-  @UseInterceptors(FileInterceptor('audio'))
-  public async createAudioNews(
-    @Body() createAudioNewsDto: CreateAudioNewsDto,
-    @UploadedFile(new FileValidationPipe()) file: Express.Multer.File
-  ): Promise<AudioNewsItem> {
-    this.logger.log('POST /news/audio');
-    
-    if (file) {
-      // If a file was uploaded, store it and use the URL
-      const path = `news/audio/${Date.now()}-${file.originalname}`;
-      const audioUrl = await this.firebaseStorageService.uploadFile(file, path);
-      createAudioNewsDto.audioUrl = audioUrl;
-    } else if (!createAudioNewsDto.audioUrl) {
-      throw new BadRequestException('Either an audio file or an audioUrl must be provided');
-    }
-    
-    return this.newsService.createAudioNews(createAudioNewsDto);
-  }
-
   @Post('poll')
   public async createPollNews(
     @Body() createPollNewsDto: CreatePollNewsDto,
   ): Promise<PollNewsItem> {
     this.logger.log('POST /news/poll');
     return this.newsService.createPollNews(createPollNewsDto);
-  }
-
-  @Post('survey')
-  public async createSurveyNews(
-    @Body() createSurveyNewsDto: CreateSurveyNewsDto,
-  ): Promise<SurveyNewsItem> {
-    this.logger.log('POST /news/survey');
-    return this.newsService.createSurveyNews(createSurveyNewsDto);
   }
 
   @Patch(':id/poll-vote')
@@ -106,15 +78,6 @@ export class NewsController {
   ): Promise<PollNewsItem> {
     this.logger.log(`POST /news/${id}/vote`);
     return this.newsService.votePoll(id, voteData);
-  }
-
-  @Post(':id/survey-vote')
-  public async voteSurvey(
-    @Param('id') id: string,
-    @Body() voteData: VoteSurveyDto,
-  ): Promise<SurveyNewsItem> {
-    this.logger.log(`POST /news/${id}/survey-vote`);
-    return this.newsService.voteSurvey(id, voteData);
   }
 
   @Patch(':id/react')

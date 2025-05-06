@@ -19,7 +19,7 @@ export class UserAdapterService {
       businessId: businessId,
       businessName: businessName,
       benefit: benefit,
-      visitedAt: DateTimeUtils.getBerlinTime()
+      visitedAt: DateTimeUtils.getUTCTime()
     };
 
     const user = await this.usersService.getUserProfile(userId);
