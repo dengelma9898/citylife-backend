@@ -17,6 +17,9 @@ import { BusinessCategoriesModule } from './business-categories/business-categor
 import { LocationModule } from './location/location.module';
 import { EventCategoriesModule } from './event-categories/event-categories.module';
 import { ContactModule } from './contact/contact.module';
+import { JobOfferCategoriesModule } from './job-offer-categories/job-offer-categories.module';
+import { JobOffersModule } from './job-offers/job-offers.module';
+import { SpecialPollsModule } from './special-polls/special-polls.module';
 
 @Module({
   imports: [
@@ -40,7 +43,10 @@ import { ContactModule } from './contact/contact.module';
     BusinessCategoriesModule,
     LocationModule,
     EventCategoriesModule,
-    ContactModule
+    ContactModule,
+    JobOfferCategoriesModule,
+    JobOffersModule,
+    SpecialPollsModule,
   ],
   providers: [
     {

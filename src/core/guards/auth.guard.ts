@@ -1,57 +1,33 @@
-import { Injectable, CanActivate, ExecutionContext, Logger, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as admin from 'firebase-admin';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
+import { FirebaseService } from '../../firebase/firebase.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly firebaseService: FirebaseService) {}
 
-  async canActivate(
-    context: ExecutionContext,
-  ): Promise<boolean> {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization;
-    
+
     if (!authHeader) {
-      this.logger.warn('No authorization header present');
-      throw new UnauthorizedException('No authorization header present');
+      this.logger.warn('No authorization header found');
+      throw new UnauthorizedException('No authorization header found');
     }
 
-    const [type, token] = authHeader.split(' ');
-    
-    if (type !== 'Bearer') {
-      this.logger.warn(`Invalid authorization type: ${type}`);
-      throw new UnauthorizedException('Invalid authorization type. Expected Bearer token');
-    }
-
+    const token = authHeader.split(' ')[1];
     if (!token) {
-      this.logger.warn('No token provided');
-      throw new UnauthorizedException('No token provided');
+      this.logger.warn('No token found in authorization header');
+      throw new UnauthorizedException('No token found in authorization header');
     }
 
     try {
-      const decodedToken = await admin.auth().verifyIdToken(token);
-      
-      // Prüfe Firebase Audience gegen Umgebungsvariable
-      const expectedAudience = this.configService.get<string>('FIREBASE_PROJECT_ID');
-      if (decodedToken.aud !== expectedAudience) {
-        this.logger.warn(`Invalid token audience: ${decodedToken.aud}`);
-        throw new UnauthorizedException('Invalid token audience');
-      }
-
-      // Prüfe Firebase Property  
-      if (!decodedToken.firebase) {
-        this.logger.warn('Token is not a Firebase token');
-        throw new UnauthorizedException('Invalid token type');
-      }
-
-      this.logger.debug(`Valid token for user: ${decodedToken.uid}`);
+      const decodedToken = await this.firebaseService.getAuth().verifyIdToken(token);
+      request.user = decodedToken;
       return true;
-
     } catch (error) {
-      this.logger.warn('Token verification failed:', error.message);
+      this.logger.error(`Token verification failed: ${error.message}`);
       throw new UnauthorizedException('Invalid token');
     }
   }

@@ -16,6 +16,7 @@ export class FileValidationPipe implements PipeTransform {
   }
 
   transform(file: Express.Multer.File, metadata: ArgumentMetadata) {
+    this.logger.debug(`Validating file: ${file}`);
     this.logger.debug(`Validating file: ${file?.originalname}`);
     
     if (!file || file.originalname === undefined) {

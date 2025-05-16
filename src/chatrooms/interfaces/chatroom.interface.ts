@@ -1,8 +1,9 @@
 export interface Chatroom {
   id: string;
-  name: string;
+  title: string;
   description: string;
   imageUrl?: string;
+  createdBy: string; // User ID des Erstellers
   participants: string[]; // Array of user IDs
   lastMessage?: {
     content: string;

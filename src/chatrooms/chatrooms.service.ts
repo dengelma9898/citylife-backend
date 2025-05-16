@@ -1,9 +1,10 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
+import { FirebaseService } from '../firebase/firebase.service';
 import { Chatroom } from './interfaces/chatroom.interface';
 import { CreateChatroomDto } from './dto/create-chatroom.dto';
-import { FirebaseService } from 'src/firebase/firebase.service';
-import { DateTimeUtils } from 'src/utils/date-time.utils';
+import { UpdateChatroomDto } from './dto/update-chatroom.dto';
+import { DateTimeUtils } from '../utils/date-time.utils';
+import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 @Injectable()
 export class ChatroomsService {
@@ -11,7 +12,7 @@ export class ChatroomsService {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  public async getAll(): Promise<Chatroom[]> {
+  async getAll(): Promise<Chatroom[]> {
     this.logger.debug('Getting all chatrooms');
     const db = this.firebaseService.getClientFirestore();
     const chatroomsCol = collection(db, 'chatrooms');
@@ -22,14 +23,14 @@ export class ChatroomsService {
     } as Chatroom));
   }
 
-  public async getById(id: string): Promise<Chatroom | null> {
+  async findOne(id: string): Promise<Chatroom> {
     this.logger.debug(`Getting chatroom ${id}`);
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'chatrooms', id);
     const docSnap = await getDoc(docRef);
     
     if (!docSnap.exists()) {
-      return null;
+      throw new NotFoundException('Chatroom not found');
     }
 
     return {
@@ -38,18 +39,20 @@ export class ChatroomsService {
     } as Chatroom;
   }
 
-  public async create(data: CreateChatroomDto): Promise<Chatroom> {
+  async create(createChatroomDto: CreateChatroomDto, userId: string): Promise<Chatroom> {
     this.logger.debug('Creating chatroom');
     const db = this.firebaseService.getClientFirestore();
     
     const chatroomData: Omit<Chatroom, 'id'> = {
-      name: data.name,
-      description: data.description,
-      imageUrl: data.imageUrl,
-      participants: data.participants,
+      title: createChatroomDto.title,
+      description: createChatroomDto.description || '',
+      imageUrl: createChatroomDto.image || '',
+      createdBy: userId,
+      participants: [userId],
       createdAt: DateTimeUtils.getBerlinTime(),
       updatedAt: DateTimeUtils.getBerlinTime()
     };
+    console.log(chatroomData);
 
     const docRef = await addDoc(collection(db, 'chatrooms'), chatroomData);
     
@@ -59,18 +62,13 @@ export class ChatroomsService {
     };
   }
 
-  public async update(id: string, data: Partial<Chatroom>): Promise<Chatroom> {
+  async update(id: string, updateChatroomDto: UpdateChatroomDto): Promise<Chatroom> {
     this.logger.debug(`Updating chatroom ${id}`);
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'chatrooms', id);
-    const docSnap = await getDoc(docRef);
     
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Chatroom not found');
-    }
-
     const updateData = {
-      ...data,
+      ...updateChatroomDto,
       updatedAt: DateTimeUtils.getBerlinTime()
     };
 
@@ -83,15 +81,18 @@ export class ChatroomsService {
     } as Chatroom;
   }
 
-  public async updateLastMessage(id: string, content: string, authorId: string): Promise<Chatroom> {
-    this.logger.debug(`Updating last message for chatroom ${id}`);
-    
-    const lastMessage = {
-      content,
-      authorId,
-      sentAt: DateTimeUtils.getBerlinTime()
-    };
+  async updateImage(id: string, imageUrl: string): Promise<Chatroom> {
+    this.logger.debug(`Updating chatroom image ${id}`);
+    const db = this.firebaseService.getClientFirestore();
+    const docRef = doc(db, 'chatrooms', id);
+    await updateDoc(docRef, { imageUrl });
+    return this.findOne(id);
+  }
 
-    return this.update(id, { lastMessage });
+  async remove(id: string): Promise<void> {
+    this.logger.debug(`Deleting chatroom ${id}`);
+    const db = this.firebaseService.getClientFirestore();
+    const docRef = doc(db, 'chatrooms', id);
+    await deleteDoc(docRef);
   }
 } 
