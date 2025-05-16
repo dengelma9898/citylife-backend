@@ -32,6 +32,11 @@ jobs:
         run: |
           echo "${{ secrets.ENV_FILE }}" > .env.dev
 
+      - name: Create service account file
+        run: |
+          mkdir -p certificates
+          echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT }}" > certificates/service_account.json
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -71,6 +76,10 @@ jobs:
             docker stop nuernbergspots-test || true
             docker rm nuernbergspots-test || true
             
+            # Erstelle certificates Verzeichnis und Service Account
+            mkdir -p /app/certificates
+            echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT }}" > /app/certificates/service_account.json
+            
             # Pull und starte neuen Container
             docker pull ${{ env.IMAGE_NAME_DEV }}:latest
             docker run -d \
@@ -80,6 +89,8 @@ jobs:
               -e NODE_ENV=dev \
               -e PORT=3000 \
               -e BASE_URL=${{ env.BASE_URL_DEV }} \
+              -e GOOGLE_APPLICATION_CREDENTIALS=/app/certificates/service_account.json \
+              -v /app/certificates:/app/certificates \
               ${{ env.IMAGE_NAME_DEV }}:latest
 
   build-and-push-prd:
@@ -97,6 +108,11 @@ jobs:
       - name: Create .env file for build
         run: |
           echo "${{ secrets.ENV_FILE }}" > .env.prd
+
+      - name: Create service account file
+        run: |
+          mkdir -p certificates
+          echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT }}" > certificates/service_account.json
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -137,6 +153,10 @@ jobs:
             docker stop nuernbergspots || true
             docker rm nuernbergspots || true
             
+            # Erstelle certificates Verzeichnis und Service Account
+            mkdir -p /app/certificates
+            echo "${{ secrets.GOOGLE_SERVICE_ACCOUNT }}" > /app/certificates/service_account.json
+            
             # Pull und starte neuen Container
             docker pull ${{ env.IMAGE_NAME_PRD }}:latest
             docker run -d \
@@ -146,4 +166,6 @@ jobs:
               -e NODE_ENV=prd \
               -e PORT=3100 \
               -e BASE_URL=${{ env.BASE_URL_PRD }} \
+              -e GOOGLE_APPLICATION_CREDENTIALS=/app/certificates/service_account.json \
+              -v /app/certificates:/app/certificates \
               ${{ env.IMAGE_NAME_PRD }}:latest
