@@ -130,7 +130,7 @@ dist
 .pnp.*
 
 # Certificates
-certificates/*.pem
+certificates/*
 *.base64
 .env
 .env.*
