@@ -1,26 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { FirebaseService } from '../../firebase/firebase.service';
 import { CreateJobCategoryDto } from '../dto/create-job-category.dto';
 import { JobCategory } from '../interfaces/job-category.interface';
+import { DateTimeUtils } from '../../utils/date-time.utils';
 
 @Injectable()
 export class JobOfferCategoriesService {
-  private readonly collection = 'job_categories';
+  private readonly logger = new Logger(JobOfferCategoriesService.name);
+  private readonly collectionName = 'job_categories';
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
   async create(createJobCategoryDto: CreateJobCategoryDto): Promise<JobCategory> {
-    const now = new Date().toISOString();
+    this.logger.debug('Creating new job category');
+    const now = DateTimeUtils.getUTCTime();
     const jobCategory: Omit<JobCategory, 'id'> = {
       ...createJobCategoryDto,
       createdAt: now,
       updatedAt: now,
     };
 
-    const docRef = await this.firebaseService
-      .getFirestore()
-      .collection(this.collection)
-      .add(jobCategory);
+    const db = this.firebaseService.getClientFirestore();
+    const docRef = await addDoc(collection(db, this.collectionName), jobCategory);
 
     return {
       id: docRef.id,
@@ -29,54 +31,62 @@ export class JobOfferCategoriesService {
   }
 
   async findAll(): Promise<JobCategory[]> {
-    const snapshot = await this.firebaseService
-      .getFirestore()
-      .collection(this.collection)
-      .get();
-
-    return snapshot.docs.map((doc) => ({
+    this.logger.debug('Getting all job categories');
+    const db = this.firebaseService.getClientFirestore();
+    const categoriesCol = collection(db, this.collectionName);
+    const snapshot = await getDocs(categoriesCol);
+    
+    return snapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data(),
+      ...doc.data()
     })) as JobCategory[];
   }
 
   async findOne(id: string): Promise<JobCategory> {
-    const doc = await this.firebaseService
-      .getFirestore()
-      .collection(this.collection)
-      .doc(id)
-      .get();
+    this.logger.debug(`Getting job category ${id}`);
+    const db = this.firebaseService.getClientFirestore();
+    const docRef = doc(db, this.collectionName, id);
+    const docSnap = await getDoc(docRef);
 
-    if (!doc.exists) {
-      throw new Error('Job category not found');
+    if (!docSnap.exists()) {
+      throw new NotFoundException('Job category not found');
     }
 
     return {
-      id: doc.id,
-      ...doc.data(),
+      id: docSnap.id,
+      ...docSnap.data()
     } as JobCategory;
   }
 
   async update(id: string, updateJobCategoryDto: Partial<CreateJobCategoryDto>): Promise<JobCategory> {
+    this.logger.debug(`Updating job category ${id}`);
+    const db = this.firebaseService.getClientFirestore();
+    const docRef = doc(db, this.collectionName, id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      throw new NotFoundException('Job category not found');
+    }
+
     const updateData = {
       ...updateJobCategoryDto,
-      updatedAt: new Date().toISOString(),
+      updatedAt: DateTimeUtils.getUTCTime(),
     };
 
-    await this.firebaseService
-      .getFirestore()
-      .collection(this.collection)
-      .doc(id)
-      .update(updateData);
-
+    await updateDoc(docRef, updateData);
     return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
-    await this.firebaseService
-      .getFirestore()
-      .collection(this.collection)
-      .doc(id)
-      .delete();
+    this.logger.debug(`Removing job category ${id}`);
+    const db = this.firebaseService.getClientFirestore();
+    const docRef = doc(db, this.collectionName, id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      throw new NotFoundException('Job category not found');
+    }
+
+    await deleteDoc(docRef);
   }
 } 

@@ -1,26 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { FirebaseService } from '../../firebase/firebase.service';
 import { CreateJobOfferDto } from '../dto/create-job-offer.dto';
 import { JobOffer } from '../interfaces/job-offer.interface';
+import { DateTimeUtils } from '../../utils/date-time.utils';
 
 @Injectable()
 export class JobOffersService {
-  private readonly collection = 'job_offers';
+  private readonly logger = new Logger(JobOffersService.name);
+  private readonly collectionName = 'job_offers';
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
   async create(createJobOfferDto: CreateJobOfferDto): Promise<JobOffer> {
-    const now = new Date().toISOString();
+    this.logger.debug('Creating new job offer');
+    const now = DateTimeUtils.getUTCTime();
     const jobOffer: Omit<JobOffer, 'id'> = {
       ...createJobOfferDto,
       createdAt: now,
       updatedAt: now,
     };
 
-    const docRef = await this.firebaseService
-      .getFirestore()
-      .collection(this.collection)
-      .add(jobOffer);
+    const db = this.firebaseService.getClientFirestore();
+    const docRef = await addDoc(collection(db, this.collectionName), jobOffer);
 
     return {
       id: docRef.id,
@@ -29,54 +31,62 @@ export class JobOffersService {
   }
 
   async findAll(): Promise<JobOffer[]> {
-    const snapshot = await this.firebaseService
-      .getFirestore()
-      .collection(this.collection)
-      .get();
-
-    return snapshot.docs.map((doc) => ({
+    this.logger.debug('Getting all job offers');
+    const db = this.firebaseService.getClientFirestore();
+    const offersCol = collection(db, this.collectionName);
+    const snapshot = await getDocs(offersCol);
+    
+    return snapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data(),
+      ...doc.data()
     })) as JobOffer[];
   }
 
   async findOne(id: string): Promise<JobOffer> {
-    const doc = await this.firebaseService
-      .getFirestore()
-      .collection(this.collection)
-      .doc(id)
-      .get();
+    this.logger.debug(`Getting job offer ${id}`);
+    const db = this.firebaseService.getClientFirestore();
+    const docRef = doc(db, this.collectionName, id);
+    const docSnap = await getDoc(docRef);
 
-    if (!doc.exists) {
-      throw new Error('Job offer not found');
+    if (!docSnap.exists()) {
+      throw new NotFoundException('Job offer not found');
     }
 
     return {
-      id: doc.id,
-      ...doc.data(),
+      id: docSnap.id,
+      ...docSnap.data()
     } as JobOffer;
   }
 
   async update(id: string, updateJobOfferDto: Partial<CreateJobOfferDto>): Promise<JobOffer> {
+    this.logger.debug(`Updating job offer ${id}`);
+    const db = this.firebaseService.getClientFirestore();
+    const docRef = doc(db, this.collectionName, id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      throw new NotFoundException('Job offer not found');
+    }
+
     const updateData = {
       ...updateJobOfferDto,
-      updatedAt: new Date().toISOString(),
+      updatedAt: DateTimeUtils.getUTCTime(),
     };
 
-    await this.firebaseService
-      .getFirestore()
-      .collection(this.collection)
-      .doc(id)
-      .update(updateData);
-
+    await updateDoc(docRef, updateData);
     return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
-    await this.firebaseService
-      .getFirestore()
-      .collection(this.collection)
-      .doc(id)
-      .delete();
+    this.logger.debug(`Removing job offer ${id}`);
+    const db = this.firebaseService.getClientFirestore();
+    const docRef = doc(db, this.collectionName, id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      throw new NotFoundException('Job offer not found');
+    }
+
+    await deleteDoc(docRef);
   }
 } 

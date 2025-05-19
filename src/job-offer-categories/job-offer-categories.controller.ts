@@ -27,6 +27,7 @@ export class JobOfferCategoriesController {
   @ApiOperation({ summary: 'Get all job offer categories' })
   @ApiResponse({ status: 200, description: 'Return all job offer categories.' })
   findAll(): Promise<JobCategory[]> {
+    console.log('findAll');
     return this.jobOfferCategoriesService.findAll();
   }
 
