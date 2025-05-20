@@ -39,6 +39,55 @@ Generate code, corrections, and refactorings that comply with the basic principl
 - Declare interfaces for contracts
 - Write small classes (< 200 lines, < 10 methods)
 
+## Domain Entities
+- Use readonly properties for immutability
+- Avoid getter methods, expose properties directly
+- Use private constructor with static factory methods
+- Implement toJSON for serialization
+- Return new instances in update methods
+- Example:
+```typescript
+export interface EntityProps {
+  id: string;
+  // other properties
+}
+
+export class Entity {
+  readonly id: string;
+  // other readonly properties
+
+  private constructor(props: EntityProps) {
+    this.id = props.id;
+    // initialize other properties
+  }
+
+  static create(props: Omit<EntityProps, 'id'>): Entity {
+    return new Entity({
+      id: crypto.randomUUID(),
+      ...props
+    });
+  }
+
+  static fromProps(props: EntityProps): Entity {
+    return new Entity(props);
+  }
+
+  update(props: Partial<Omit<EntityProps, 'id'>>): Entity {
+    return new Entity({
+      ...this,
+      ...props
+    });
+  }
+
+  toJSON(): EntityProps {
+    return {
+      id: this.id,
+      // other properties
+    };
+  }
+}
+```
+
 ## Exceptions
 - Use exceptions for unexpected errors
 - Catch exceptions to:

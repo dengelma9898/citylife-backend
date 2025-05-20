@@ -1,11 +1,12 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ValidationPipe, UseInterceptors, UploadedFiles, NotFoundException } from '@nestjs/common';
 import { JobOfferCategoriesService } from './services/job-offer-categories.service';
 import { CreateJobCategoryDto } from './dto/create-job-category.dto';
-import { JobCategory } from './interfaces/job-category.interface';
+
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
+import { JobCategory } from './domain/entities/job-category.entity';
 
 @ApiTags('Job Offer Categories')
 @Controller('job-offer-categories')
