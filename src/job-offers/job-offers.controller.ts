@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFiles, NotFoundException, Logger, UploadedFile } from '@nestjs/common';
-import { JobOffersService } from './services/job-offers.service';
+import { JobOffersService } from './application/services/job-offers.service';
 import { CreateJobOfferDto } from './dto/create-job-offer.dto';
-import { JobOffer } from './interfaces/job-offer.interface';
+import { JobOffer } from './domain/entities/job-offer.entity';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';

@@ -97,6 +97,7 @@ export class JobOfferCategoriesController {
     @Param('id') categoryId: string,
     @Body('imageUrl') imageUrl: string
   ): Promise<JobCategory> {
+    console.log('removeFallbackImage', categoryId, imageUrl);
     if (!imageUrl) {
       throw new NotFoundException('imageUrl is required');
     }

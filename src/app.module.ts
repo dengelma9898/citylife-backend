@@ -4,7 +4,6 @@ import { CoreModule } from './core/core.module';
 import { UsersModule } from './users/users.module';
 import { WalletModule } from './wallet/wallet.module';
 import { FirebaseModule } from './firebase/firebase.module';
-import { CitiesModule } from './cities/cities.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
 import { BusinessesModule } from './businesses/businesses.module';
 import { APP_GUARD } from '@nestjs/core';
@@ -33,7 +32,6 @@ import { SpecialPollsModule } from './special-polls/special-polls.module';
     FirebaseModule,
     UsersModule,
     WalletModule,
-    CitiesModule,
     AppSettingsModule,
     BusinessesModule,
     NewsModule,
