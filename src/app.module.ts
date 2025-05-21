@@ -4,7 +4,6 @@ import { CoreModule } from './core/core.module';
 import { UsersModule } from './users/users.module';
 import { WalletModule } from './wallet/wallet.module';
 import { FirebaseModule } from './firebase/firebase.module';
-import { CitiesModule } from './cities/cities.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
 import { BusinessesModule } from './businesses/businesses.module';
 import { APP_GUARD } from '@nestjs/core';
@@ -20,6 +19,7 @@ import { ContactModule } from './contact/contact.module';
 import { JobOfferCategoriesModule } from './job-offer-categories/job-offer-categories.module';
 import { JobOffersModule } from './job-offers/job-offers.module';
 import { SpecialPollsModule } from './special-polls/special-polls.module';
+import { AccountManagementModule } from './account-management/account-management.module';
 
 @Module({
   imports: [
@@ -33,7 +33,6 @@ import { SpecialPollsModule } from './special-polls/special-polls.module';
     FirebaseModule,
     UsersModule,
     WalletModule,
-    CitiesModule,
     AppSettingsModule,
     BusinessesModule,
     NewsModule,
@@ -47,6 +46,7 @@ import { SpecialPollsModule } from './special-polls/special-polls.module';
     JobOfferCategoriesModule,
     JobOffersModule,
     SpecialPollsModule,
+    AccountManagementModule,
   ],
   providers: [
     {

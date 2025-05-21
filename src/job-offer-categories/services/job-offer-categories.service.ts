@@ -1,92 +1,49 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { FirebaseService } from '../../firebase/firebase.service';
+import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
+import { JobCategory } from '../domain/entities/job-category.entity';
+import { JobCategoryRepository, JOB_CATEGORY_REPOSITORY } from '../domain/repositories/job-category.repository';
 import { CreateJobCategoryDto } from '../dto/create-job-category.dto';
-import { JobCategory } from '../interfaces/job-category.interface';
-import { DateTimeUtils } from '../../utils/date-time.utils';
 
 @Injectable()
 export class JobOfferCategoriesService {
   private readonly logger = new Logger(JobOfferCategoriesService.name);
-  private readonly collectionName = 'job_categories';
 
-  constructor(private readonly firebaseService: FirebaseService) {}
+  constructor(
+    @Inject(JOB_CATEGORY_REPOSITORY)
+    private readonly jobCategoryRepository: JobCategoryRepository
+  ) {}
 
   async create(createJobCategoryDto: CreateJobCategoryDto): Promise<JobCategory> {
     this.logger.debug('Creating new job category');
-    const now = DateTimeUtils.getUTCTime();
-    const jobCategory: Omit<JobCategory, 'id'> = {
-      ...createJobCategoryDto,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = await addDoc(collection(db, this.collectionName), jobCategory);
-
-    return {
-      id: docRef.id,
-      ...jobCategory,
-    };
+    const jobCategory = JobCategory.create(createJobCategoryDto);
+    await this.jobCategoryRepository.save(jobCategory);
+    return jobCategory;
   }
 
   async findAll(): Promise<JobCategory[]> {
     this.logger.debug('Getting all job categories');
-    const db = this.firebaseService.getClientFirestore();
-    const categoriesCol = collection(db, this.collectionName);
-    const snapshot = await getDocs(categoriesCol);
-    
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as JobCategory[];
+    return this.jobCategoryRepository.findAll();
   }
 
   async findOne(id: string): Promise<JobCategory> {
     this.logger.debug(`Getting job category ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, this.collectionName, id);
-    const docSnap = await getDoc(docRef);
-
-    if (!docSnap.exists()) {
+    try {
+      return await this.jobCategoryRepository.findById(id);
+    } catch (error) {
       throw new NotFoundException('Job category not found');
     }
-
-    return {
-      id: docSnap.id,
-      ...docSnap.data()
-    } as JobCategory;
   }
 
   async update(id: string, updateJobCategoryDto: Partial<CreateJobCategoryDto>): Promise<JobCategory> {
     this.logger.debug(`Updating job category ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, this.collectionName, id);
-    const docSnap = await getDoc(docRef);
-
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Job category not found');
-    }
-
-    const updateData = {
-      ...updateJobCategoryDto,
-      updatedAt: DateTimeUtils.getUTCTime(),
-    };
-
-    await updateDoc(docRef, updateData);
-    return this.findOne(id);
+    const existingCategory = await this.findOne(id);
+    existingCategory.update(updateJobCategoryDto);
+    await this.jobCategoryRepository.update(id, existingCategory);
+    return existingCategory;
   }
 
   async remove(id: string): Promise<void> {
     this.logger.debug(`Removing job category ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, this.collectionName, id);
-    const docSnap = await getDoc(docRef);
-
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Job category not found');
-    }
-
-    await deleteDoc(docRef);
+    await this.findOne(id); // Verify existence
+    await this.jobCategoryRepository.delete(id);
   }
 } 
