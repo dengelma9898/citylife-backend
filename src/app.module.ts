@@ -19,6 +19,7 @@ import { ContactModule } from './contact/contact.module';
 import { JobOfferCategoriesModule } from './job-offer-categories/job-offer-categories.module';
 import { JobOffersModule } from './job-offers/job-offers.module';
 import { SpecialPollsModule } from './special-polls/special-polls.module';
+import { AccountManagementModule } from './account-management/account-management.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { SpecialPollsModule } from './special-polls/special-polls.module';
     JobOfferCategoriesModule,
     JobOffersModule,
     SpecialPollsModule,
+    AccountManagementModule,
   ],
   providers: [
     {
