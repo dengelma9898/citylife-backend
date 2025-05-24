@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { UserType } from './enums/user-type.enum';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { EventsService } from '../events/events.service';
-import { BusinessesService } from '../businesses/businesses.service';
+import { BusinessesService } from '../businesses/application/services/businesses.service';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { DateTimeUtils } from 'src/utils/date-time.utils';
 import { BusinessStatus } from '../businesses/interfaces/business.interface';

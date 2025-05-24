@@ -6,7 +6,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersService } from '../users/users.service';
-import { BusinessesService } from '../businesses/businesses.service';
+import { BusinessesService } from '../businesses/application/services/businesses.service';
 
 @Controller('events')
 export class EventsController {

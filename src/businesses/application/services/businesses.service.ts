@@ -114,4 +114,15 @@ export class BusinessesService {
     this.logger.debug(`Getting businesses with status ${filter.status} and hasAccount ${filter.hasAccount}`);
     return this.businessRepository.findByStatusAndHasAccount(filter.status, filter.hasAccount);
   }
+
+  public async updateHasAccount(id: string, hasAccount: boolean): Promise<Business> {
+    this.logger.debug(`Updating business hasAccount status ${id} to ${hasAccount}`);
+    const existingBusiness = await this.businessRepository.findById(id);
+    if (!existingBusiness) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const updatedBusiness = existingBusiness.update({ hasAccount });
+    return this.businessRepository.update(id, updatedBusiness);
+  }
 } 
