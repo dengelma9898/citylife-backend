@@ -1,8 +1,8 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, NotFoundException, Logger } from '@nestjs/common';
-import { BusinessCategoriesService } from './business-categories.service';
-import { BusinessCategory } from './interfaces/business-category.interface';
-import { CreateBusinessCategoryDto } from './dto/create-business-category.dto';
-import { UpdateBusinessCategoryDto } from './dto/update-business-category.dto';
+import { BusinessCategoriesService } from '../services/business-categories.service';
+import { BusinessCategory } from '../../domain/entities/business-category.entity';
+import { CreateBusinessCategoryDto } from '../../dto/create-business-category.dto';
+import { UpdateBusinessCategoryDto } from '../../dto/update-business-category.dto';
 
 @Controller('business-categories')
 export class BusinessCategoriesController {
@@ -56,6 +56,4 @@ export class BusinessCategoriesController {
     this.logger.log(`DELETE /business-categories/${id}`);
     return this.businessCategoriesService.delete(id);
   }
-
-
 } 
