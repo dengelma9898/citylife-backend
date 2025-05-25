@@ -2,8 +2,8 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, runTransaction } from 'firebase/firestore';
 import { Event, DailyTimeSlot } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
-import { FirebaseService } from 'src/firebase/firebase.service';
-import { DateTimeUtils } from 'src/utils/date-time.utils';
+import { FirebaseService } from '../firebase/firebase.service';
+import { DateTimeUtils } from '../utils/date-time.utils';
 
 @Injectable()
 export class EventsService {

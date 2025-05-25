@@ -8,8 +8,8 @@ import { UserType } from './enums/user-type.enum';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { EventsService } from '../events/events.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
-import { FirebaseService } from 'src/firebase/firebase.service';
-import { DateTimeUtils } from 'src/utils/date-time.utils';
+import { FirebaseService } from '../firebase/firebase.service';
+import { DateTimeUtils } from '../utils/date-time.utils';
 import { BusinessStatus } from '../businesses/interfaces/business.interface';
 
 @Injectable()

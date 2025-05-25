@@ -48,7 +48,7 @@ export class ContactService {
     if (user) {
       const contactRequestIds = user.contactRequestIds || [];
       contactRequestIds.push(createdRequest.id);
-      
+
       if ('userType' in user) {
         await this.usersService.update(data.userId, { contactRequestIds });
       } else {
@@ -109,7 +109,7 @@ export class ContactService {
   public async getById(id: string, userId: string): Promise<ContactRequest | null> {
     this.logger.debug(`Getting contact request ${id} for user ${userId}`);
     const contactRequest = await this.contactRequestRepository.findById(id);
-    
+
     if (!contactRequest) {
       return null;
     }

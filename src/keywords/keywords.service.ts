@@ -3,8 +3,8 @@ import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, dele
 import { Keyword } from './interfaces/keyword.interface';
 import { CreateKeywordDto } from './dto/create-keyword.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
-import { FirebaseService } from 'src/firebase/firebase.service';
-import { DateTimeUtils } from 'src/utils/date-time.utils';
+import { FirebaseService } from '../firebase/firebase.service';
+import { DateTimeUtils } from '../utils/date-time.utils';
 @Injectable()
 export class KeywordsService {
   private readonly logger = new Logger(KeywordsService.name);
