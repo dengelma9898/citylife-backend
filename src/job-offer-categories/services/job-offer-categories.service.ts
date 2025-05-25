@@ -36,9 +36,9 @@ export class JobOfferCategoriesService {
   async update(id: string, updateJobCategoryDto: Partial<CreateJobCategoryDto>): Promise<JobCategory> {
     this.logger.debug(`Updating job category ${id}`);
     const existingCategory = await this.findOne(id);
-    existingCategory.update(updateJobCategoryDto);
-    await this.jobCategoryRepository.update(id, existingCategory);
-    return existingCategory;
+    const updatedCategory = existingCategory.update(updateJobCategoryDto);
+    await this.jobCategoryRepository.update(id, updatedCategory);
+    return updatedCategory;
   }
 
   async remove(id: string): Promise<void> {

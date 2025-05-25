@@ -28,7 +28,6 @@ export class JobOfferCategoriesController {
   @ApiOperation({ summary: 'Get all job offer categories' })
   @ApiResponse({ status: 200, description: 'Return all job offer categories.' })
   findAll(): Promise<JobCategory[]> {
-    console.log('findAll');
     return this.jobOfferCategoriesService.findAll();
   }
 
@@ -98,7 +97,7 @@ export class JobOfferCategoriesController {
     @Param('id') categoryId: string,
     @Body('imageUrl') imageUrl: string
   ): Promise<JobCategory> {
-    console.log('removeFallbackImage', categoryId, imageUrl);
+
     if (!imageUrl) {
       throw new NotFoundException('imageUrl is required');
     }
