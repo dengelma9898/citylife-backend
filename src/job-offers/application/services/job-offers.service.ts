@@ -37,6 +37,7 @@ export class JobOffersService {
 
   async remove(id: string): Promise<void> {
     this.logger.debug(`Removing job offer ${id}`);
+    await this.findOne(id); // Verify existence
     await this.jobOfferRepository.delete(id);
   }
 } 
