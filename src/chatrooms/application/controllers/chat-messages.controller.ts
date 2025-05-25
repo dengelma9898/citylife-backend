@@ -6,8 +6,8 @@ import { UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
 
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
-import { CurrentUser } from 'src/core/decorators/current-user.decorator';
-import { Roles } from 'src/core/decorators/roles.decorator';
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { Roles } from '../../../core/decorators/roles.decorator';
 
 @ApiTags('chat-messages')
 @Controller('chatrooms/:chatroomId/messages')
