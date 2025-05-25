@@ -108,7 +108,6 @@ export class EventsService {
       updatedAt: DateTimeUtils.getBerlinTime()
     };
 
-    console.log('eventData', eventData);
     const docRef = await addDoc(collection(db, 'events'), eventData);
     
     return {
@@ -126,7 +125,7 @@ export class EventsService {
     if (!docSnap.exists()) {
       throw new NotFoundException('Event not found');
     }
-    console.log('update event data', data);
+
     const updateData = {
       ...data,
       updatedAt: DateTimeUtils.getBerlinTime()
