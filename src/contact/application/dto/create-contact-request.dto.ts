@@ -1,5 +1,5 @@
 import { IsEnum, IsString, IsEmail, IsOptional } from 'class-validator';
-import { ContactRequestType } from '../interfaces/contact-request.interface';
+import { ContactRequestType } from '../../domain/entities/contact-request.entity';
 
 export class CreateContactRequestDto {
   @IsEnum(ContactRequestType)

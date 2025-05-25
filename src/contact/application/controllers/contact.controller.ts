@@ -1,13 +1,13 @@
 import { Controller, Get, Post, Body, Param, Logger, NotFoundException, Patch, UseGuards } from '@nestjs/common';
-import { ContactService } from './contact.service';
-import { ContactRequest } from './interfaces/contact-request.interface';
-import { GeneralContactRequestDto } from './dto/general-contact-request.dto';
-import { FeedbackRequestDto } from './dto/feedback-request.dto';
-import { BusinessClaimRequestDto } from './dto/business-claim-request.dto';
-import { BusinessRequestDto } from './dto/business-request.dto';
-import { AdminResponseDto } from './dto/admin-response.dto';
+import { ContactService } from '../services/contact.service';
+import { ContactRequest } from '../../domain/entities/contact-request.entity';
+import { GeneralContactRequestDto } from '../dto/general-contact-request.dto';
+import { FeedbackRequestDto } from '../dto/feedback-request.dto';
+import { BusinessClaimRequestDto } from '../dto/business-claim-request.dto';
+import { BusinessRequestDto } from '../dto/business-request.dto';
+import { AdminResponseDto } from '../dto/admin-response.dto';
 import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { AddMessageDto } from './dto/add-message.dto';
+import { AddMessageDto } from '../dto/add-message.dto';
 
 @Controller('contact')
 export class ContactController {
