@@ -1,8 +1,8 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
-import { ChatMessagesService } from './chat-messages.service';
-import { CreateMessageDto } from './dto/create-message.dto';
-import { UpdateMessageDto } from './dto/update-message.dto';
-import { UpdateMessageReactionDto } from './dto/update-message-reaction.dto';
+import { ChatMessagesService } from '../services/chat-messages.service';
+import { CreateMessageDto } from '../dtos/create-message.dto';
+import { UpdateMessageDto } from '../dtos/update-message.dto';
+import { UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
 
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
@@ -56,7 +56,7 @@ export class ChatMessagesController {
     @CurrentUser() userId: string,
     @Body() updateMessageDto: UpdateMessageDto
   ) {
-    return this.chatMessagesService.update(chatroomId, id, userId, updateMessageDto);
+    return this.chatMessagesService.update(chatroomId, id, updateMessageDto);
   }
 
   @Delete(':id')

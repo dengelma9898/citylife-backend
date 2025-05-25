@@ -1,13 +1,13 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Logger, UseInterceptors, UploadedFile, NotFoundException } from '@nestjs/common';
-import { ChatroomsService } from './chatrooms.service';
-import { Chatroom } from './interfaces/chatroom.interface';
-import { CreateChatroomDto } from './dto/create-chatroom.dto';
-import { UpdateChatroomDto } from './dto/update-chatroom.dto';
-import { CurrentUser } from '../core/decorators/current-user.decorator';
-import { Roles } from '../core/decorators/roles.decorator';
+import { ChatroomsService } from '../services/chatrooms.service';
+import { Chatroom } from '../../domain/entities/chatroom.entity';
+import { CreateChatroomDto } from '../dtos/create-chatroom.dto';
+import { UpdateChatroomDto } from '../dtos/update-chatroom.dto';
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { Roles } from '../../../core/decorators/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
-import { FirebaseStorageService } from '../firebase/firebase-storage.service';
+import { FileValidationPipe } from '../../../core/pipes/file-validation.pipe';
+import { FirebaseStorageService } from '../../../firebase/firebase-storage.service';
 
 @Controller('chatrooms')
 export class ChatroomsController {
@@ -27,7 +27,7 @@ export class ChatroomsController {
   @Get(':id')
   public async getById(@Param('id') id: string): Promise<Chatroom> {
     this.logger.log(`GET /chatrooms/${id}`);
-    return this.chatroomsService.findOne(id);
+    return this.chatroomsService.getById(id);
   }
 
   @Post()
@@ -66,7 +66,7 @@ export class ChatroomsController {
     this.logger.log(`PATCH /chatrooms/${chatroomId}/image`);
 
     // Get current chatroom to check for existing image
-    const currentChatroom = await this.chatroomsService.findOne(chatroomId);
+    const currentChatroom = await this.chatroomsService.getById(chatroomId);
     if (!currentChatroom) {
       throw new NotFoundException('Chatroom not found');
     }
