@@ -1,18 +1,14 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, runTransaction, where, query } from 'firebase/firestore';
-import { v4 as uuidv4 } from 'uuid';
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, runTransaction } from 'firebase/firestore';
 import { NewsItem, TextNewsItem, ImageNewsItem, PollNewsItem, PollOption, Reaction } from './interfaces/news-item.interface';
 import { CreateImageNewsDto } from './dto/create-image-news.dto';
-import { CreatePollNewsDto, PollOptionDto } from './dto/create-poll-news.dto';
-import { CreateAudioNewsDto } from './dto/create-audio-news.dto';
+import { CreatePollNewsDto } from './dto/create-poll-news.dto';
 import { VotePollDto } from './dto/vote-poll.dto';
-import { CreateSurveyNewsDto, SurveyOptionDto } from './dto/create-survey-news.dto';
-import { VoteSurveyDto } from './dto/vote-survey.dto';
 import { CreateTextNewsDto } from './dto/create-text-news.dto';
 import { CreateReactionDto } from './dto/create-reaction.dto';
 import { UsersService } from '../users/users.service';
-import { FirebaseService } from 'src/firebase/firebase.service';
-import { DateTimeUtils } from 'src/utils/date-time.utils';
+import { FirebaseService } from '../firebase/firebase.service';
+import { DateTimeUtils } from '../utils/date-time.utils';
 
 @Injectable()
 export class NewsService {
