@@ -2,8 +2,22 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NewsService } from './news.service';
 import { UsersService } from '../users/users.service';
 import { FirebaseService } from '../firebase/firebase.service';
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, runTransaction } from 'firebase/firestore';
-import { NewsItem, TextNewsItem, ImageNewsItem, PollNewsItem } from './interfaces/news-item.interface';
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  runTransaction,
+} from 'firebase/firestore';
+import {
+  NewsItem,
+  TextNewsItem,
+  ImageNewsItem,
+  PollNewsItem,
+} from './interfaces/news-item.interface';
 import { CreateTextNewsDto } from './dto/create-text-news.dto';
 import { CreateImageNewsDto } from './dto/create-image-news.dto';
 import { CreatePollNewsDto } from './dto/create-poll-news.dto';
@@ -19,7 +33,7 @@ jest.mock('firebase/firestore', () => ({
   addDoc: jest.fn(),
   updateDoc: jest.fn(),
   deleteDoc: jest.fn(),
-  runTransaction: jest.fn()
+  runTransaction: jest.fn(),
 }));
 
 describe('NewsService', () => {
@@ -28,11 +42,11 @@ describe('NewsService', () => {
   let firebaseService: FirebaseService;
 
   const mockUsersService = {
-    getUserProfile: jest.fn()
+    getUserProfile: jest.fn(),
   };
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn().mockReturnValue({})
+    getClientFirestore: jest.fn().mockReturnValue({}),
   };
 
   const mockTextNewsItem: TextNewsItem = {
@@ -45,7 +59,7 @@ describe('NewsService', () => {
     authorName: 'Test User',
     authorImageUrl: 'https://example.com/avatar.jpg',
     reactions: [],
-    views: 0
+    views: 0,
   };
 
   const mockImageNewsItem: ImageNewsItem = {
@@ -59,7 +73,7 @@ describe('NewsService', () => {
     authorName: 'Test User',
     authorImageUrl: 'https://example.com/avatar.jpg',
     reactions: [],
-    views: 0
+    views: 0,
   };
 
   const mockPollNewsItem: PollNewsItem = {
@@ -68,7 +82,7 @@ describe('NewsService', () => {
     question: 'Test Question?',
     options: [
       { id: 'opt1', text: 'Option 1', voters: [] },
-      { id: 'opt2', text: 'Option 2', voters: [] }
+      { id: 'opt2', text: 'Option 2', voters: [] },
     ],
     allowMultipleAnswers: false,
     votes: 0,
@@ -78,7 +92,7 @@ describe('NewsService', () => {
     authorName: 'Test User',
     authorImageUrl: 'https://example.com/avatar.jpg',
     reactions: [],
-    views: 0
+    views: 0,
   };
 
   beforeEach(async () => {
@@ -87,12 +101,12 @@ describe('NewsService', () => {
         NewsService,
         {
           provide: UsersService,
-          useValue: mockUsersService
+          useValue: mockUsersService,
         },
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
-        }
+          useValue: mockFirebaseService,
+        },
       ],
     }).compile();
 
@@ -109,14 +123,14 @@ describe('NewsService', () => {
       const mockSnapshot = {
         docs: [
           { id: 'news1', data: () => ({ ...mockTextNewsItem }) },
-          { id: 'news2', data: () => ({ ...mockImageNewsItem }) }
-        ]
+          { id: 'news2', data: () => ({ ...mockImageNewsItem }) },
+        ],
       };
 
       (getDocs as jest.Mock).mockResolvedValue(mockSnapshot);
       mockUsersService.getUserProfile.mockResolvedValue({
         name: 'Test User',
-        profilePictureUrl: 'https://example.com/avatar.jpg'
+        profilePictureUrl: 'https://example.com/avatar.jpg',
       });
 
       const result = await service.getAll();
@@ -132,13 +146,13 @@ describe('NewsService', () => {
       const mockDoc = {
         exists: () => true,
         id: 'news1',
-        data: () => ({ ...mockTextNewsItem })
+        data: () => ({ ...mockTextNewsItem }),
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
       mockUsersService.getUserProfile.mockResolvedValue({
         name: 'Test User',
-        profilePictureUrl: 'https://example.com/avatar.jpg'
+        profilePictureUrl: 'https://example.com/avatar.jpg',
       });
 
       const result = await service.getById('news1');
@@ -150,7 +164,7 @@ describe('NewsService', () => {
 
     it('should return null if news item not found', async () => {
       const mockDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
@@ -165,7 +179,7 @@ describe('NewsService', () => {
     it('should create a new text news item', async () => {
       const createDto: CreateTextNewsDto = {
         content: 'New Text News',
-        authorId: 'user1'
+        authorId: 'user1',
       };
 
       (addDoc as jest.Mock).mockResolvedValue({ id: 'news1' });
@@ -184,7 +198,7 @@ describe('NewsService', () => {
       const createDto: CreateImageNewsDto = {
         content: 'New Image News',
         imageUrls: ['https://example.com/image1.jpg'],
-        authorId: 'user1'
+        authorId: 'user1',
       };
 
       (addDoc as jest.Mock).mockResolvedValue({ id: 'news2' });
@@ -206,11 +220,11 @@ describe('NewsService', () => {
         pollInfo: {
           options: [
             { id: 'opt1', text: 'Option 1' },
-            { id: 'opt2', text: 'Option 2' }
+            { id: 'opt2', text: 'Option 2' },
           ],
           allowMultipleChoices: false,
-          endDate: '2024-12-31T23:59:59.999Z'
-        }
+          endDate: '2024-12-31T23:59:59.999Z',
+        },
       };
 
       (addDoc as jest.Mock).mockResolvedValue({ id: 'news3' });
@@ -230,14 +244,14 @@ describe('NewsService', () => {
       const mockDoc = {
         exists: () => true,
         id: 'news1',
-        data: () => ({ ...mockTextNewsItem })
+        data: () => ({ ...mockTextNewsItem }),
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
       (updateDoc as jest.Mock).mockResolvedValue(undefined);
 
       const updateData = {
-        content: 'Updated Content'
+        content: 'Updated Content',
       };
 
       const result = await service.update('news1', updateData);
@@ -248,21 +262,19 @@ describe('NewsService', () => {
 
     it('should throw NotFoundException if news item not found', async () => {
       const mockDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
 
-      await expect(service.update('nonexistent', {}))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.update('nonexistent', {})).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('delete', () => {
     it('should delete a news item', async () => {
       const mockDoc = {
-        exists: () => true
+        exists: () => true,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
@@ -275,14 +287,12 @@ describe('NewsService', () => {
 
     it('should throw NotFoundException if news item not found', async () => {
       const mockDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
 
-      await expect(service.delete('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.delete('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -290,21 +300,21 @@ describe('NewsService', () => {
     it('should add a new reaction', async () => {
       const mockDoc = {
         exists: () => true,
-        data: () => ({ ...mockTextNewsItem })
+        data: () => ({ ...mockTextNewsItem }),
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
       (runTransaction as jest.Mock).mockImplementation((db, updateFunction) => {
         const transaction = {
           get: jest.fn().mockResolvedValue(mockDoc),
-          update: jest.fn()
+          update: jest.fn(),
         };
         return updateFunction(transaction);
       });
 
       const reactionDto: CreateReactionDto = {
         userId: 'user1',
-        reactionType: 'like'
+        reactionType: 'like',
       };
 
       const result = await service.postReaction('news1', reactionDto);
@@ -315,26 +325,26 @@ describe('NewsService', () => {
 
     it('should throw NotFoundException if news item not found', async () => {
       const mockDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
       (runTransaction as jest.Mock).mockImplementation((db, updateFunction) => {
         const transaction = {
           get: jest.fn().mockResolvedValue(mockDoc),
-          update: jest.fn()
+          update: jest.fn(),
         };
         return updateFunction(transaction);
       });
 
       const reactionDto: CreateReactionDto = {
         userId: 'user1',
-        reactionType: 'like'
+        reactionType: 'like',
       };
 
-      await expect(service.postReaction('nonexistent', reactionDto))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.postReaction('nonexistent', reactionDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -342,21 +352,21 @@ describe('NewsService', () => {
     it('should add a vote to a poll', async () => {
       const mockDoc = {
         exists: () => true,
-        data: () => ({ ...mockPollNewsItem })
+        data: () => ({ ...mockPollNewsItem }),
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
       (runTransaction as jest.Mock).mockImplementation((db, updateFunction) => {
         const transaction = {
           get: jest.fn().mockResolvedValue(mockDoc),
-          update: jest.fn()
+          update: jest.fn(),
         };
         return updateFunction(transaction);
       });
 
       const voteDto: VotePollDto = {
         optionId: 'opt1',
-        userId: 'user1'
+        userId: 'user1',
       };
 
       const result = await service.votePoll('news3', voteDto);
@@ -367,51 +377,47 @@ describe('NewsService', () => {
 
     it('should throw NotFoundException if news item not found', async () => {
       const mockDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
       (runTransaction as jest.Mock).mockImplementation((db, updateFunction) => {
         const transaction = {
           get: jest.fn().mockResolvedValue(mockDoc),
-          update: jest.fn()
+          update: jest.fn(),
         };
         return updateFunction(transaction);
       });
 
       const voteDto: VotePollDto = {
         optionId: 'opt1',
-        userId: 'user1'
+        userId: 'user1',
       };
 
-      await expect(service.votePoll('nonexistent', voteDto))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.votePoll('nonexistent', voteDto)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException if news item is not a poll', async () => {
       const mockDoc = {
         exists: () => true,
-        data: () => ({ ...mockTextNewsItem })
+        data: () => ({ ...mockTextNewsItem }),
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
       (runTransaction as jest.Mock).mockImplementation((db, updateFunction) => {
         const transaction = {
           get: jest.fn().mockResolvedValue(mockDoc),
-          update: jest.fn()
+          update: jest.fn(),
         };
         return updateFunction(transaction);
       });
 
       const voteDto: VotePollDto = {
         optionId: 'opt1',
-        userId: 'user1'
+        userId: 'user1',
       };
 
-      await expect(service.votePoll('news1', voteDto))
-        .rejects
-        .toThrow(BadRequestException);
+      await expect(service.votePoll('news1', voteDto)).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -419,14 +425,14 @@ describe('NewsService', () => {
     it('should increment view count', async () => {
       const mockDoc = {
         exists: () => true,
-        data: () => ({ ...mockTextNewsItem })
+        data: () => ({ ...mockTextNewsItem }),
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
       (runTransaction as jest.Mock).mockImplementation((db, updateFunction) => {
         const transaction = {
           get: jest.fn().mockResolvedValue(mockDoc),
-          update: jest.fn()
+          update: jest.fn(),
         };
         return updateFunction(transaction);
       });
@@ -438,21 +444,19 @@ describe('NewsService', () => {
 
     it('should throw NotFoundException if news item not found', async () => {
       const mockDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
       (runTransaction as jest.Mock).mockImplementation((db, updateFunction) => {
         const transaction = {
           get: jest.fn().mockResolvedValue(mockDoc),
-          update: jest.fn()
+          update: jest.fn(),
         };
         return updateFunction(transaction);
       });
 
-      await expect(service.incrementViewCount('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.incrementViewCount('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
-}); 
+});

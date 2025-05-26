@@ -11,4 +11,4 @@ export interface BusinessRepository {
   delete(id: string): Promise<void>;
   findByStatus(status: BusinessStatus): Promise<Business[]>;
   findByStatusAndHasAccount(status: BusinessStatus, hasAccount: boolean): Promise<Business[]>;
-} 
+}

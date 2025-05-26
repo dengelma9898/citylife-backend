@@ -5,7 +5,16 @@ import { Keyword } from './interfaces/keyword.interface';
 import { CreateKeywordDto } from './dto/create-keyword.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
 import { NotFoundException } from '@nestjs/common';
-import { getFirestore, getDocs, getDoc, addDoc, updateDoc, deleteDoc, collection, doc } from 'firebase/firestore';
+import {
+  getFirestore,
+  getDocs,
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  collection,
+  doc,
+} from 'firebase/firestore';
 
 jest.mock('firebase/firestore');
 
@@ -14,7 +23,7 @@ describe('KeywordsService', () => {
   let firebaseService: FirebaseService;
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn()
+    getClientFirestore: jest.fn(),
   };
 
   const mockKeyword: Keyword = {
@@ -22,7 +31,7 @@ describe('KeywordsService', () => {
     name: 'Test Keyword',
     description: 'Test Description',
     createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z'
+    updatedAt: '2024-01-01T00:00:00.000Z',
   };
 
   const mockCollection = jest.fn();
@@ -39,8 +48,8 @@ describe('KeywordsService', () => {
         KeywordsService,
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
-        }
+          useValue: mockFirebaseService,
+        },
       ],
     }).compile();
 
@@ -50,14 +59,14 @@ describe('KeywordsService', () => {
     // Mock Firebase functions
     (getFirestore as jest.Mock).mockReturnValue({
       collection: mockCollection,
-      doc: mockDoc
+      doc: mockDoc,
     });
 
     mockCollection.mockReturnValue({});
     mockDoc.mockReturnValue({});
     mockFirebaseService.getClientFirestore.mockReturnValue({
       collection: mockCollection,
-      doc: mockDoc
+      doc: mockDoc,
     });
 
     // Mock Firestore functions
@@ -77,15 +86,17 @@ describe('KeywordsService', () => {
   describe('getAll', () => {
     it('should return all keywords', async () => {
       const mockSnapshot = {
-        docs: [{
-          id: mockKeyword.id,
-          data: () => ({
-            name: mockKeyword.name,
-            description: mockKeyword.description,
-            createdAt: mockKeyword.createdAt,
-            updatedAt: mockKeyword.updatedAt
-          })
-        }]
+        docs: [
+          {
+            id: mockKeyword.id,
+            data: () => ({
+              name: mockKeyword.name,
+              description: mockKeyword.description,
+              createdAt: mockKeyword.createdAt,
+              updatedAt: mockKeyword.updatedAt,
+            }),
+          },
+        ],
       };
 
       mockGetDocs.mockResolvedValue(mockSnapshot);
@@ -110,8 +121,8 @@ describe('KeywordsService', () => {
           name: mockKeyword.name,
           description: mockKeyword.description,
           createdAt: mockKeyword.createdAt,
-          updatedAt: mockKeyword.updatedAt
-        })
+          updatedAt: mockKeyword.updatedAt,
+        }),
       };
 
       mockGetDoc.mockResolvedValue(mockDocSnap);
@@ -127,7 +138,7 @@ describe('KeywordsService', () => {
 
     it('should return null if keyword not found', async () => {
       const mockDocSnap = {
-        exists: () => false
+        exists: () => false,
       };
 
       mockGetDoc.mockResolvedValue(mockDocSnap);
@@ -142,11 +153,11 @@ describe('KeywordsService', () => {
     it('should create a new keyword', async () => {
       const createDto: CreateKeywordDto = {
         name: 'New Keyword',
-        description: 'New Description'
+        description: 'New Description',
       };
 
       const mockDocRef = {
-        id: 'new-keyword-id'
+        id: 'new-keyword-id',
       };
 
       mockAddDoc.mockResolvedValue(mockDocRef);
@@ -166,7 +177,7 @@ describe('KeywordsService', () => {
     it('should update a keyword', async () => {
       const updateDto: UpdateKeywordDto = {
         name: 'Updated Keyword',
-        description: 'Updated Description'
+        description: 'Updated Description',
       };
 
       const mockDocSnap = {
@@ -176,8 +187,8 @@ describe('KeywordsService', () => {
           name: mockKeyword.name,
           description: mockKeyword.description,
           createdAt: mockKeyword.createdAt,
-          updatedAt: mockKeyword.updatedAt
-        })
+          updatedAt: mockKeyword.updatedAt,
+        }),
       };
 
       const mockUpdatedDocSnap = {
@@ -186,8 +197,8 @@ describe('KeywordsService', () => {
           name: updateDto.name,
           description: updateDto.description,
           createdAt: mockKeyword.createdAt,
-          updatedAt: expect.any(String)
-        })
+          updatedAt: expect.any(String),
+        }),
       };
 
       mockGetDoc.mockResolvedValueOnce(mockDocSnap).mockResolvedValueOnce(mockUpdatedDocSnap);
@@ -205,21 +216,21 @@ describe('KeywordsService', () => {
 
     it('should throw NotFoundException if keyword not found', async () => {
       const mockDocSnap = {
-        exists: () => false
+        exists: () => false,
       };
 
       mockGetDoc.mockResolvedValue(mockDocSnap);
 
-      await expect(service.update('nonexistent', { name: 'Updated' }))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.update('nonexistent', { name: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('delete', () => {
     it('should delete a keyword', async () => {
       const mockDocSnap = {
-        exists: () => true
+        exists: () => true,
       };
 
       mockGetDoc.mockResolvedValue(mockDocSnap);
@@ -233,14 +244,12 @@ describe('KeywordsService', () => {
 
     it('should throw NotFoundException if keyword not found', async () => {
       const mockDocSnap = {
-        exists: () => false
+        exists: () => false,
       };
 
       mockGetDoc.mockResolvedValue(mockDocSnap);
 
-      await expect(service.delete('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.delete('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
-}); 
+});

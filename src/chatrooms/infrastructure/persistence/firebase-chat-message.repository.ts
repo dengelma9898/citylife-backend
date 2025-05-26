@@ -35,13 +35,14 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
       id,
       ...data,
       createdAt: data.createdAt || new Date().toISOString(),
-      updatedAt: data.updatedAt || new Date().toISOString()
+      updatedAt: data.updatedAt || new Date().toISOString(),
     };
   }
 
   async findAll(chatroomId: string, limit?: number): Promise<ChatMessage[]> {
     try {
-      let query = this.firebaseService.getFirestore()
+      let query = this.firebaseService
+        .getFirestore()
         .collection(this.collection)
         .where('chatroomId', '==', chatroomId)
         .orderBy('createdAt', 'desc');
@@ -51,8 +52,8 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
       }
 
       const snapshot = await query.get();
-      return snapshot.docs.map(doc => 
-        ChatMessage.fromProps(this.toEntityProps(doc.data(), doc.id))
+      return snapshot.docs.map(doc =>
+        ChatMessage.fromProps(this.toEntityProps(doc.data(), doc.id)),
       );
     } catch (error) {
       this.logger.error(`Error finding messages for chatroom ${chatroomId}: ${error.message}`);
@@ -62,7 +63,8 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
 
   async findById(chatroomId: string, id: string): Promise<ChatMessage | null> {
     try {
-      const doc = await this.firebaseService.getFirestore()
+      const doc = await this.firebaseService
+        .getFirestore()
         .collection(this.collection)
         .doc(chatroomId)
         .collection(this.messagesCollection)
@@ -78,12 +80,16 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     }
   }
 
-  async create(chatroomId: string, data: Omit<ChatMessage, 'id' | 'createdAt' | 'updatedAt'>): Promise<ChatMessage> {
+  async create(
+    chatroomId: string,
+    data: Omit<ChatMessage, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<ChatMessage> {
     try {
       const message = ChatMessage.create(data);
       const plainData = this.toPlainObject(message);
 
-      await this.firebaseService.getFirestore()
+      await this.firebaseService
+        .getFirestore()
         .collection(this.collection)
         .doc(chatroomId)
         .collection(this.messagesCollection)
@@ -97,7 +103,11 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     }
   }
 
-  async update(chatroomId: string, id: string, data: Partial<Omit<ChatMessage, 'id' | 'createdAt'>>): Promise<ChatMessage | null> {
+  async update(
+    chatroomId: string,
+    id: string,
+    data: Partial<Omit<ChatMessage, 'id' | 'createdAt'>>,
+  ): Promise<ChatMessage | null> {
     try {
       const existing = await this.findById(chatroomId, id);
       if (!existing) return null;
@@ -105,7 +115,8 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
       const updated = existing.update(data);
       const plainData = this.toPlainObject(updated);
 
-      await this.firebaseService.getFirestore()
+      await this.firebaseService
+        .getFirestore()
         .collection(this.collection)
         .doc(chatroomId)
         .collection(this.messagesCollection)
@@ -121,7 +132,8 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
 
   async delete(chatroomId: string, id: string): Promise<void> {
     try {
-      await this.firebaseService.getFirestore()
+      await this.firebaseService
+        .getFirestore()
         .collection(this.collection)
         .doc(chatroomId)
         .collection(this.messagesCollection)
@@ -137,7 +149,12 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     return this.findAll(chatroomId);
   }
 
-  async addReaction(chatroomId: string, id: string, userId: string, reaction: UpdateMessageReactionDto): Promise<ChatMessage | null> {
+  async addReaction(
+    chatroomId: string,
+    id: string,
+    userId: string,
+    reaction: UpdateMessageReactionDto,
+  ): Promise<ChatMessage | null> {
     try {
       const message = await this.findById(chatroomId, id);
       if (!message) return null;
@@ -158,7 +175,11 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     }
   }
 
-  async removeReaction(chatroomId: string, id: string, userId: string): Promise<ChatMessage | null> {
+  async removeReaction(
+    chatroomId: string,
+    id: string,
+    userId: string,
+  ): Promise<ChatMessage | null> {
     try {
       const message = await this.findById(chatroomId, id);
       if (!message || !message.reactions) return null;
@@ -170,4 +191,4 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
       throw error;
     }
   }
-} 
+}

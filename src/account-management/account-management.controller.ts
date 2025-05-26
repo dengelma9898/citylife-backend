@@ -23,4 +23,4 @@ export class AccountManagementController {
   async getAnonymousAccountStats() {
     return this.accountManagementService.getAnonymousAccountStats();
   }
-} 
+}

@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Logger, UseInterceptors, UploadedFile, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Logger,
+  UseInterceptors,
+  UploadedFile,
+  NotFoundException,
+} from '@nestjs/common';
 import { ChatroomsService } from '../services/chatrooms.service';
 import { Chatroom } from '../../domain/entities/chatroom.entity';
 import { CreateChatroomDto } from '../dtos/create-chatroom.dto';
@@ -15,7 +27,7 @@ export class ChatroomsController {
 
   constructor(
     private readonly chatroomsService: ChatroomsService,
-    private readonly firebaseStorageService: FirebaseStorageService
+    private readonly firebaseStorageService: FirebaseStorageService,
   ) {}
 
   @Get()
@@ -34,7 +46,7 @@ export class ChatroomsController {
   @Roles('super_admin')
   public async create(
     @Body() createChatroomDto: CreateChatroomDto,
-    @CurrentUser() userId: string
+    @CurrentUser() userId: string,
   ): Promise<Chatroom> {
     this.logger.log('POST /chatrooms');
     return this.chatroomsService.create(createChatroomDto, userId);
@@ -44,7 +56,7 @@ export class ChatroomsController {
   @Roles('super_admin')
   public async update(
     @Param('id') id: string,
-    @Body() updateChatroomDto: UpdateChatroomDto
+    @Body() updateChatroomDto: UpdateChatroomDto,
   ): Promise<Chatroom> {
     this.logger.log(`PATCH /chatrooms/${id}`);
     return this.chatroomsService.update(id, updateChatroomDto);
@@ -61,7 +73,7 @@ export class ChatroomsController {
   @UseInterceptors(FileInterceptor('file'))
   public async updateImage(
     @Param('id') chatroomId: string,
-    @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File
+    @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File,
   ): Promise<Chatroom> {
     this.logger.log(`PATCH /chatrooms/${chatroomId}/image`);
 
@@ -84,4 +96,4 @@ export class ChatroomsController {
     // Update the chatroom with the new image URL
     return this.chatroomsService.updateImage(chatroomId, imageUrl);
   }
-} 
+}

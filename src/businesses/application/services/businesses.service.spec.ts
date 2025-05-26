@@ -14,8 +14,8 @@ jest.mock('../../../firebase/firebase.service', () => ({
   FirebaseService: jest.fn().mockImplementation(() => ({
     getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
-    getClientStorage: jest.fn()
-  }))
+    getClientStorage: jest.fn(),
+  })),
 }));
 
 describe('BusinessesService', () => {
@@ -29,33 +29,33 @@ describe('BusinessesService', () => {
     findByStatus: jest.fn(),
     findByStatusAndHasAccount: jest.fn(),
     create: jest.fn(),
-    update: jest.fn()
+    update: jest.fn(),
   };
 
   const mockUsersService = {
-    getById: jest.fn()
+    getById: jest.fn(),
   };
 
   const mockBusinessCategoriesService = {
-    getById: jest.fn()
+    getById: jest.fn(),
   };
 
   const mockKeywordsService = {
-    getById: jest.fn()
+    getById: jest.fn(),
   };
 
   const mockEventsService = {
-    getById: jest.fn()
+    getById: jest.fn(),
   };
 
   const mockConfigService = {
-    get: jest.fn()
+    get: jest.fn(),
   };
 
   const mockFirebaseService = {
     getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
-    getClientStorage: jest.fn()
+    getClientStorage: jest.fn(),
   };
 
   const mockBusinessAddress = BusinessAddress.create({
@@ -64,13 +64,13 @@ describe('BusinessesService', () => {
     postalCode: '90402',
     city: 'Nürnberg',
     latitude: 49.4521,
-    longitude: 11.0767
+    longitude: 11.0767,
   });
 
   const mockBusinessContact = BusinessContact.create({
     email: 'contact@business.com',
     phoneNumber: '+49123456789',
-    website: 'https://business.com'
+    website: 'https://business.com',
   });
 
   beforeEach(async () => {
@@ -79,32 +79,32 @@ describe('BusinessesService', () => {
         BusinessesService,
         {
           provide: BUSINESS_REPOSITORY,
-          useValue: mockBusinessesRepository
+          useValue: mockBusinessesRepository,
         },
         {
           provide: UsersService,
-          useValue: mockUsersService
+          useValue: mockUsersService,
         },
         {
           provide: BusinessCategoriesService,
-          useValue: mockBusinessCategoriesService
+          useValue: mockBusinessCategoriesService,
         },
         {
           provide: KeywordsService,
-          useValue: mockKeywordsService
+          useValue: mockKeywordsService,
         },
         {
           provide: EventsService,
-          useValue: mockEventsService
+          useValue: mockEventsService,
         },
         {
           provide: ConfigService,
-          useValue: mockConfigService
+          useValue: mockConfigService,
         },
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
-        }
+          useValue: mockFirebaseService,
+        },
       ],
     }).compile();
 
@@ -125,11 +125,11 @@ describe('BusinessesService', () => {
         categoryIds: ['category1'],
         keywordIds: ['keyword1'],
         openingHours: {
-          monday: '09:00-22:00'
+          monday: '09:00-22:00',
         },
         benefit: '10% discount',
         hasAccount: true,
-        status: BusinessStatus.ACTIVE
+        status: BusinessStatus.ACTIVE,
       }),
       Business.create({
         name: 'Shop B',
@@ -139,12 +139,12 @@ describe('BusinessesService', () => {
         categoryIds: ['category2'],
         keywordIds: ['keyword2'],
         openingHours: {
-          monday: '10:00-20:00'
+          monday: '10:00-20:00',
         },
         benefit: 'Free shipping',
         hasAccount: true,
-        status: BusinessStatus.ACTIVE
-      })
+        status: BusinessStatus.ACTIVE,
+      }),
     ];
 
     it('should return all businesses', async () => {
@@ -169,11 +169,11 @@ describe('BusinessesService', () => {
       categoryIds: ['category1'],
       keywordIds: ['keyword1'],
       openingHours: {
-        monday: '09:00-22:00'
+        monday: '09:00-22:00',
       },
       benefit: '10% discount',
       hasAccount: true,
-      status: BusinessStatus.ACTIVE
+      status: BusinessStatus.ACTIVE,
     });
 
     it('should return a business by id', async () => {
@@ -204,7 +204,7 @@ describe('BusinessesService', () => {
       contact: {
         email: 'contact@newrestaurant.com',
         phoneNumber: '+49123456789',
-        website: 'https://newrestaurant.com'
+        website: 'https://newrestaurant.com',
       },
       address: {
         street: 'New Street',
@@ -212,15 +212,15 @@ describe('BusinessesService', () => {
         postalCode: '90403',
         city: 'Nürnberg',
         latitude: 49.4522,
-        longitude: 11.0768
+        longitude: 11.0768,
       },
       openingHours: {
-        monday: '08:00-23:00'
+        monday: '08:00-23:00',
       },
       categoryIds: ['category1'],
       keywordIds: ['keyword1'],
       benefit: '15% discount',
-      hasAccount: true
+      hasAccount: true,
     };
 
     const mockCreatedBusiness = Business.create({
@@ -233,7 +233,7 @@ describe('BusinessesService', () => {
       openingHours: createData.openingHours,
       benefit: createData.benefit,
       hasAccount: createData.hasAccount,
-      status: BusinessStatus.PENDING
+      status: BusinessStatus.PENDING,
     });
 
     it('should create a new business', async () => {
@@ -265,7 +265,7 @@ describe('BusinessesService', () => {
       const adminCreateData = { ...createData, isAdmin: true };
       const adminBusiness = Business.create({
         ...mockCreatedBusiness,
-        status: BusinessStatus.ACTIVE
+        status: BusinessStatus.ACTIVE,
       });
       mockBusinessesRepository.create.mockResolvedValue(adminBusiness);
 
@@ -280,8 +280,8 @@ describe('BusinessesService', () => {
       name: 'Updated Restaurant',
       description: 'Updated description',
       openingHours: {
-        monday: '10:00-22:00'
-      }
+        monday: '10:00-22:00',
+      },
     };
 
     const mockUpdatedBusiness = Business.create({
@@ -294,7 +294,7 @@ describe('BusinessesService', () => {
       openingHours: updateData.openingHours,
       benefit: '10% discount',
       hasAccount: true,
-      status: BusinessStatus.ACTIVE
+      status: BusinessStatus.ACTIVE,
     });
 
     it('should update an existing business', async () => {
@@ -314,9 +314,7 @@ describe('BusinessesService', () => {
     it('should throw NotFoundException if business not found', async () => {
       mockBusinessesRepository.findById.mockResolvedValue(null);
 
-      await expect(service.update('nonexistent', updateData))
-        .rejects
-        .toThrow('Business not found');
+      await expect(service.update('nonexistent', updateData)).rejects.toThrow('Business not found');
     });
   });
 
@@ -340,12 +338,12 @@ describe('BusinessesService', () => {
         categoryIds: ['category1'],
         keywordIds: ['keyword1'],
         openingHours: {
-          monday: '09:00-22:00'
+          monday: '09:00-22:00',
         },
         benefit: '10% discount',
         hasAccount: true,
-        status: BusinessStatus.ACTIVE
-      })
+        status: BusinessStatus.ACTIVE,
+      }),
     ];
 
     it('should return businesses by status', async () => {
@@ -353,7 +351,7 @@ describe('BusinessesService', () => {
 
       const result = await service.getBusinessesByStatus({
         hasAccount: true,
-        status: BusinessStatus.ACTIVE
+        status: BusinessStatus.ACTIVE,
       });
 
       expect(result).toBeDefined();
@@ -361,8 +359,8 @@ describe('BusinessesService', () => {
       expect(result[0].name).toBe('Restaurant A');
       expect(mockBusinessesRepository.findByStatusAndHasAccount).toHaveBeenCalledWith(
         BusinessStatus.ACTIVE,
-        true
+        true,
       );
     });
   });
-}); 
+});

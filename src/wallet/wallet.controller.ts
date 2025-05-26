@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Res, Logger, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Get, Param, Res, Logger, NotFoundException } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { Response } from 'express';
 import * as fs from 'fs';
@@ -25,9 +25,9 @@ export class WalletController {
   @Get('coupon')
   async getCouponPass(@Res() res: Response) {
     this.logger.log('GET /wallet/coupon');
-    
+
     const passPath = path.join(process.cwd(), 'nuernbergspots.pass', 'Coupon.pkpass');
-    
+
     if (!fs.existsSync(passPath)) {
       this.logger.error(`Pass file not found at ${passPath}`);
       return res.status(404).send('Pass file not found');
@@ -37,19 +37,16 @@ export class WalletController {
 
     res.set({
       'Content-Type': 'application/vnd.apple.pkpass',
-      'Content-Disposition': 'attachment; filename=Coupon.pkpass'
+      'Content-Disposition': 'attachment; filename=Coupon.pkpass',
     });
-    
+
     return res.send(passFile);
   }
 
   @Post('personalized/:userId')
-  async getPersonalizedPass(
-    @Param('userId') userId: string,
-    @Res() res: Response
-  ) {
+  async getPersonalizedPass(@Param('userId') userId: string, @Res() res: Response) {
     this.logger.log(`POST /wallet/personalized/${userId}`);
-    
+
     const user = await this.usersService.getUserProfile(userId);
     if (!user || !user.name) {
       throw new NotFoundException('User not found');
@@ -72,17 +69,16 @@ export class WalletController {
     const passData = {
       customerId: user.customerId,
       userName: user.name,
-      memberSince: user.memberSince
+      memberSince: user.memberSince,
     };
 
     const passBuffer = await this.walletService.generatePersonalizedPass(passData);
 
     res.set({
       'Content-Type': 'application/vnd.apple.pkpass',
-      'Content-Disposition': `attachment; filename=member-${user.customerId}.pkpass`
+      'Content-Disposition': `attachment; filename=member-${user.customerId}.pkpass`,
     });
-    
+
     return res.send(passBuffer);
   }
-
-} 
+}

@@ -12,4 +12,4 @@ export class CreateChatroomDto {
   @IsOptional()
   @IsString()
   image?: string;
-} 
+}

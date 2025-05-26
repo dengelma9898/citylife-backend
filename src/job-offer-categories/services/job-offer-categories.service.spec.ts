@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JobOfferCategoriesService } from './job-offer-categories.service';
 import { JobCategory } from '../domain/entities/job-category.entity';
-import { JobCategoryRepository, JOB_CATEGORY_REPOSITORY } from '../domain/repositories/job-category.repository';
+import {
+  JobCategoryRepository,
+  JOB_CATEGORY_REPOSITORY,
+} from '../domain/repositories/job-category.repository';
 import { CreateJobCategoryDto } from '../dto/create-job-category.dto';
 import { NotFoundException } from '@nestjs/common';
 
@@ -14,7 +17,7 @@ describe('JobOfferCategoriesService', () => {
     findAll: jest.fn(),
     findById: jest.fn(),
     update: jest.fn(),
-    delete: jest.fn()
+    delete: jest.fn(),
   };
 
   const mockJobCategory: JobCategory = JobCategory.create({
@@ -22,7 +25,7 @@ describe('JobOfferCategoriesService', () => {
     description: 'Test Description',
     colorCode: '#FF0000',
     iconName: 'test-icon',
-    fallbackImages: []
+    fallbackImages: [],
   });
 
   beforeEach(async () => {
@@ -31,8 +34,8 @@ describe('JobOfferCategoriesService', () => {
         JobOfferCategoriesService,
         {
           provide: JOB_CATEGORY_REPOSITORY,
-          useValue: mockJobCategoryRepository
-        }
+          useValue: mockJobCategoryRepository,
+        },
       ],
     }).compile();
 
@@ -51,7 +54,7 @@ describe('JobOfferCategoriesService', () => {
         description: 'New Description',
         colorCode: '#00FF00',
         iconName: 'new-icon',
-        fallbackImages: []
+        fallbackImages: [],
       };
 
       mockJobCategoryRepository.save.mockResolvedValue(createDto);
@@ -92,9 +95,7 @@ describe('JobOfferCategoriesService', () => {
     it('should throw NotFoundException if category not found', async () => {
       mockJobCategoryRepository.findById.mockRejectedValue(new Error('Not found'));
 
-      await expect(service.findOne('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -102,12 +103,12 @@ describe('JobOfferCategoriesService', () => {
     it('should update a job category', async () => {
       const updateDto = {
         name: 'Updated Category',
-        description: 'Updated Description'
+        description: 'Updated Description',
       };
 
       const updatedCategory = JobCategory.create({
         ...mockJobCategory,
-        ...updateDto
+        ...updateDto,
       });
 
       mockJobCategoryRepository.findById.mockResolvedValue(mockJobCategory);
@@ -119,15 +120,18 @@ describe('JobOfferCategoriesService', () => {
       expect(result.name).toBe(updateDto.name);
       expect(result.description).toBe(updateDto.description);
       expect(mockJobCategoryRepository.findById).toHaveBeenCalledWith('category1');
-      expect(mockJobCategoryRepository.update).toHaveBeenCalledWith('category1', expect.objectContaining(updateDto));
+      expect(mockJobCategoryRepository.update).toHaveBeenCalledWith(
+        'category1',
+        expect.objectContaining(updateDto),
+      );
     });
 
     it('should throw NotFoundException if category not found', async () => {
       mockJobCategoryRepository.findById.mockRejectedValue(new Error('Not found'));
 
-      await expect(service.update('nonexistent', { name: 'Updated' }))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.update('nonexistent', { name: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -145,9 +149,7 @@ describe('JobOfferCategoriesService', () => {
     it('should throw NotFoundException if category not found', async () => {
       mockJobCategoryRepository.findById.mockRejectedValue(new Error('Not found'));
 
-      await expect(service.remove('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.remove('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
-}); 
+});

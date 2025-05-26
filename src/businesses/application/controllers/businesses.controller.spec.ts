@@ -12,8 +12,8 @@ jest.mock('../../../firebase/firebase.service', () => ({
   FirebaseService: jest.fn().mockImplementation(() => ({
     getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
-    getClientStorage: jest.fn()
-  }))
+    getClientStorage: jest.fn(),
+  })),
 }));
 
 describe('BusinessesController', () => {
@@ -26,27 +26,27 @@ describe('BusinessesController', () => {
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
-    getBusinessesByStatus: jest.fn()
+    getBusinessesByStatus: jest.fn(),
   };
 
   const mockConfigService = {
-    get: jest.fn()
+    get: jest.fn(),
   };
 
   const mockFirebaseService = {
     getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
-    getClientStorage: jest.fn()
+    getClientStorage: jest.fn(),
   };
 
   const mockFirebaseStorageService = {
     uploadFile: jest.fn(),
-    deleteFile: jest.fn()
+    deleteFile: jest.fn(),
   };
 
   const mockUsersService = {
     getBusinessUser: jest.fn(),
-    addBusinessToUser: jest.fn()
+    addBusinessToUser: jest.fn(),
   };
 
   const mockBusinessAddress = BusinessAddress.create({
@@ -55,13 +55,13 @@ describe('BusinessesController', () => {
     postalCode: '90402',
     city: 'Nürnberg',
     latitude: 49.4521,
-    longitude: 11.0767
+    longitude: 11.0767,
   });
 
   const mockBusinessContact = BusinessContact.create({
     email: 'contact@business.com',
     phoneNumber: '+49123456789',
-    website: 'https://business.com'
+    website: 'https://business.com',
   });
 
   beforeEach(async () => {
@@ -70,24 +70,24 @@ describe('BusinessesController', () => {
       providers: [
         {
           provide: BusinessesService,
-          useValue: mockBusinessesService
+          useValue: mockBusinessesService,
         },
         {
           provide: ConfigService,
-          useValue: mockConfigService
+          useValue: mockConfigService,
         },
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
+          useValue: mockFirebaseService,
         },
         {
           provide: FirebaseStorageService,
-          useValue: mockFirebaseStorageService
+          useValue: mockFirebaseStorageService,
         },
         {
           provide: UsersService,
-          useValue: mockUsersService
-        }
+          useValue: mockUsersService,
+        },
       ],
     }).compile();
 
@@ -109,11 +109,11 @@ describe('BusinessesController', () => {
         categoryIds: ['category1'],
         keywordIds: ['keyword1'],
         openingHours: {
-          monday: '09:00-22:00'
+          monday: '09:00-22:00',
         },
         benefit: '10% discount',
         hasAccount: true,
-        status: BusinessStatus.ACTIVE
+        status: BusinessStatus.ACTIVE,
       }),
       Business.create({
         name: 'Shop B',
@@ -123,12 +123,12 @@ describe('BusinessesController', () => {
         categoryIds: ['category2'],
         keywordIds: ['keyword2'],
         openingHours: {
-          monday: '10:00-20:00'
+          monday: '10:00-20:00',
         },
         benefit: 'Free shipping',
         hasAccount: true,
-        status: BusinessStatus.ACTIVE
-      })
+        status: BusinessStatus.ACTIVE,
+      }),
     ];
 
     it('should return all businesses', async () => {
@@ -153,11 +153,11 @@ describe('BusinessesController', () => {
       categoryIds: ['category1'],
       keywordIds: ['keyword1'],
       openingHours: {
-        monday: '09:00-22:00'
+        monday: '09:00-22:00',
       },
       benefit: '10% discount',
       hasAccount: true,
-      status: BusinessStatus.ACTIVE
+      status: BusinessStatus.ACTIVE,
     });
 
     it('should return a business by id', async () => {
@@ -174,9 +174,7 @@ describe('BusinessesController', () => {
     it('should throw NotFoundException if business not found', async () => {
       mockBusinessesService.getById.mockResolvedValue(null);
 
-      await expect(controller.getById('nonexistent'))
-        .rejects
-        .toThrow('Business not found');
+      await expect(controller.getById('nonexistent')).rejects.toThrow('Business not found');
     });
   });
 
@@ -187,7 +185,7 @@ describe('BusinessesController', () => {
       contact: {
         email: 'contact@newrestaurant.com',
         phoneNumber: '+49123456789',
-        website: 'https://newrestaurant.com'
+        website: 'https://newrestaurant.com',
       },
       address: {
         street: 'New Street',
@@ -195,15 +193,15 @@ describe('BusinessesController', () => {
         postalCode: '90403',
         city: 'Nürnberg',
         latitude: 49.4522,
-        longitude: 11.0768
+        longitude: 11.0768,
       },
       openingHours: {
-        monday: '08:00-23:00'
+        monday: '08:00-23:00',
       },
       categoryIds: ['category1'],
       keywordIds: ['keyword1'],
       benefit: '15% discount',
-      hasAccount: true
+      hasAccount: true,
     };
 
     const mockCreatedBusiness = Business.create({
@@ -216,7 +214,7 @@ describe('BusinessesController', () => {
       openingHours: createDto.openingHours,
       benefit: createDto.benefit,
       hasAccount: createDto.hasAccount,
-      status: BusinessStatus.PENDING
+      status: BusinessStatus.PENDING,
     });
 
     it('should create a new business', async () => {
@@ -242,8 +240,8 @@ describe('BusinessesController', () => {
       name: 'Updated Restaurant',
       description: 'Updated description',
       openingHours: {
-        monday: '10:00-22:00'
-      }
+        monday: '10:00-22:00',
+      },
     };
 
     const mockUpdatedBusiness = Business.create({
@@ -256,7 +254,7 @@ describe('BusinessesController', () => {
       openingHours: updateDto.openingHours,
       benefit: '10% discount',
       hasAccount: true,
-      status: BusinessStatus.ACTIVE
+      status: BusinessStatus.ACTIVE,
     });
 
     it('should update an existing business', async () => {
@@ -276,7 +274,7 @@ describe('BusinessesController', () => {
   describe('uploadLogo', () => {
     const mockFile = {
       originalname: 'logo.png',
-      buffer: Buffer.from('test')
+      buffer: Buffer.from('test'),
     } as Express.Multer.File;
 
     const mockBusiness = Business.create({
@@ -287,19 +285,21 @@ describe('BusinessesController', () => {
       categoryIds: ['category1'],
       keywordIds: ['keyword1'],
       openingHours: {
-        monday: '09:00-22:00'
+        monday: '09:00-22:00',
       },
       benefit: '10% discount',
       hasAccount: true,
-      status: BusinessStatus.ACTIVE
+      status: BusinessStatus.ACTIVE,
     });
 
     it('should upload a logo for a business', async () => {
       mockBusinessesService.getById.mockResolvedValue(mockBusiness);
-      mockFirebaseStorageService.uploadFile.mockResolvedValue('https://storage.googleapis.com/logo.png');
+      mockFirebaseStorageService.uploadFile.mockResolvedValue(
+        'https://storage.googleapis.com/logo.png',
+      );
       mockBusinessesService.update.mockResolvedValue({
         ...mockBusiness,
-        logoUrl: 'https://storage.googleapis.com/logo.png'
+        logoUrl: 'https://storage.googleapis.com/logo.png',
       });
 
       const result = await controller.uploadLogo('business1', mockFile);
@@ -308,30 +308,34 @@ describe('BusinessesController', () => {
       expect(result.logoUrl).toBe('https://storage.googleapis.com/logo.png');
       expect(mockFirebaseStorageService.uploadFile).toHaveBeenCalled();
       expect(mockBusinessesService.update).toHaveBeenCalledWith('business1', {
-        logoUrl: 'https://storage.googleapis.com/logo.png'
+        logoUrl: 'https://storage.googleapis.com/logo.png',
       });
     });
 
     it('should delete old logo before uploading new one', async () => {
       const businessWithLogo = {
         ...mockBusiness,
-        logoUrl: 'https://storage.googleapis.com/old-logo.png'
+        logoUrl: 'https://storage.googleapis.com/old-logo.png',
       };
       mockBusinessesService.getById.mockResolvedValue(businessWithLogo);
-      mockFirebaseStorageService.uploadFile.mockResolvedValue('https://storage.googleapis.com/new-logo.png');
+      mockFirebaseStorageService.uploadFile.mockResolvedValue(
+        'https://storage.googleapis.com/new-logo.png',
+      );
       mockBusinessesService.update.mockResolvedValue({
         ...businessWithLogo,
-        logoUrl: 'https://storage.googleapis.com/new-logo.png'
+        logoUrl: 'https://storage.googleapis.com/new-logo.png',
       });
 
       const result = await controller.uploadLogo('business1', mockFile);
 
       expect(result).toBeDefined();
       expect(result.logoUrl).toBe('https://storage.googleapis.com/new-logo.png');
-      expect(mockFirebaseStorageService.deleteFile).toHaveBeenCalledWith('https://storage.googleapis.com/old-logo.png');
+      expect(mockFirebaseStorageService.deleteFile).toHaveBeenCalledWith(
+        'https://storage.googleapis.com/old-logo.png',
+      );
       expect(mockFirebaseStorageService.uploadFile).toHaveBeenCalled();
       expect(mockBusinessesService.update).toHaveBeenCalledWith('business1', {
-        logoUrl: 'https://storage.googleapis.com/new-logo.png'
+        logoUrl: 'https://storage.googleapis.com/new-logo.png',
       });
     });
   });
@@ -345,44 +349,52 @@ describe('BusinessesController', () => {
       categoryIds: ['category1'],
       keywordIds: ['keyword1'],
       openingHours: {
-        monday: '09:00-22:00'
+        monday: '09:00-22:00',
       },
       benefit: '10% discount',
       hasAccount: true,
       status: BusinessStatus.ACTIVE,
-      imageUrls: ['https://storage.googleapis.com/image1.png', 'https://storage.googleapis.com/image2.png']
+      imageUrls: [
+        'https://storage.googleapis.com/image1.png',
+        'https://storage.googleapis.com/image2.png',
+      ],
     });
 
     it('should remove an image from a business', async () => {
       mockBusinessesService.getById.mockResolvedValue(mockBusiness);
       mockBusinessesService.update.mockResolvedValue({
         ...mockBusiness,
-        imageUrls: ['https://storage.googleapis.com/image2.png']
+        imageUrls: ['https://storage.googleapis.com/image2.png'],
       });
 
-      const result = await controller.removeImage('business1', 'https://storage.googleapis.com/image1.png');
+      const result = await controller.removeImage(
+        'business1',
+        'https://storage.googleapis.com/image1.png',
+      );
 
       expect(result).toBeDefined();
       expect(result.imageUrls).toHaveLength(1);
       expect(result.imageUrls).not.toContain('https://storage.googleapis.com/image1.png');
-      expect(mockFirebaseStorageService.deleteFile).toHaveBeenCalledWith('https://storage.googleapis.com/image1.png');
+      expect(mockFirebaseStorageService.deleteFile).toHaveBeenCalledWith(
+        'https://storage.googleapis.com/image1.png',
+      );
       expect(mockBusinessesService.update).toHaveBeenCalledWith('business1', {
-        imageUrls: ['https://storage.googleapis.com/image2.png']
+        imageUrls: ['https://storage.googleapis.com/image2.png'],
       });
     });
 
     it('should throw BadRequestException if image URL is not provided', async () => {
-      await expect(controller.removeImage('business1', ''))
-        .rejects
-        .toThrow('Image URL is required');
+      await expect(controller.removeImage('business1', '')).rejects.toThrow(
+        'Image URL is required',
+      );
     });
 
     it('should throw BadRequestException if image URL is not found in business', async () => {
       mockBusinessesService.getById.mockResolvedValue(mockBusiness);
 
-      await expect(controller.removeImage('business1', 'https://storage.googleapis.com/nonexistent.png'))
-        .rejects
-        .toThrow('Image URL not found in business');
+      await expect(
+        controller.removeImage('business1', 'https://storage.googleapis.com/nonexistent.png'),
+      ).rejects.toThrow('Image URL not found in business');
     });
   });
 
@@ -396,12 +408,12 @@ describe('BusinessesController', () => {
         categoryIds: ['category1'],
         keywordIds: ['keyword1'],
         openingHours: {
-          monday: '09:00-22:00'
+          monday: '09:00-22:00',
         },
         benefit: '10% discount',
         hasAccount: true,
-        status: BusinessStatus.PENDING
-      })
+        status: BusinessStatus.PENDING,
+      }),
     ];
 
     it('should return count of pending approvals', async () => {
@@ -413,8 +425,8 @@ describe('BusinessesController', () => {
       expect(result.count).toBe(1);
       expect(mockBusinessesService.getBusinessesByStatus).toHaveBeenCalledWith({
         hasAccount: true,
-        status: BusinessStatus.PENDING
+        status: BusinessStatus.PENDING,
       });
     });
   });
-}); 
+});

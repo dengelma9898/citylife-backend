@@ -6,4 +6,4 @@ export interface BusinessCategory {
   keywordIds?: string[];
   createdAt: string;
   updatedAt: string;
-} 
+}

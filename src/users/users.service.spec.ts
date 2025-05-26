@@ -3,7 +3,18 @@ import { UsersService } from './users.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { EventsService } from '../events/events.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, runTransaction } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  runTransaction,
+} from 'firebase/firestore';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
@@ -22,7 +33,7 @@ jest.mock('firebase/firestore', () => ({
   deleteDoc: jest.fn(),
   query: jest.fn(),
   where: jest.fn(),
-  runTransaction: jest.fn()
+  runTransaction: jest.fn(),
 }));
 
 describe('UsersService', () => {
@@ -32,15 +43,15 @@ describe('UsersService', () => {
   let businessesService: BusinessesService;
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn().mockReturnValue({})
+    getClientFirestore: jest.fn().mockReturnValue({}),
   };
 
   const mockEventsService = {
-    getById: jest.fn()
+    getById: jest.fn(),
   };
 
   const mockBusinessesService = {
-    getById: jest.fn()
+    getById: jest.fn(),
   };
 
   const mockUserProfile: UserProfile = {
@@ -53,7 +64,7 @@ describe('UsersService', () => {
     businessHistory: [],
     preferences: [],
     language: 'de',
-    livingInCitySinceYear: 2020
+    livingInCitySinceYear: 2020,
   };
 
   const mockBusinessUser: BusinessUser = {
@@ -63,7 +74,7 @@ describe('UsersService', () => {
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
     isDeleted: false,
-    needsReview: false
+    needsReview: false,
   };
 
   beforeEach(async () => {
@@ -72,16 +83,16 @@ describe('UsersService', () => {
         UsersService,
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
+          useValue: mockFirebaseService,
         },
         {
           provide: EventsService,
-          useValue: mockEventsService
+          useValue: mockEventsService,
         },
         {
           provide: BusinessesService,
-          useValue: mockBusinessesService
-        }
+          useValue: mockBusinessesService,
+        },
       ],
     }).compile();
 
@@ -96,9 +107,7 @@ describe('UsersService', () => {
   describe('getAll', () => {
     it('should return an array of users', async () => {
       const mockSnapshot = {
-        docs: [
-          { data: () => mockUserProfile }
-        ]
+        docs: [{ data: () => mockUserProfile }],
       };
 
       (getDocs as jest.Mock).mockResolvedValue(mockSnapshot);
@@ -114,9 +123,7 @@ describe('UsersService', () => {
   describe('getBusinessUsersNeedsReview', () => {
     it('should return business users that need review', async () => {
       const mockSnapshot = {
-        docs: [
-          { id: 'business1', data: () => mockBusinessUser }
-        ]
+        docs: [{ id: 'business1', data: () => mockBusinessUser }],
       };
 
       (getDocs as jest.Mock).mockResolvedValue(mockSnapshot);
@@ -135,8 +142,8 @@ describe('UsersService', () => {
       const mockSnapshot = {
         docs: [
           { data: () => ({ needsReview: true, isDeleted: false }) },
-          { data: () => ({ needsReview: true, isDeleted: false }) }
-        ]
+          { data: () => ({ needsReview: true, isDeleted: false }) },
+        ],
       };
 
       (getDocs as jest.Mock).mockResolvedValue(mockSnapshot);
@@ -152,7 +159,7 @@ describe('UsersService', () => {
     it('should return a user profile', async () => {
       const mockDoc = {
         exists: () => true,
-        data: () => mockUserProfile
+        data: () => mockUserProfile,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
@@ -167,7 +174,7 @@ describe('UsersService', () => {
       const mockDoc = {
         exists: () => true,
         id: 'business1',
-        data: () => mockBusinessUser
+        data: () => mockBusinessUser,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
@@ -180,7 +187,7 @@ describe('UsersService', () => {
 
     it('should return null if user not found', async () => {
       const mockDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
@@ -198,7 +205,7 @@ describe('UsersService', () => {
         email: 'new@example.com',
         preferences: [],
         language: 'de',
-        livingInCitySinceYear: 2020
+        livingInCitySinceYear: 2020,
       };
 
       (setDoc as jest.Mock).mockResolvedValue(undefined);
@@ -216,14 +223,14 @@ describe('UsersService', () => {
     it('should update a user profile', async () => {
       const mockDoc = {
         exists: () => true,
-        data: () => mockUserProfile
+        data: () => mockUserProfile,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
       (updateDoc as jest.Mock).mockResolvedValue(undefined);
 
       const updateData = {
-        name: 'Updated User'
+        name: 'Updated User',
       };
 
       const result = await service.update('user1', updateData);
@@ -234,21 +241,19 @@ describe('UsersService', () => {
 
     it('should throw NotFoundException if user not found', async () => {
       const mockDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
 
-      await expect(service.update('nonexistent', {}))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.update('nonexistent', {})).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('delete', () => {
     it('should delete a user profile', async () => {
       const mockDoc = {
-        exists: () => true
+        exists: () => true,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
@@ -261,14 +266,12 @@ describe('UsersService', () => {
 
     it('should throw NotFoundException if user not found', async () => {
       const mockDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
 
-      await expect(service.delete('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.delete('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -278,7 +281,7 @@ describe('UsersService', () => {
         userId: 'business1',
         email: 'business@example.com',
         businessId: 'business1',
-        needsReview: false
+        needsReview: false,
       };
 
       (setDoc as jest.Mock).mockResolvedValue(undefined);
@@ -296,14 +299,14 @@ describe('UsersService', () => {
       const mockDoc = {
         exists: () => true,
         id: 'business1',
-        data: () => mockBusinessUser
+        data: () => mockBusinessUser,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
       (updateDoc as jest.Mock).mockResolvedValue(undefined);
 
       const updateData = {
-        needsReview: true
+        needsReview: true,
       };
 
       const result = await service.updateBusinessUser('business1', updateData);
@@ -314,14 +317,14 @@ describe('UsersService', () => {
 
     it('should throw NotFoundException if business user not found', async () => {
       const mockDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
 
-      await expect(service.updateBusinessUser('nonexistent', {}))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.updateBusinessUser('nonexistent', {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -329,7 +332,7 @@ describe('UsersService', () => {
     it('should delete a business user and set associated businesses to INACTIVE', async () => {
       const mockDoc = {
         exists: () => true,
-        data: () => mockBusinessUser
+        data: () => mockBusinessUser,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
@@ -337,7 +340,7 @@ describe('UsersService', () => {
         const transaction = {
           get: jest.fn().mockResolvedValue({ exists: () => true }),
           update: jest.fn(),
-          delete: jest.fn()
+          delete: jest.fn(),
         };
         await updateFunction(transaction);
       });
@@ -349,14 +352,12 @@ describe('UsersService', () => {
 
     it('should throw NotFoundException if business user not found', async () => {
       const mockDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
 
-      await expect(service.deleteBusinessUser('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.deleteBusinessUser('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -366,8 +367,8 @@ describe('UsersService', () => {
         exists: () => true,
         data: () => ({
           ...mockUserProfile,
-          favoriteEventIds: []
-        })
+          favoriteEventIds: [],
+        }),
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
@@ -384,8 +385,8 @@ describe('UsersService', () => {
         exists: () => true,
         data: () => ({
           ...mockUserProfile,
-          favoriteEventIds: ['event1']
-        })
+          favoriteEventIds: ['event1'],
+        }),
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
@@ -404,8 +405,8 @@ describe('UsersService', () => {
         exists: () => true,
         data: () => ({
           ...mockUserProfile,
-          favoriteBusinessIds: []
-        })
+          favoriteBusinessIds: [],
+        }),
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
@@ -422,8 +423,8 @@ describe('UsersService', () => {
         exists: () => true,
         data: () => ({
           ...mockUserProfile,
-          favoriteBusinessIds: ['business1']
-        })
+          favoriteBusinessIds: ['business1'],
+        }),
       };
 
       (getDoc as jest.Mock).mockResolvedValue(mockDoc);
@@ -435,4 +436,4 @@ describe('UsersService', () => {
       expect(updateDoc).toHaveBeenCalled();
     });
   });
-}); 
+});

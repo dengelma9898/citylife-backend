@@ -46,7 +46,7 @@ export class Chatroom {
       id: crypto.randomUUID(),
       ...props,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -58,7 +58,7 @@ export class Chatroom {
     return new Chatroom({
       ...this,
       ...props,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -72,7 +72,7 @@ export class Chatroom {
       participants: this.participants,
       lastMessage: this.lastMessage,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
     };
   }
-} 
+}

@@ -25,8 +25,8 @@ import { UsersModule } from '../users/users.module';
       provide: APP_GUARD,
       useClass: RolesGuard,
     },
-    RolesGuard
+    RolesGuard,
   ],
-  exports: [RolesGuard]
+  exports: [RolesGuard],
 })
-export class CoreModule {} 
+export class CoreModule {}

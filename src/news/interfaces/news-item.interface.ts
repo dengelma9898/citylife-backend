@@ -42,4 +42,4 @@ export interface PollNewsItem extends BaseNewsItem {
 }
 
 // Union type for all news item types
-export type NewsItem = TextNewsItem | ImageNewsItem | PollNewsItem; 
+export type NewsItem = TextNewsItem | ImageNewsItem | PollNewsItem;

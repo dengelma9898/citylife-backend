@@ -11,7 +11,7 @@ export class ChatroomsService {
 
   constructor(
     @Inject(CHATROOM_REPOSITORY)
-    private readonly chatroomRepository: ChatroomRepository
+    private readonly chatroomRepository: ChatroomRepository,
   ) {}
 
   async getAll(): Promise<Chatroom[]> {
@@ -35,7 +35,7 @@ export class ChatroomsService {
       description: data.description || '',
       imageUrl: data.image || '',
       createdBy: userId,
-      participants: [userId]
+      participants: [userId],
     });
     return this.chatroomRepository.create(chatroomData);
   }
@@ -67,4 +67,4 @@ export class ChatroomsService {
     }
     return chatroom;
   }
-} 
+}

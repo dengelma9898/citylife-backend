@@ -8,12 +8,12 @@ import { TimezoneInterceptor } from './core/interceptors/timezone.interceptor';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
-  
+
   // Enable CORS
   app.enableCors({
     origin: [
       configService.get<string>('FRONTEND_URL'),
-      'http://localhost:5173',           // Local Frontend (falls benötigt)
+      'http://localhost:5173', // Local Frontend (falls benötigt)
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -38,8 +38,8 @@ async function bootstrap() {
 
   // Get port from environment variable or use default
   const port = configService.get<number>('PORT') || 3000;
-  
+
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);
 }
-bootstrap(); 
+bootstrap();

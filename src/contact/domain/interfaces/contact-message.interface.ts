@@ -3,4 +3,4 @@ export interface ContactMessage {
   message: string;
   createdAt: string;
   isAdminResponse: boolean;
-} 
+}

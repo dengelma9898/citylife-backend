@@ -5,7 +5,6 @@ import { CreateMessageDto } from '../dtos/create-message.dto';
 import { UpdateMessageDto } from '../dtos/update-message.dto';
 import { ReactionType, UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
 
-
 describe('ChatMessagesController', () => {
   let controller: ChatMessagesController;
   let service: ChatMessagesService;
@@ -19,7 +18,7 @@ describe('ChatMessagesController', () => {
     addReaction: jest.fn(),
     removeReaction: jest.fn(),
     adminUpdate: jest.fn(),
-    adminRemove: jest.fn()
+    adminRemove: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -28,8 +27,8 @@ describe('ChatMessagesController', () => {
       providers: [
         {
           provide: ChatMessagesService,
-          useValue: mockChatMessagesService
-        }
+          useValue: mockChatMessagesService,
+        },
       ],
     }).compile();
 
@@ -43,7 +42,7 @@ describe('ChatMessagesController', () => {
 
   describe('create', () => {
     const createDto: CreateMessageDto = {
-      content: 'Test Message'
+      content: 'Test Message',
     };
 
     it('should create a new message', async () => {
@@ -54,7 +53,7 @@ describe('ChatMessagesController', () => {
         senderName: 'User 1',
         reactions: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockChatMessagesService.create.mockResolvedValue(mockMessage);
@@ -77,8 +76,8 @@ describe('ChatMessagesController', () => {
           senderName: 'User 1',
           reactions: [],
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       ];
 
       mockChatMessagesService.findAll.mockResolvedValue(mockMessages);
@@ -99,8 +98,8 @@ describe('ChatMessagesController', () => {
           senderName: 'User 1',
           reactions: [],
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       ];
 
       mockChatMessagesService.findAll.mockResolvedValue(mockMessages);
@@ -122,7 +121,7 @@ describe('ChatMessagesController', () => {
         senderName: 'User 1',
         reactions: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockChatMessagesService.findOne.mockResolvedValue(mockMessage);
@@ -137,7 +136,7 @@ describe('ChatMessagesController', () => {
 
   describe('update', () => {
     const updateDto: UpdateMessageDto = {
-      content: 'Updated Message'
+      content: 'Updated Message',
     };
 
     it('should update a message', async () => {
@@ -148,7 +147,7 @@ describe('ChatMessagesController', () => {
         senderName: 'User 1',
         reactions: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockChatMessagesService.update.mockResolvedValue(mockMessage);
@@ -157,7 +156,11 @@ describe('ChatMessagesController', () => {
 
       expect(result).toBeDefined();
       expect(result.content).toBe(updateDto.content);
-      expect(mockChatMessagesService.update).toHaveBeenCalledWith('chatroom1', 'message1', updateDto);
+      expect(mockChatMessagesService.update).toHaveBeenCalledWith(
+        'chatroom1',
+        'message1',
+        updateDto,
+      );
     });
   });
 
@@ -173,7 +176,7 @@ describe('ChatMessagesController', () => {
 
   describe('addReaction', () => {
     const reactionDto: UpdateMessageReactionDto = {
-      type: ReactionType.LIKE
+      type: ReactionType.LIKE,
     };
 
     it('should add a reaction to a message', async () => {
@@ -184,7 +187,7 @@ describe('ChatMessagesController', () => {
         senderName: 'User 1',
         reactions: [{ userId: 'user1', type: ReactionType.LIKE }],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockChatMessagesService.addReaction.mockResolvedValue(mockMessage);
@@ -193,7 +196,12 @@ describe('ChatMessagesController', () => {
 
       expect(result).toBeDefined();
       expect(result.reactions).toHaveLength(1);
-      expect(mockChatMessagesService.addReaction).toHaveBeenCalledWith('chatroom1', 'message1', 'user1', reactionDto);
+      expect(mockChatMessagesService.addReaction).toHaveBeenCalledWith(
+        'chatroom1',
+        'message1',
+        'user1',
+        reactionDto,
+      );
     });
   });
 
@@ -206,7 +214,7 @@ describe('ChatMessagesController', () => {
         senderName: 'User 1',
         reactions: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockChatMessagesService.removeReaction.mockResolvedValue(mockMessage);
@@ -215,13 +223,17 @@ describe('ChatMessagesController', () => {
 
       expect(result).toBeDefined();
       expect(result.reactions).toHaveLength(0);
-      expect(mockChatMessagesService.removeReaction).toHaveBeenCalledWith('chatroom1', 'message1', 'user1');
+      expect(mockChatMessagesService.removeReaction).toHaveBeenCalledWith(
+        'chatroom1',
+        'message1',
+        'user1',
+      );
     });
   });
 
   describe('adminUpdate', () => {
     const updateDto: UpdateMessageDto = {
-      content: 'Admin Updated Message'
+      content: 'Admin Updated Message',
     };
 
     it('should update a message as admin', async () => {
@@ -234,7 +246,7 @@ describe('ChatMessagesController', () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         editedAt: new Date().toISOString(),
-        editedByAdmin: true
+        editedByAdmin: true,
       };
 
       mockChatMessagesService.adminUpdate.mockResolvedValue(mockMessage);
@@ -244,7 +256,11 @@ describe('ChatMessagesController', () => {
       expect(result).toBeDefined();
       expect(result.content).toBe(updateDto.content);
       expect(result.editedByAdmin).toBe(true);
-      expect(mockChatMessagesService.adminUpdate).toHaveBeenCalledWith('chatroom1', 'message1', updateDto);
+      expect(mockChatMessagesService.adminUpdate).toHaveBeenCalledWith(
+        'chatroom1',
+        'message1',
+        updateDto,
+      );
     });
   });
 
@@ -257,4 +273,4 @@ describe('ChatMessagesController', () => {
       expect(mockChatMessagesService.adminRemove).toHaveBeenCalledWith('chatroom1', 'message1');
     });
   });
-}); 
+});

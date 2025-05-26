@@ -8,4 +8,4 @@ export interface JobOfferRepository {
   save(jobOffer: JobOffer): Promise<JobOffer>;
   update(id: string, jobOffer: JobOffer): Promise<JobOffer>;
   delete(id: string): Promise<void>;
-} 
+}

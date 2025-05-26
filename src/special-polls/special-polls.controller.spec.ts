@@ -21,12 +21,12 @@ describe('SpecialPollsController', () => {
     updateStatus: jest.fn(),
     addResponse: jest.fn(),
     updateResponses: jest.fn(),
-    remove: jest.fn()
+    remove: jest.fn(),
   };
 
   const mockUsersService = {
     getById: jest.fn(),
-    getUserProfile: jest.fn()
+    getUserProfile: jest.fn(),
   };
 
   const mockSpecialPoll: SpecialPoll = {
@@ -35,7 +35,7 @@ describe('SpecialPollsController', () => {
     responses: [],
     status: SpecialPollStatus.PENDING,
     createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z'
+    updatedAt: '2024-01-01T00:00:00.000Z',
   };
 
   beforeEach(async () => {
@@ -44,24 +44,24 @@ describe('SpecialPollsController', () => {
       providers: [
         {
           provide: SpecialPollsService,
-          useValue: mockSpecialPollsService
+          useValue: mockSpecialPollsService,
         },
         {
           provide: UsersService,
-          useValue: mockUsersService
+          useValue: mockUsersService,
         },
         {
           provide: RolesGuard,
           useValue: {
-            canActivate: jest.fn().mockReturnValue(true)
-          }
+            canActivate: jest.fn().mockReturnValue(true),
+          },
         },
         {
           provide: Reflector,
           useValue: {
-            get: jest.fn().mockReturnValue(['user', 'admin', 'super_admin'])
-          }
-        }
+            get: jest.fn().mockReturnValue(['user', 'admin', 'super_admin']),
+          },
+        },
       ],
     }).compile();
 
@@ -74,7 +74,7 @@ describe('SpecialPollsController', () => {
   describe('create', () => {
     it('should create a new special poll', async () => {
       const createDto: CreateSpecialPollDto = {
-        title: 'New Poll'
+        title: 'New Poll',
       };
 
       mockSpecialPollsService.create.mockResolvedValue(mockSpecialPoll);
@@ -111,16 +111,14 @@ describe('SpecialPollsController', () => {
     it('should throw NotFoundException if poll not found', async () => {
       mockSpecialPollsService.findOne.mockRejectedValue(new NotFoundException());
 
-      await expect(controller.findOne('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('updateStatus', () => {
     it('should update the status of a special poll', async () => {
       const updateStatusDto: UpdateSpecialPollStatusDto = {
-        status: SpecialPollStatus.ACTIVE
+        status: SpecialPollStatus.ACTIVE,
       };
 
       const updatedPoll = { ...mockSpecialPoll, status: SpecialPollStatus.ACTIVE };
@@ -140,12 +138,14 @@ describe('SpecialPollsController', () => {
 
       const updatedPoll = {
         ...mockSpecialPoll,
-        responses: [{
-          userId,
-          userName: 'Test User',
-          response,
-          createdAt: expect.any(String)
-        }]
+        responses: [
+          {
+            userId,
+            userName: 'Test User',
+            response,
+            createdAt: expect.any(String),
+          },
+        ],
       };
 
       mockSpecialPollsService.addResponse.mockResolvedValue(updatedPoll);
@@ -159,26 +159,28 @@ describe('SpecialPollsController', () => {
     it('should throw BadRequestException if poll is not active', async () => {
       mockSpecialPollsService.addResponse.mockRejectedValue(new BadRequestException());
 
-      await expect(controller.addResponse('poll1', 'user1', 'response'))
-        .rejects
-        .toThrow(BadRequestException);
+      await expect(controller.addResponse('poll1', 'user1', 'response')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
   describe('updateResponses', () => {
     it('should update responses of a special poll', async () => {
       const updateResponsesDto: UpdateSpecialPollResponsesDto = {
-        responses: [{
-          userId: 'user1',
-          userName: 'Test User',
-          response: 'Test Response',
-          createdAt: '2024-01-01T00:00:00.000Z'
-        }]
+        responses: [
+          {
+            userId: 'user1',
+            userName: 'Test User',
+            response: 'Test Response',
+            createdAt: '2024-01-01T00:00:00.000Z',
+          },
+        ],
       };
 
       const updatedPoll = {
         ...mockSpecialPoll,
-        responses: updateResponsesDto.responses
+        responses: updateResponsesDto.responses,
       };
 
       mockSpecialPollsService.updateResponses.mockResolvedValue(updatedPoll);
@@ -199,4 +201,4 @@ describe('SpecialPollsController', () => {
       expect(service.remove).toHaveBeenCalledWith('poll1');
     });
   });
-}); 
+});

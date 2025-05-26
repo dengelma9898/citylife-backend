@@ -8,4 +8,4 @@ export class UpdateChatroomDto {
   @IsOptional()
   @IsString()
   image?: string;
-} 
+}

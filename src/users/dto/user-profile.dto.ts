@@ -2,7 +2,6 @@ import { IsString, IsEmail, IsEnum, IsOptional, IsArray, IsInt, Min, Max } from 
 import { UserType } from '../enums/user-type.enum';
 
 export class UserProfileDto {
-
   @IsEmail()
   public readonly email: string;
 
@@ -42,4 +41,4 @@ export class UserProfileDto {
   @IsString()
   @IsOptional()
   public readonly customerId?: string;
-} 
+}

@@ -7,7 +7,6 @@ export class BusinessClaimRequestDto {
   @IsString()
   message: string;
 
-  
   @IsString()
   businessId: string;
-} 
+}

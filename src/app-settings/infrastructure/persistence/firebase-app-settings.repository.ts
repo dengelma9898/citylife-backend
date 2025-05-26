@@ -29,7 +29,7 @@ export class FirebaseAppSettingsRepository implements AppSettingsRepository {
   private toAppSettingsProps(data: any, id: string): AppSettingsProps {
     return {
       id,
-      preferences: data.preferences || []
+      preferences: data.preferences || [],
     };
   }
 
@@ -37,9 +37,9 @@ export class FirebaseAppSettingsRepository implements AppSettingsRepository {
     const db = this.firebaseService.getClientFirestore();
     const settingsCol = collection(db, 'app_settings');
     const snapshot = await getDocs(settingsCol);
-    
-    return snapshot.docs.map(doc => 
-      AppSettings.fromProps(this.toAppSettingsProps(doc.data(), doc.id))
+
+    return snapshot.docs.map(doc =>
+      AppSettings.fromProps(this.toAppSettingsProps(doc.data(), doc.id)),
     );
   }
 
@@ -47,13 +47,11 @@ export class FirebaseAppSettingsRepository implements AppSettingsRepository {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'app_settings', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       return null;
     }
 
-    return AppSettings.fromProps(
-      this.toAppSettingsProps(docSnap.data(), docSnap.id)
-    );
+    return AppSettings.fromProps(this.toAppSettingsProps(docSnap.data(), docSnap.id));
   }
-} 
+}

@@ -9,4 +9,4 @@ export interface ChatroomRepository {
   update(id: string, data: Partial<Omit<Chatroom, 'id' | 'createdAt'>>): Promise<Chatroom | null>;
   delete(id: string): Promise<void>;
   findByParticipant(userId: string): Promise<Chatroom[]>;
-} 
+}

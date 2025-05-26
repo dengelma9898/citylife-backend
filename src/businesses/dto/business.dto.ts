@@ -1,4 +1,13 @@
-import { IsString, IsNotEmpty, IsArray, IsBoolean, IsDateString, ValidateNested, IsObject, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  ValidateNested,
+  IsObject,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { BusinessCategoryDto } from './business-category.dto';
 import { BusinessContactDto } from './business-contact.dto';
@@ -56,4 +65,4 @@ export class BusinessDto {
   @ValidateNested()
   @Type(() => BusinessAddressDto)
   public readonly address: BusinessAddressDto;
-} 
+}

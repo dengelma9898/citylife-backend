@@ -6,4 +6,4 @@ export class AdminResponseDto {
 
   @IsString()
   userId: string;
-} 
+}

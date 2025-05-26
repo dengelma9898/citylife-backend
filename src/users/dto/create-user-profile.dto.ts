@@ -23,5 +23,4 @@ export class CreateUserProfileDto {
   @Min(1900)
   @Max(new Date().getFullYear())
   public readonly livingInCitySinceYear: number;
-
-} 
+}

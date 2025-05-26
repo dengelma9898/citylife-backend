@@ -1,5 +1,3 @@
-
-
 /**
  * Täglicher Zeitslot für ein Event
  */
@@ -47,4 +45,4 @@ export interface Event {
   };
   isPromoted?: boolean;
   dailyTimeSlots?: DailyTimeSlot[];
-} 
+}

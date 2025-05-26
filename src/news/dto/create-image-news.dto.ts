@@ -5,12 +5,12 @@ export class CreateImageNewsDto {
   @IsString({ each: true })
   @IsOptional()
   public imageUrls: string[] = [];
-  
+
   @IsString()
   @IsOptional()
   public readonly content: string = '';
-  
+
   @IsString()
   @IsNotEmpty()
   public readonly authorId: string;
-} 
+}

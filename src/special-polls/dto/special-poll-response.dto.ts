@@ -21,4 +21,4 @@ export class SpecialPollResponseDto {
   @IsString()
   @IsNotEmpty()
   readonly createdAt: string;
-} 
+}

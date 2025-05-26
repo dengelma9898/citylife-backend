@@ -20,4 +20,4 @@ export class CreateJobCategoryDto {
   @IsArray()
   @IsString({ each: true })
   fallbackImages: string[];
-} 
+}

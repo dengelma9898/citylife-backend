@@ -17,7 +17,7 @@ describe('ContactService', () => {
   const mockUsersService = {
     getById: jest.fn(),
     update: jest.fn(),
-    updateBusinessUser: jest.fn()
+    updateBusinessUser: jest.fn(),
   };
 
   const mockContactRequestRepository = {
@@ -27,17 +27,17 @@ describe('ContactService', () => {
     update: jest.fn(),
     delete: jest.fn(),
     findByUserId: jest.fn(),
-    findByBusinessId: jest.fn()
+    findByBusinessId: jest.fn(),
   };
 
   const mockConfigService = {
-    get: jest.fn()
+    get: jest.fn(),
   };
 
   const mockFirebaseService = {
     getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
-    getClientStorage: jest.fn()
+    getClientStorage: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -46,20 +46,20 @@ describe('ContactService', () => {
         ContactService,
         {
           provide: UsersService,
-          useValue: mockUsersService
+          useValue: mockUsersService,
         },
         {
           provide: CONTACT_REQUEST_REPOSITORY,
-          useValue: mockContactRequestRepository
+          useValue: mockContactRequestRepository,
         },
         {
           provide: ConfigService,
-          useValue: mockConfigService
+          useValue: mockConfigService,
         },
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
-        }
+          useValue: mockFirebaseService,
+        },
       ],
     }).compile();
 
@@ -75,28 +75,30 @@ describe('ContactService', () => {
   describe('createContactRequest', () => {
     const mockData = {
       userId: 'user123',
-      message: 'Test message'
+      message: 'Test message',
     };
 
     const mockUser = {
       id: 'user123',
       contactRequestIds: [],
-      userType: UserType.USER
+      userType: UserType.USER,
     };
 
     const mockContactRequest = ContactRequest.fromProps({
       id: 'fixed-id-123',
       type: ContactRequestType.GENERAL,
       userId: mockData.userId,
-      messages: [ContactMessage.create({
-        message: mockData.message,
-        userId: mockData.userId,
-        isAdminResponse: false
-      })],
+      messages: [
+        ContactMessage.create({
+          message: mockData.message,
+          userId: mockData.userId,
+          isAdminResponse: false,
+        }),
+      ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       responded: false,
-      isProcessed: false
+      isProcessed: false,
     });
 
     it('should create a new contact request and update user', async () => {
@@ -109,7 +111,7 @@ describe('ContactService', () => {
       expect(result.type).toBe(ContactRequestType.GENERAL);
       expect(result.userId).toBe(mockData.userId);
       expect(mockUsersService.update).toHaveBeenCalledWith(mockData.userId, {
-        contactRequestIds: [mockContactRequest.id]
+        contactRequestIds: [mockContactRequest.id],
       });
     });
   });
@@ -121,22 +123,24 @@ describe('ContactService', () => {
       id: mockRequestId,
       type: ContactRequestType.GENERAL,
       userId: mockUserId,
-      messages: [ContactMessage.create({
-        message: 'Test message',
-        userId: mockUserId,
-        isAdminResponse: false
-      })],
+      messages: [
+        ContactMessage.create({
+          message: 'Test message',
+          userId: mockUserId,
+          isAdminResponse: false,
+        }),
+      ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       responded: false,
-      isProcessed: false
+      isProcessed: false,
     });
 
     it('should return contact request for super admin', async () => {
       mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
       mockUsersService.getById.mockResolvedValue({
         id: 'admin123',
-        userType: UserType.SUPER_ADMIN
+        userType: UserType.SUPER_ADMIN,
       });
       const result = await service.getById(mockRequestId, 'admin123');
       expect(result).toBeDefined();
@@ -147,7 +151,7 @@ describe('ContactService', () => {
       mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
       mockUsersService.getById.mockResolvedValue({
         id: mockUserId,
-        contactRequestIds: [mockRequestId]
+        contactRequestIds: [mockRequestId],
       });
 
       const result = await service.getById(mockRequestId, mockUserId);
@@ -160,7 +164,7 @@ describe('ContactService', () => {
       mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
       mockUsersService.getById.mockResolvedValue({
         id: 'other123',
-        contactRequestIds: []
+        contactRequestIds: [],
       });
 
       const result = await service.getById(mockRequestId, 'other123');
@@ -176,26 +180,31 @@ describe('ContactService', () => {
     const mockContactRequest = ContactRequest.create({
       type: ContactRequestType.GENERAL,
       userId: mockUserId,
-      messages: [ContactMessage.create({
-        message: 'Old message',
-        userId: mockUserId,
-        isAdminResponse: false
-      })]
+      messages: [
+        ContactMessage.create({
+          message: 'Old message',
+          userId: mockUserId,
+          isAdminResponse: false,
+        }),
+      ],
     });
 
     it('should add message for authorized user', async () => {
       mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
       mockUsersService.getById.mockResolvedValue({
         id: mockUserId,
-        contactRequestIds: [mockRequestId]
+        contactRequestIds: [mockRequestId],
       });
       mockContactRequestRepository.update.mockResolvedValue({
         ...mockContactRequest,
-        messages: [...mockContactRequest.messages, ContactMessage.create({
-          message: mockMessage,
-          userId: mockUserId,
-          isAdminResponse: false
-        })]
+        messages: [
+          ...mockContactRequest.messages,
+          ContactMessage.create({
+            message: mockMessage,
+            userId: mockUserId,
+            isAdminResponse: false,
+          }),
+        ],
       });
 
       const result = await service.addMessage(mockRequestId, mockUserId, { message: mockMessage });
@@ -208,9 +217,9 @@ describe('ContactService', () => {
     it('should throw UnauthorizedException for unauthorized user', async () => {
       mockContactRequestRepository.findById.mockResolvedValue(null);
 
-      await expect(service.addMessage(mockRequestId, mockUserId, { message: mockMessage }))
-        .rejects
-        .toThrow(UnauthorizedException);
+      await expect(
+        service.addMessage(mockRequestId, mockUserId, { message: mockMessage }),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
-}); 
+});

@@ -116,4 +116,4 @@ export class JobOffer {
       updatedAt: new Date(),
     });
   }
-} 
+}

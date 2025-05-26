@@ -9,8 +9,8 @@ jest.mock('../../../firebase/firebase.service', () => ({
   FirebaseService: jest.fn().mockImplementation(() => ({
     getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
-    getClientStorage: jest.fn()
-  }))
+    getClientStorage: jest.fn(),
+  })),
 }));
 
 describe('BusinessCategoriesController', () => {
@@ -23,17 +23,17 @@ describe('BusinessCategoriesController', () => {
     getById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    delete: jest.fn()
+    delete: jest.fn(),
   };
 
   const mockConfigService = {
-    get: jest.fn()
+    get: jest.fn(),
   };
 
   const mockFirebaseService = {
     getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
-    getClientStorage: jest.fn()
+    getClientStorage: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -42,16 +42,16 @@ describe('BusinessCategoriesController', () => {
       providers: [
         {
           provide: BusinessCategoriesService,
-          useValue: mockBusinessCategoriesService
+          useValue: mockBusinessCategoriesService,
         },
         {
           provide: ConfigService,
-          useValue: mockConfigService
+          useValue: mockConfigService,
         },
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
-        }
+          useValue: mockFirebaseService,
+        },
       ],
     }).compile();
 
@@ -72,7 +72,7 @@ describe('BusinessCategoriesController', () => {
         description: 'Restaurants and food services',
         keywordIds: ['keyword1', 'keyword2'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       }),
       BusinessCategory.fromProps({
         id: 'category2',
@@ -81,8 +81,8 @@ describe('BusinessCategoriesController', () => {
         description: 'Retail stores and shops',
         keywordIds: ['keyword3'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      })
+        updatedAt: new Date().toISOString(),
+      }),
     ];
 
     it('should return all business categories', async () => {
@@ -108,11 +108,11 @@ describe('BusinessCategoriesController', () => {
         keywordIds: ['keyword1', 'keyword2'],
         keywords: [
           { id: 'keyword1', name: 'Italian' },
-          { id: 'keyword2', name: 'Pizza' }
+          { id: 'keyword2', name: 'Pizza' },
         ],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      })
+        updatedAt: new Date().toISOString(),
+      }),
     ];
 
     it('should return all business categories with their keywords', async () => {
@@ -138,7 +138,7 @@ describe('BusinessCategoriesController', () => {
       description: 'Restaurants and food services',
       keywordIds: ['keyword1', 'keyword2'],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
 
     it('should return a business category by id', async () => {
@@ -155,9 +155,9 @@ describe('BusinessCategoriesController', () => {
     it('should throw NotFoundException if category not found', async () => {
       mockBusinessCategoriesService.getById.mockResolvedValue(null);
 
-      await expect(controller.getById('nonexistent'))
-        .rejects
-        .toThrow('Business category not found');
+      await expect(controller.getById('nonexistent')).rejects.toThrow(
+        'Business category not found',
+      );
     });
   });
 
@@ -166,14 +166,14 @@ describe('BusinessCategoriesController', () => {
       name: 'Restaurant',
       iconName: 'restaurant',
       description: 'Restaurants and food services',
-      keywordIds: ['keyword1', 'keyword2']
+      keywordIds: ['keyword1', 'keyword2'],
     };
 
     const mockCreatedCategory = BusinessCategory.fromProps({
       id: 'new-category',
       ...createDto,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
 
     it('should create a new business category', async () => {
@@ -196,14 +196,14 @@ describe('BusinessCategoriesController', () => {
       name: 'Updated Restaurant',
       iconName: 'updated-icon',
       description: 'Updated description',
-      keywordIds: ['keyword3']
+      keywordIds: ['keyword3'],
     };
 
     const mockUpdatedCategory = BusinessCategory.fromProps({
       id: 'category1',
       ...updateDto,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
 
     it('should update an existing business category', async () => {
@@ -230,4 +230,4 @@ describe('BusinessCategoriesController', () => {
       expect(mockBusinessCategoriesService.delete).toHaveBeenCalledWith('category1');
     });
   });
-}); 
+});

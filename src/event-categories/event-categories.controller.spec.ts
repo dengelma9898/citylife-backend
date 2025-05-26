@@ -16,12 +16,12 @@ describe('EventCategoriesController', () => {
     findAll: jest.fn(),
     findOne: jest.fn(),
     update: jest.fn(),
-    remove: jest.fn()
+    remove: jest.fn(),
   };
 
   const mockFirebaseStorageService = {
     uploadFile: jest.fn(),
-    deleteFile: jest.fn()
+    deleteFile: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -30,12 +30,12 @@ describe('EventCategoriesController', () => {
       providers: [
         {
           provide: EventCategoriesService,
-          useValue: mockEventCategoriesService
+          useValue: mockEventCategoriesService,
         },
         {
           provide: FirebaseStorageService,
-          useValue: mockFirebaseStorageService
-        }
+          useValue: mockFirebaseStorageService,
+        },
       ],
     }).compile();
 
@@ -53,7 +53,7 @@ describe('EventCategoriesController', () => {
       name: 'New Category',
       description: 'New Description',
       colorCode: '#00FF00',
-      iconName: 'newIcon'
+      iconName: 'newIcon',
     };
 
     it('should create a new event category', async () => {
@@ -61,7 +61,7 @@ describe('EventCategoriesController', () => {
         id: 'category1',
         ...createDto,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockEventCategoriesService.create.mockResolvedValue(mockCategory);
@@ -86,8 +86,8 @@ describe('EventCategoriesController', () => {
           colorCode: '#FF0000',
           iconName: 'icon1',
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       ];
 
       mockEventCategoriesService.findAll.mockResolvedValue(mockCategories);
@@ -111,7 +111,7 @@ describe('EventCategoriesController', () => {
         colorCode: '#FF0000',
         iconName: 'icon1',
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockEventCategoriesService.findOne.mockResolvedValue(mockCategory);
@@ -131,7 +131,7 @@ describe('EventCategoriesController', () => {
   describe('update', () => {
     const updateDto: UpdateEventCategoryDto = {
       name: 'Updated Category',
-      description: 'Updated Description'
+      description: 'Updated Description',
     };
 
     it('should update an event category', async () => {
@@ -141,7 +141,7 @@ describe('EventCategoriesController', () => {
         colorCode: '#FF0000',
         iconName: 'icon1',
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockEventCategoriesService.update.mockResolvedValue(mockCategory);
@@ -176,7 +176,7 @@ describe('EventCategoriesController', () => {
       encoding: '7bit',
       mimetype: 'image/jpeg',
       buffer: Buffer.from('test'),
-      size: 1024
+      size: 1024,
     } as Express.Multer.File;
 
     it('should add fallback images to an event category', async () => {
@@ -188,7 +188,7 @@ describe('EventCategoriesController', () => {
         iconName: 'icon1',
         fallbackImages: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       const newImageUrl = 'new-image.jpg';
@@ -197,7 +197,7 @@ describe('EventCategoriesController', () => {
       mockFirebaseStorageService.uploadFile.mockResolvedValue(newImageUrl);
       mockEventCategoriesService.update.mockResolvedValue({
         ...mockCategory,
-        fallbackImages: [newImageUrl]
+        fallbackImages: [newImageUrl],
       });
 
       const result = await controller.addFallbackImages('category1', [mockFile]);
@@ -209,16 +209,16 @@ describe('EventCategoriesController', () => {
       }
       expect(mockFirebaseStorageService.uploadFile).toHaveBeenCalled();
       expect(mockEventCategoriesService.update).toHaveBeenCalledWith('category1', {
-        fallbackImages: [newImageUrl]
+        fallbackImages: [newImageUrl],
       });
     });
 
     it('should throw NotFoundException if category not found', async () => {
       mockEventCategoriesService.findOne.mockResolvedValue(null);
 
-      await expect(controller.addFallbackImages('nonexistent', [mockFile]))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.addFallbackImages('nonexistent', [mockFile])).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should handle empty files array', async () => {
@@ -230,7 +230,7 @@ describe('EventCategoriesController', () => {
         iconName: 'icon1',
         fallbackImages: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockEventCategoriesService.findOne.mockResolvedValue(mockCategory);
@@ -245,7 +245,7 @@ describe('EventCategoriesController', () => {
       }
       expect(mockFirebaseStorageService.uploadFile).not.toHaveBeenCalled();
       expect(mockEventCategoriesService.update).toHaveBeenCalledWith('category1', {
-        fallbackImages: []
+        fallbackImages: [],
       });
     });
   });
@@ -261,13 +261,13 @@ describe('EventCategoriesController', () => {
         iconName: 'icon1',
         fallbackImages: [imageUrl],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockEventCategoriesService.findOne.mockResolvedValue(mockCategory);
       mockEventCategoriesService.update.mockResolvedValue({
         ...mockCategory,
-        fallbackImages: []
+        fallbackImages: [],
       });
 
       const result = await controller.removeFallbackImage('category1', imageUrl);
@@ -279,16 +279,16 @@ describe('EventCategoriesController', () => {
       }
       expect(mockFirebaseStorageService.deleteFile).toHaveBeenCalledWith(imageUrl);
       expect(mockEventCategoriesService.update).toHaveBeenCalledWith('category1', {
-        fallbackImages: []
+        fallbackImages: [],
       });
     });
 
     it('should throw NotFoundException if category not found', async () => {
       mockEventCategoriesService.findOne.mockResolvedValue(null);
 
-      await expect(controller.removeFallbackImage('nonexistent', 'test-image.jpg'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.removeFallbackImage('nonexistent', 'test-image.jpg')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw NotFoundException if image not found in category', async () => {
@@ -300,14 +300,14 @@ describe('EventCategoriesController', () => {
         iconName: 'icon1',
         fallbackImages: ['other-image.jpg'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockEventCategoriesService.findOne.mockResolvedValue(mockCategory);
 
-      await expect(controller.removeFallbackImage('category1', 'test-image.jpg'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.removeFallbackImage('category1', 'test-image.jpg')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw NotFoundException if imageUrl is not provided', async () => {
@@ -319,14 +319,14 @@ describe('EventCategoriesController', () => {
         iconName: 'icon1',
         fallbackImages: ['test-image.jpg'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockEventCategoriesService.findOne.mockResolvedValue(mockCategory);
 
-      await expect(controller.removeFallbackImage('category1', ''))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.removeFallbackImage('category1', '')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
-}); 
+});

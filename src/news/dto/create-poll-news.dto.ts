@@ -1,4 +1,14 @@
-import { IsString, IsNotEmpty, IsArray, IsDateString, IsOptional, ValidateNested, ArrayMinSize, IsBoolean, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsArray,
+  IsDateString,
+  IsOptional,
+  ValidateNested,
+  ArrayMinSize,
+  IsBoolean,
+  IsObject,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class PollOptionDto {
@@ -34,7 +44,7 @@ export class CreatePollNewsDto {
   @IsString()
   @IsNotEmpty()
   public readonly content: string;
-  
+
   @IsString()
   @IsNotEmpty()
   public readonly authorId: string;
@@ -43,4 +53,4 @@ export class CreatePollNewsDto {
   @ValidateNested()
   @Type(() => PollInfoDto)
   public readonly pollInfo: PollInfoDto;
-} 
+}

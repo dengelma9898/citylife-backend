@@ -15,7 +15,7 @@ export class AppSettings {
   static create(props: Omit<AppSettingsProps, 'id'>): AppSettings {
     return new AppSettings({
       id: crypto.randomUUID(),
-      ...props
+      ...props,
     });
   }
 
@@ -26,14 +26,14 @@ export class AppSettings {
   update(props: Partial<Omit<AppSettingsProps, 'id'>>): AppSettings {
     return new AppSettings({
       ...this,
-      ...props
+      ...props,
     });
   }
 
   toJSON(): AppSettingsProps {
     return {
       id: this.id,
-      preferences: this.preferences
+      preferences: this.preferences,
     };
   }
-} 
+}

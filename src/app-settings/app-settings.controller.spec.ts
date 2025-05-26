@@ -10,12 +10,12 @@ describe('AppSettingsController', () => {
   const mockPreferences: Preference[] = [
     {
       id: 'settings1',
-      preferences: ['pref1', 'pref2']
+      preferences: ['pref1', 'pref2'],
     },
     {
       id: 'settings2',
-      preferences: ['pref3', 'pref4']
-    }
+      preferences: ['pref3', 'pref4'],
+    },
   ];
 
   beforeEach(async () => {
@@ -29,9 +29,9 @@ describe('AppSettingsController', () => {
             getById: jest.fn().mockImplementation((id: string) => {
               const pref = mockPreferences.find(p => p.id === id);
               return Promise.resolve(pref || null);
-            })
-          }
-        }
+            }),
+          },
+        },
       ],
     }).compile();
 
@@ -70,4 +70,4 @@ describe('AppSettingsController', () => {
       expect(service.getById).toHaveBeenCalledWith('nonexistent');
     });
   });
-}); 
+});

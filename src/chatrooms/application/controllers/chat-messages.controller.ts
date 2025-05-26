@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ChatMessagesService } from '../services/chat-messages.service';
 import { CreateMessageDto } from '../dtos/create-message.dto';
 import { UpdateMessageDto } from '../dtos/update-message.dto';
@@ -21,7 +32,7 @@ export class ChatMessagesController {
   async create(
     @Param('chatroomId') chatroomId: string,
     @CurrentUser() userId: string,
-    @Body() createMessageDto: CreateMessageDto
+    @Body() createMessageDto: CreateMessageDto,
   ) {
     return this.chatMessagesService.create(chatroomId, userId, createMessageDto);
   }
@@ -29,20 +40,14 @@ export class ChatMessagesController {
   @Get()
   @ApiOperation({ summary: 'Get all messages in a chatroom' })
   @ApiResponse({ status: 200, description: 'Returns all messages' })
-  async findAll(
-    @Param('chatroomId') chatroomId: string,
-    @Query('limit') limit?: number
-  ) {
+  async findAll(@Param('chatroomId') chatroomId: string, @Query('limit') limit?: number) {
     return this.chatMessagesService.findAll(chatroomId, limit);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific message' })
   @ApiResponse({ status: 200, description: 'Returns the message' })
-  async findOne(
-    @Param('chatroomId') chatroomId: string,
-    @Param('id') id: string
-  ) {
+  async findOne(@Param('chatroomId') chatroomId: string, @Param('id') id: string) {
     return this.chatMessagesService.findOne(chatroomId, id);
   }
 
@@ -54,7 +59,7 @@ export class ChatMessagesController {
     @Param('chatroomId') chatroomId: string,
     @Param('id') id: string,
     @CurrentUser() userId: string,
-    @Body() updateMessageDto: UpdateMessageDto
+    @Body() updateMessageDto: UpdateMessageDto,
   ) {
     return this.chatMessagesService.update(chatroomId, id, updateMessageDto);
   }
@@ -79,7 +84,7 @@ export class ChatMessagesController {
     @Param('chatroomId') chatroomId: string,
     @Param('id') id: string,
     @CurrentUser() userId: string,
-    @Body() reactionDto: UpdateMessageReactionDto
+    @Body() reactionDto: UpdateMessageReactionDto,
   ) {
     return this.chatMessagesService.addReaction(chatroomId, id, userId, reactionDto);
   }
@@ -103,7 +108,7 @@ export class ChatMessagesController {
   async adminUpdate(
     @Param('chatroomId') chatroomId: string,
     @Param('id') id: string,
-    @Body() updateMessageDto: UpdateMessageDto
+    @Body() updateMessageDto: UpdateMessageDto,
   ) {
     return this.chatMessagesService.adminUpdate(chatroomId, id, updateMessageDto);
   }
@@ -112,11 +117,7 @@ export class ChatMessagesController {
   @Roles('super_admin')
   @ApiOperation({ summary: 'Admin: Delete any message' })
   @ApiResponse({ status: 200, description: 'Message deleted successfully' })
-  async adminRemove(
-    @Param('chatroomId') chatroomId: string,
-    @Param('id') id: string
-  ) {
+  async adminRemove(@Param('chatroomId') chatroomId: string, @Param('id') id: string) {
     return this.chatMessagesService.adminRemove(chatroomId, id);
   }
-
-} 
+}

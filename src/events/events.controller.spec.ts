@@ -21,22 +21,22 @@ describe('EventsController', () => {
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
-    getByIds: jest.fn()
+    getByIds: jest.fn(),
   };
 
   const mockFirebaseStorageService = {
     uploadFile: jest.fn(),
-    deleteFile: jest.fn()
+    deleteFile: jest.fn(),
   };
 
   const mockUsersService = {
     getBusinessUser: jest.fn(),
-    addEventToUser: jest.fn()
+    addEventToUser: jest.fn(),
   };
 
   const mockBusinessesService = {
     getById: jest.fn(),
-    addEventToBusiness: jest.fn()
+    addEventToBusiness: jest.fn(),
   };
 
   const mockEvent: Event = {
@@ -46,7 +46,7 @@ describe('EventsController', () => {
     location: {
       address: 'Test Address',
       latitude: 52.520008,
-      longitude: 13.404954
+      longitude: 13.404954,
     },
     imageUrls: [],
     titleImageUrl: '',
@@ -59,18 +59,18 @@ describe('EventsController', () => {
     socialMedia: {
       instagram: '',
       facebook: '',
-      tiktok: ''
+      tiktok: '',
     },
     isPromoted: false,
     dailyTimeSlots: [
       {
         date: '2024-03-20',
         from: '10:00',
-        to: '18:00'
-      }
+        to: '18:00',
+      },
     ],
     createdAt: '2024-03-20T10:00:00.000Z',
-    updatedAt: '2024-03-20T10:00:00.000Z'
+    updatedAt: '2024-03-20T10:00:00.000Z',
   };
 
   beforeEach(async () => {
@@ -79,20 +79,20 @@ describe('EventsController', () => {
       providers: [
         {
           provide: EventsService,
-          useValue: mockEventsService
+          useValue: mockEventsService,
         },
         {
           provide: FirebaseStorageService,
-          useValue: mockFirebaseStorageService
+          useValue: mockFirebaseStorageService,
         },
         {
           provide: UsersService,
-          useValue: mockUsersService
+          useValue: mockUsersService,
         },
         {
           provide: BusinessesService,
-          useValue: mockBusinessesService
-        }
+          useValue: mockBusinessesService,
+        },
       ],
     }).compile();
 
@@ -136,9 +136,7 @@ describe('EventsController', () => {
     it('should throw NotFoundException if event not found', async () => {
       mockEventsService.getById.mockResolvedValue(null);
 
-      await expect(controller.getById('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.getById('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -154,15 +152,15 @@ describe('EventsController', () => {
         {
           date: '2024-03-20',
           from: '10:00',
-          to: '18:00'
-        }
-      ]
+          to: '18:00',
+        },
+      ],
     };
 
     it('should create a new event', async () => {
       mockEventsService.create.mockResolvedValue({
         id: 'newEventId',
-        ...createDto
+        ...createDto,
       });
 
       const result = await controller.create(createDto);
@@ -177,13 +175,13 @@ describe('EventsController', () => {
   describe('update', () => {
     const updateDto = {
       title: 'Updated Event',
-      description: 'Updated Description'
+      description: 'Updated Description',
     };
 
     it('should update an event', async () => {
       mockEventsService.update.mockResolvedValue({
         ...mockEvent,
-        ...updateDto
+        ...updateDto,
       });
 
       const result = await controller.update('event1', updateDto);
@@ -209,9 +207,7 @@ describe('EventsController', () => {
     it('should throw NotFoundException if event not found', async () => {
       mockEventsService.getById.mockResolvedValue(null);
 
-      await expect(controller.delete('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.delete('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -222,7 +218,7 @@ describe('EventsController', () => {
       encoding: '7bit',
       mimetype: 'image/jpeg',
       buffer: Buffer.from('test'),
-      size: 1024
+      size: 1024,
     } as Express.Multer.File;
 
     it('should update title image', async () => {
@@ -231,7 +227,7 @@ describe('EventsController', () => {
       mockFirebaseStorageService.uploadFile.mockResolvedValue(newImageUrl);
       mockEventsService.update.mockResolvedValue({
         ...mockEvent,
-        titleImageUrl: newImageUrl
+        titleImageUrl: newImageUrl,
       });
 
       const result = await controller.updateTitleImage('event1', mockFile);
@@ -240,16 +236,16 @@ describe('EventsController', () => {
       expect(result.titleImageUrl).toBe(newImageUrl);
       expect(mockFirebaseStorageService.uploadFile).toHaveBeenCalled();
       expect(mockEventsService.update).toHaveBeenCalledWith('event1', {
-        titleImageUrl: newImageUrl
+        titleImageUrl: newImageUrl,
       });
     });
 
     it('should throw NotFoundException if event not found', async () => {
       mockEventsService.getById.mockResolvedValue(null);
 
-      await expect(controller.updateTitleImage('nonexistent', mockFile))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.updateTitleImage('nonexistent', mockFile)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -261,7 +257,7 @@ describe('EventsController', () => {
         encoding: '7bit',
         mimetype: 'image/jpeg',
         buffer: Buffer.from('test1'),
-        size: 1024
+        size: 1024,
       },
       {
         fieldname: 'images',
@@ -269,8 +265,8 @@ describe('EventsController', () => {
         encoding: '7bit',
         mimetype: 'image/jpeg',
         buffer: Buffer.from('test2'),
-        size: 1024
-      }
+        size: 1024,
+      },
     ] as Express.Multer.File[];
 
     it('should add images to event', async () => {
@@ -281,7 +277,7 @@ describe('EventsController', () => {
         .mockResolvedValueOnce(newImageUrls[1]);
       mockEventsService.update.mockResolvedValue({
         ...mockEvent,
-        imageUrls: newImageUrls
+        imageUrls: newImageUrls,
       });
 
       const result = await controller.addImages('event1', mockFiles);
@@ -290,16 +286,16 @@ describe('EventsController', () => {
       expect(result.imageUrls).toEqual(newImageUrls);
       expect(mockFirebaseStorageService.uploadFile).toHaveBeenCalledTimes(2);
       expect(mockEventsService.update).toHaveBeenCalledWith('event1', {
-        imageUrls: newImageUrls
+        imageUrls: newImageUrls,
       });
     });
 
     it('should throw NotFoundException if event not found', async () => {
       mockEventsService.getById.mockResolvedValue(null);
 
-      await expect(controller.addImages('nonexistent', mockFiles))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.addImages('nonexistent', mockFiles)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -308,11 +304,11 @@ describe('EventsController', () => {
       const imageUrl = 'test-image.jpg';
       mockEventsService.getById.mockResolvedValue({
         ...mockEvent,
-        imageUrls: [imageUrl]
+        imageUrls: [imageUrl],
       });
       mockEventsService.update.mockResolvedValue({
         ...mockEvent,
-        imageUrls: []
+        imageUrls: [],
       });
 
       const result = await controller.removeImage('event1', imageUrl);
@@ -321,27 +317,27 @@ describe('EventsController', () => {
       expect(result.imageUrls).not.toContain(imageUrl);
       expect(mockFirebaseStorageService.deleteFile).toHaveBeenCalledWith(imageUrl);
       expect(mockEventsService.update).toHaveBeenCalledWith('event1', {
-        imageUrls: []
+        imageUrls: [],
       });
     });
 
     it('should throw NotFoundException if event not found', async () => {
       mockEventsService.getById.mockResolvedValue(null);
 
-      await expect(controller.removeImage('nonexistent', 'test-image.jpg'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.removeImage('nonexistent', 'test-image.jpg')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw NotFoundException if image not found in event', async () => {
       mockEventsService.getById.mockResolvedValue({
         ...mockEvent,
-        imageUrls: ['other-image.jpg']
+        imageUrls: ['other-image.jpg'],
       });
 
-      await expect(controller.removeImage('event1', 'test-image.jpg'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.removeImage('event1', 'test-image.jpg')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -357,21 +353,21 @@ describe('EventsController', () => {
         {
           date: '2024-03-20',
           from: '10:00',
-          to: '18:00'
-        }
-      ]
+          to: '18:00',
+        },
+      ],
     };
 
     it('should create event for user', async () => {
       const mockBusinessUser = {
         id: 'user1',
-        eventIds: []
+        eventIds: [],
       };
 
       mockUsersService.getBusinessUser.mockResolvedValue(mockBusinessUser);
       mockEventsService.create.mockResolvedValue({
         id: 'newEventId',
-        ...createDto
+        ...createDto,
       });
 
       const result = await controller.createEventForUser('user1', createDto);
@@ -386,9 +382,9 @@ describe('EventsController', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getBusinessUser.mockResolvedValue(null);
 
-      await expect(controller.createEventForUser('nonexistent', createDto))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.createEventForUser('nonexistent', createDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -396,7 +392,7 @@ describe('EventsController', () => {
     it('should return events for user', async () => {
       const mockBusinessUser = {
         id: 'user1',
-        eventIds: ['event1']
+        eventIds: ['event1'],
       };
 
       mockUsersService.getBusinessUser.mockResolvedValue(mockBusinessUser);
@@ -414,15 +410,13 @@ describe('EventsController', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getBusinessUser.mockResolvedValue(null);
 
-      await expect(controller.getEventsByUserId('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.getEventsByUserId('nonexistent')).rejects.toThrow(NotFoundException);
     });
 
     it('should return empty array if user has no events', async () => {
       const mockBusinessUser = {
         id: 'user1',
-        eventIds: []
+        eventIds: [],
       };
 
       mockUsersService.getBusinessUser.mockResolvedValue(mockBusinessUser);
@@ -455,4 +449,4 @@ describe('EventsController', () => {
       expect(mockEventsService.getByIds).not.toHaveBeenCalled();
     });
   });
-}); 
+});

@@ -11,8 +11,8 @@ jest.mock('../../../firebase/firebase.service', () => ({
   FirebaseService: jest.fn().mockImplementation(() => ({
     getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
-    getClientStorage: jest.fn()
-  }))
+    getClientStorage: jest.fn(),
+  })),
 }));
 
 describe('ContactController', () => {
@@ -30,17 +30,17 @@ describe('ContactController', () => {
     markAsProcessed: jest.fn(),
     getContactRequestsByUserId: jest.fn(),
     getOpenRequestsCount: jest.fn(),
-    addMessage: jest.fn()
+    addMessage: jest.fn(),
   };
 
   const mockConfigService = {
-    get: jest.fn()
+    get: jest.fn(),
   };
 
   const mockFirebaseService = {
     getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
-    getClientStorage: jest.fn()
+    getClientStorage: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -49,16 +49,16 @@ describe('ContactController', () => {
       providers: [
         {
           provide: ContactService,
-          useValue: mockContactService
+          useValue: mockContactService,
         },
         {
           provide: ConfigService,
-          useValue: mockConfigService
+          useValue: mockConfigService,
         },
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
-        }
+          useValue: mockFirebaseService,
+        },
       ],
     }).compile();
 
@@ -73,17 +73,19 @@ describe('ContactController', () => {
   describe('createGeneralContact', () => {
     const mockData = {
       userId: 'user123',
-      message: 'Test message'
+      message: 'Test message',
     };
 
     const mockContactRequest = ContactRequest.create({
       type: ContactRequestType.GENERAL,
       userId: mockData.userId,
-      messages: [ContactMessage.create({
-        message: mockData.message,
-        userId: mockData.userId,
-        isAdminResponse: false
-      })]
+      messages: [
+        ContactMessage.create({
+          message: mockData.message,
+          userId: mockData.userId,
+          isAdminResponse: false,
+        }),
+      ],
     });
 
     it('should create a general contact request', async () => {
@@ -103,11 +105,13 @@ describe('ContactController', () => {
     const mockContactRequest = ContactRequest.create({
       type: ContactRequestType.GENERAL,
       userId: mockUserId,
-      messages: [ContactMessage.create({
-        message: 'Test message',
-        userId: mockUserId,
-        isAdminResponse: false
-      })]
+      messages: [
+        ContactMessage.create({
+          message: 'Test message',
+          userId: mockUserId,
+          isAdminResponse: false,
+        }),
+      ],
     });
 
     it('should return contact request if found', async () => {
@@ -123,9 +127,9 @@ describe('ContactController', () => {
     it('should throw NotFoundException if contact request not found', async () => {
       mockContactService.getById.mockResolvedValue(null);
 
-      await expect(controller.getById(mockUserId, mockRequestId))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.getById(mockUserId, mockRequestId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -140,14 +144,14 @@ describe('ContactController', () => {
         ContactMessage.create({
           message: 'Old message',
           userId: mockUserId,
-          isAdminResponse: false
+          isAdminResponse: false,
         }),
         ContactMessage.create({
           message: mockMessage.message,
           userId: mockUserId,
-          isAdminResponse: false
-        })
-      ]
+          isAdminResponse: false,
+        }),
+      ],
     });
 
     it('should add message to contact request', async () => {
@@ -158,7 +162,11 @@ describe('ContactController', () => {
       expect(result).toBeDefined();
       expect(result.messages.length).toBe(2);
       expect(result.messages[1].message).toBe(mockMessage.message);
-      expect(mockContactService.addMessage).toHaveBeenCalledWith(mockRequestId, mockUserId, mockMessage);
+      expect(mockContactService.addMessage).toHaveBeenCalledWith(
+        mockRequestId,
+        mockUserId,
+        mockMessage,
+      );
     });
   });
 
@@ -173,4 +181,4 @@ describe('ContactController', () => {
       expect(mockContactService.getOpenRequestsCount).toHaveBeenCalled();
     });
   });
-}); 
+});

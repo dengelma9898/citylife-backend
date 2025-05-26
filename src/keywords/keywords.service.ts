@@ -1,5 +1,14 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+} from 'firebase/firestore';
 import { Keyword } from './interfaces/keyword.interface';
 import { CreateKeywordDto } from './dto/create-keyword.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
@@ -15,10 +24,13 @@ export class KeywordsService {
     const db = this.firebaseService.getClientFirestore();
     const keywordsCol = collection(db, 'keywords');
     const snapshot = await getDocs(keywordsCol);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Keyword));
+    return snapshot.docs.map(
+      doc =>
+        ({
+          id: doc.id,
+          ...doc.data(),
+        }) as Keyword,
+    );
   }
 
   public async getById(id: string): Promise<Keyword | null> {
@@ -26,33 +38,33 @@ export class KeywordsService {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'keywords', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       return null;
     }
 
     return {
       id: docSnap.id,
-      ...docSnap.data()
+      ...docSnap.data(),
     } as Keyword;
   }
 
   public async create(data: CreateKeywordDto): Promise<Keyword> {
     this.logger.debug('Creating keyword');
     const db = this.firebaseService.getClientFirestore();
-    
+
     const keywordData: Omit<Keyword, 'id'> = {
       name: data.name,
       description: data.description,
       createdAt: DateTimeUtils.getBerlinTime(),
-      updatedAt: DateTimeUtils.getBerlinTime()
+      updatedAt: DateTimeUtils.getBerlinTime(),
     };
 
     const docRef = await addDoc(collection(db, 'keywords'), keywordData);
-    
+
     return {
       id: docRef.id,
-      ...keywordData
+      ...keywordData,
     };
   }
 
@@ -61,22 +73,22 @@ export class KeywordsService {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'keywords', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new NotFoundException('Keyword not found');
     }
 
     const updateData = {
       ...data,
-      updatedAt: DateTimeUtils.getBerlinTime()
+      updatedAt: DateTimeUtils.getBerlinTime(),
     };
 
     await updateDoc(docRef, updateData);
-    
+
     const updatedDoc = await getDoc(docRef);
     return {
       id: updatedDoc.id,
-      ...updatedDoc.data()
+      ...updatedDoc.data(),
     } as Keyword;
   }
 
@@ -85,11 +97,11 @@ export class KeywordsService {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'keywords', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new NotFoundException('Keyword not found');
     }
 
     await deleteDoc(docRef);
   }
-} 
+}

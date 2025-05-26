@@ -2,7 +2,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { ContactRequest } from '../../domain/entities/contact-request.entity';
 import { ContactRequestRepository } from '../../domain/repositories/contact-request.repository';
-import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+} from 'firebase/firestore';
 
 @Injectable()
 export class FirebaseContactRequestRepository implements ContactRequestRepository {
@@ -15,10 +25,12 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
     this.logger.log('Getting all contact requests');
     const db = this.firebaseService.getClientFirestore();
     const snapshot = await getDocs(collection(db, this.contactRequestCollection));
-    return snapshot.docs.map(doc => ContactRequest.fromProps({
-      id: doc.id,
-      ...doc.data()
-    } as any));
+    return snapshot.docs.map(doc =>
+      ContactRequest.fromProps({
+        id: doc.id,
+        ...doc.data(),
+      } as any),
+    );
   }
 
   async findById(id: string): Promise<ContactRequest | null> {
@@ -26,34 +38,39 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, this.contactRequestCollection, id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       return null;
     }
 
     return ContactRequest.fromProps({
       id: docSnap.id,
-      ...docSnap.data()
+      ...docSnap.data(),
     } as any);
   }
 
-  async create(data: Omit<ContactRequest, 'id' | 'createdAt' | 'updatedAt'>): Promise<ContactRequest> {
+  async create(
+    data: Omit<ContactRequest, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<ContactRequest> {
     this.logger.log('Creating new contact request');
     const db = this.firebaseService.getClientFirestore();
     const contactRequest = ContactRequest.create(data);
     await addDoc(collection(db, this.contactRequestCollection), contactRequest.toJSON());
     return ContactRequest.fromProps({
-      ...contactRequest.toJSON()
+      ...contactRequest.toJSON(),
     });
   }
 
-  async update(id: string, data: Partial<Omit<ContactRequest, 'id' | 'createdAt'>>): Promise<ContactRequest | null> {
+  async update(
+    id: string,
+    data: Partial<Omit<ContactRequest, 'id' | 'createdAt'>>,
+  ): Promise<ContactRequest | null> {
     this.logger.log(`Updating contact request with id: ${id}`);
 
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, this.contactRequestCollection, id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       return null;
     }
@@ -66,13 +83,13 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
       ...currentData,
       ...data,
       messages: messages,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     await updateDoc(docRef, updatedData);
     return ContactRequest.fromProps({
       id: docSnap.id,
-      ...updatedData
+      ...updatedData,
     } as any);
   }
 
@@ -88,20 +105,27 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
     const db = this.firebaseService.getClientFirestore();
     const q = query(collection(db, this.contactRequestCollection), where('userId', '==', userId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ContactRequest.fromProps({
-      id: doc.id,
-      ...doc.data()
-    } as any));
+    return snapshot.docs.map(doc =>
+      ContactRequest.fromProps({
+        id: doc.id,
+        ...doc.data(),
+      } as any),
+    );
   }
 
   async findByBusinessId(businessId: string): Promise<ContactRequest[]> {
     this.logger.log(`Finding contact requests for business: ${businessId}`);
     const db = this.firebaseService.getClientFirestore();
-    const q = query(collection(db, this.contactRequestCollection), where('businessId', '==', businessId));
+    const q = query(
+      collection(db, this.contactRequestCollection),
+      where('businessId', '==', businessId),
+    );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ContactRequest.fromProps({
-      id: doc.id,
-      ...doc.data()
-    } as any));
+    return snapshot.docs.map(doc =>
+      ContactRequest.fromProps({
+        id: doc.id,
+        ...doc.data(),
+      } as any),
+    );
   }
-} 
+}

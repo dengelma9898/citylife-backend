@@ -5,17 +5,10 @@ import { DateTimeUtils } from '../../utils/date-time.utils';
 
 @Injectable()
 export class TimezoneInterceptor implements NestInterceptor {
-  private readonly dateFields = [
-    'createdAt',
-    'updatedAt',
-    'visitedAt',
-    'scannedAt',
-  ];
+  private readonly dateFields = ['createdAt', 'updatedAt', 'visitedAt', 'scannedAt'];
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    return next.handle().pipe(
-      map(data => this.convertDatesToBerlinTime(data))
-    );
+    return next.handle().pipe(map(data => this.convertDatesToBerlinTime(data)));
   }
 
   private convertDatesToBerlinTime(data: any): any {
@@ -33,8 +26,10 @@ export class TimezoneInterceptor implements NestInterceptor {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
           const value = data[key];
           if (value !== null) {
-            if (this.dateFields.includes(key) && 
-                (this.isISODateString(value) || value instanceof Date)) {
+            if (
+              this.dateFields.includes(key) &&
+              (this.isISODateString(value) || value instanceof Date)
+            ) {
               result[key] = DateTimeUtils.convertUTCToBerlinTime(value);
             } else {
               result[key] = this.convertDatesToBerlinTime(value);
@@ -51,4 +46,4 @@ export class TimezoneInterceptor implements NestInterceptor {
     if (typeof value !== 'string') return false;
     return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(value);
   }
-} 
+}

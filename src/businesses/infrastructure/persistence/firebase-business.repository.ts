@@ -1,7 +1,23 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+} from 'firebase/firestore';
 import { FirebaseService } from 'src/firebase/firebase.service';
-import { Business, BusinessProps, BusinessCustomer, BusinessContact, BusinessAddress } from '../../domain/entities/business.entity';
+import {
+  Business,
+  BusinessProps,
+  BusinessCustomer,
+  BusinessContact,
+  BusinessAddress,
+} from '../../domain/entities/business.entity';
 import { BusinessRepository } from '../../domain/repositories/business.repository';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
 
@@ -49,7 +65,7 @@ export class FirebaseBusinessRepository implements BusinessRepository {
       previousBenefits: data.previousBenefits,
       customers: (data.customers || []).map((customer: any) => BusinessCustomer.create(customer)),
       hasAccount: data.hasAccount,
-      isPromoted: data.isPromoted
+      isPromoted: data.isPromoted,
     };
   }
 
@@ -57,36 +73,29 @@ export class FirebaseBusinessRepository implements BusinessRepository {
     const db = this.firebaseService.getClientFirestore();
     const businessesCol = collection(db, 'businesses');
     const snapshot = await getDocs(businessesCol);
-    
-    return snapshot.docs.map(doc => 
-      Business.fromProps(this.toBusinessProps(doc.data(), doc.id))
-    );
+
+    return snapshot.docs.map(doc => Business.fromProps(this.toBusinessProps(doc.data(), doc.id)));
   }
 
   async findById(id: string): Promise<Business | null> {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'businesses', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       return null;
     }
 
-    return Business.fromProps(
-      this.toBusinessProps(docSnap.data(), docSnap.id)
-    );
+    return Business.fromProps(this.toBusinessProps(docSnap.data(), docSnap.id));
   }
 
   async create(business: Business): Promise<Business> {
     const db = this.firebaseService.getClientFirestore();
-    const docRef = await addDoc(
-      collection(db, 'businesses'),
-      this.toPlainObject(business)
-    );
-    
+    const docRef = await addDoc(collection(db, 'businesses'), this.toPlainObject(business));
+
     return Business.fromProps({
       ...business.toJSON(),
-      id: docRef.id
+      id: docRef.id,
     });
   }
 
@@ -94,16 +103,16 @@ export class FirebaseBusinessRepository implements BusinessRepository {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'businesses', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new NotFoundException('Business not found');
     }
 
     await updateDoc(docRef, this.toPlainObject(business));
-    
+
     return Business.fromProps({
       ...business.toJSON(),
-      id
+      id,
     });
   }
 
@@ -111,7 +120,7 @@ export class FirebaseBusinessRepository implements BusinessRepository {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'businesses', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new NotFoundException('Business not found');
     }
@@ -124,24 +133,23 @@ export class FirebaseBusinessRepository implements BusinessRepository {
     const businessesCol = collection(db, 'businesses');
     const q = query(businessesCol, where('status', '==', status));
     const snapshot = await getDocs(q);
-    
-    return snapshot.docs.map(doc => 
-      Business.fromProps(this.toBusinessProps(doc.data(), doc.id))
-    );
+
+    return snapshot.docs.map(doc => Business.fromProps(this.toBusinessProps(doc.data(), doc.id)));
   }
 
-  async findByStatusAndHasAccount(status: BusinessStatus, hasAccount: boolean): Promise<Business[]> {
+  async findByStatusAndHasAccount(
+    status: BusinessStatus,
+    hasAccount: boolean,
+  ): Promise<Business[]> {
     const db = this.firebaseService.getClientFirestore();
     const businessesCol = collection(db, 'businesses');
     const q = query(
       businessesCol,
       where('status', '==', status),
-      where('hasAccount', '==', hasAccount)
+      where('hasAccount', '==', hasAccount),
     );
     const snapshot = await getDocs(q);
-    
-    return snapshot.docs.map(doc => 
-      Business.fromProps(this.toBusinessProps(doc.data(), doc.id))
-    );
+
+    return snapshot.docs.map(doc => Business.fromProps(this.toBusinessProps(doc.data(), doc.id)));
   }
-} 
+}

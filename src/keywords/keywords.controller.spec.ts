@@ -15,7 +15,7 @@ describe('KeywordsController', () => {
     getById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    delete: jest.fn()
+    delete: jest.fn(),
   };
 
   const mockKeyword: Keyword = {
@@ -23,7 +23,7 @@ describe('KeywordsController', () => {
     name: 'Test Keyword',
     description: 'Test Description',
     createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z'
+    updatedAt: '2024-01-01T00:00:00.000Z',
   };
 
   beforeEach(async () => {
@@ -32,8 +32,8 @@ describe('KeywordsController', () => {
       providers: [
         {
           provide: KeywordsService,
-          useValue: mockKeywordsService
-        }
+          useValue: mockKeywordsService,
+        },
       ],
     }).compile();
 
@@ -72,9 +72,7 @@ describe('KeywordsController', () => {
     it('should throw NotFoundException if keyword not found', async () => {
       mockKeywordsService.getById.mockResolvedValue(null);
 
-      await expect(controller.getById('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.getById('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -82,12 +80,12 @@ describe('KeywordsController', () => {
     it('should create a new keyword', async () => {
       const createDto: CreateKeywordDto = {
         name: 'New Keyword',
-        description: 'New Description'
+        description: 'New Description',
       };
 
       mockKeywordsService.create.mockResolvedValue({
         ...mockKeyword,
-        ...createDto
+        ...createDto,
       });
 
       const result = await controller.create(createDto);
@@ -103,12 +101,12 @@ describe('KeywordsController', () => {
     it('should update a keyword', async () => {
       const updateDto: UpdateKeywordDto = {
         name: 'Updated Keyword',
-        description: 'Updated Description'
+        description: 'Updated Description',
       };
 
       mockKeywordsService.update.mockResolvedValue({
         ...mockKeyword,
-        ...updateDto
+        ...updateDto,
       });
 
       const result = await controller.update('keyword1', updateDto);
@@ -122,9 +120,9 @@ describe('KeywordsController', () => {
     it('should throw NotFoundException if keyword not found', async () => {
       mockKeywordsService.update.mockRejectedValue(new NotFoundException('Keyword not found'));
 
-      await expect(controller.update('nonexistent', { name: 'Updated' }))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.update('nonexistent', { name: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -140,9 +138,7 @@ describe('KeywordsController', () => {
     it('should throw NotFoundException if keyword not found', async () => {
       mockKeywordsService.delete.mockRejectedValue(new NotFoundException('Keyword not found'));
 
-      await expect(controller.delete('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.delete('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
-}); 
+});

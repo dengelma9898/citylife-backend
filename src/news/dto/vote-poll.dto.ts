@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsArray, ArrayMinSize, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class VotePollDto {
   @IsString()
@@ -8,4 +8,4 @@ export class VotePollDto {
   @IsString()
   @IsNotEmpty()
   public readonly userId: string;
-} 
+}

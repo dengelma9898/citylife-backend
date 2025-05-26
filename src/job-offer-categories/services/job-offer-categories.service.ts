@@ -1,6 +1,9 @@
 import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
 import { JobCategory } from '../domain/entities/job-category.entity';
-import { JobCategoryRepository, JOB_CATEGORY_REPOSITORY } from '../domain/repositories/job-category.repository';
+import {
+  JobCategoryRepository,
+  JOB_CATEGORY_REPOSITORY,
+} from '../domain/repositories/job-category.repository';
 import { CreateJobCategoryDto } from '../dto/create-job-category.dto';
 
 @Injectable()
@@ -9,7 +12,7 @@ export class JobOfferCategoriesService {
 
   constructor(
     @Inject(JOB_CATEGORY_REPOSITORY)
-    private readonly jobCategoryRepository: JobCategoryRepository
+    private readonly jobCategoryRepository: JobCategoryRepository,
   ) {}
 
   async create(createJobCategoryDto: CreateJobCategoryDto): Promise<JobCategory> {
@@ -33,7 +36,10 @@ export class JobOfferCategoriesService {
     }
   }
 
-  async update(id: string, updateJobCategoryDto: Partial<CreateJobCategoryDto>): Promise<JobCategory> {
+  async update(
+    id: string,
+    updateJobCategoryDto: Partial<CreateJobCategoryDto>,
+  ): Promise<JobCategory> {
     this.logger.debug(`Updating job category ${id}`);
     const existingCategory = await this.findOne(id);
     const updatedCategory = existingCategory.update(updateJobCategoryDto);
@@ -46,4 +52,4 @@ export class JobOfferCategoriesService {
     await this.findOne(id); // Verify existence
     await this.jobCategoryRepository.delete(id);
   }
-} 
+}

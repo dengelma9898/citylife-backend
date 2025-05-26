@@ -1,9 +1,9 @@
 export interface ContactMessageProps {
-    userId: string;
-    message: string;
-    createdAt: string;
-    isAdminResponse: boolean;
-  } 
+  userId: string;
+  message: string;
+  createdAt: string;
+  isAdminResponse: boolean;
+}
 
 export class ContactMessage {
   readonly userId: string;
@@ -24,7 +24,7 @@ export class ContactMessage {
       userId: props.userId,
       message: props.message,
       createdAt: now,
-      isAdminResponse: props.isAdminResponse
+      isAdminResponse: props.isAdminResponse,
     });
   }
 
@@ -37,7 +37,7 @@ export class ContactMessage {
       userId: this.userId,
       message: this.message,
       createdAt: this.createdAt,
-      isAdminResponse: this.isAdminResponse
+      isAdminResponse: this.isAdminResponse,
     };
   }
-} 
+}

@@ -17,12 +17,12 @@ describe('ChatroomsController', () => {
     create: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
-    updateImage: jest.fn()
+    updateImage: jest.fn(),
   };
 
   const mockFirebaseStorageService = {
     deleteFile: jest.fn(),
-    uploadFile: jest.fn()
+    uploadFile: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -31,12 +31,12 @@ describe('ChatroomsController', () => {
       providers: [
         {
           provide: ChatroomsService,
-          useValue: mockChatroomsService
+          useValue: mockChatroomsService,
         },
         {
           provide: FirebaseStorageService,
-          useValue: mockFirebaseStorageService
-        }
+          useValue: mockFirebaseStorageService,
+        },
       ],
     }).compile();
 
@@ -60,8 +60,8 @@ describe('ChatroomsController', () => {
           createdBy: 'user1',
           participants: ['user1'],
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       ];
 
       mockChatroomsService.getAll.mockResolvedValue(mockChatrooms);
@@ -85,7 +85,7 @@ describe('ChatroomsController', () => {
         createdBy: 'user1',
         participants: ['user1'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockChatroomsService.getById.mockResolvedValue(mockChatroom);
@@ -102,7 +102,7 @@ describe('ChatroomsController', () => {
   describe('create', () => {
     const createDto: CreateChatroomDto = {
       title: 'New Chatroom',
-      description: 'New Description'
+      description: 'New Description',
     };
 
     it('should create a new chatroom', async () => {
@@ -113,7 +113,7 @@ describe('ChatroomsController', () => {
         createdBy: 'user1',
         participants: ['user1'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockChatroomsService.create.mockResolvedValue(mockChatroom);
@@ -130,7 +130,7 @@ describe('ChatroomsController', () => {
   describe('update', () => {
     const updateDto: UpdateChatroomDto = {
       title: 'Updated Chatroom',
-      image: 'image1.jpg'
+      image: 'image1.jpg',
     };
 
     it('should update a chatroom', async () => {
@@ -141,7 +141,7 @@ describe('ChatroomsController', () => {
         createdBy: 'user1',
         participants: ['user1'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       mockChatroomsService.update.mockResolvedValue(mockChatroom);
@@ -172,7 +172,7 @@ describe('ChatroomsController', () => {
       encoding: '7bit',
       mimetype: 'image/jpeg',
       buffer: Buffer.from('test'),
-      size: 1024
+      size: 1024,
     } as Express.Multer.File;
 
     it('should update chatroom image', async () => {
@@ -184,7 +184,7 @@ describe('ChatroomsController', () => {
         createdBy: 'user1',
         participants: ['user1'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       const newImageUrl = 'new-image.jpg';
@@ -193,7 +193,7 @@ describe('ChatroomsController', () => {
       mockFirebaseStorageService.uploadFile.mockResolvedValue(newImageUrl);
       mockChatroomsService.updateImage.mockResolvedValue({
         ...mockChatroom,
-        imageUrl: newImageUrl
+        imageUrl: newImageUrl,
       });
 
       const result = await controller.updateImage('chatroom1', mockFile);
@@ -208,9 +208,9 @@ describe('ChatroomsController', () => {
     it('should throw NotFoundException if chatroom not found', async () => {
       mockChatroomsService.getById.mockResolvedValue(null);
 
-      await expect(controller.updateImage('nonexistent', mockFile))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.updateImage('nonexistent', mockFile)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should not delete old image if no image exists', async () => {
@@ -222,7 +222,7 @@ describe('ChatroomsController', () => {
         createdBy: 'user1',
         participants: ['user1'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       const newImageUrl = 'new-image.jpg';
@@ -231,7 +231,7 @@ describe('ChatroomsController', () => {
       mockFirebaseStorageService.uploadFile.mockResolvedValue(newImageUrl);
       mockChatroomsService.updateImage.mockResolvedValue({
         ...mockChatroom,
-        imageUrl: newImageUrl
+        imageUrl: newImageUrl,
       });
 
       const result = await controller.updateImage('chatroom1', mockFile);
@@ -243,4 +243,4 @@ describe('ChatroomsController', () => {
       expect(mockChatroomsService.updateImage).toHaveBeenCalledWith('chatroom1', newImageUrl);
     });
   });
-}); 
+});

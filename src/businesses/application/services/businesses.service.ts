@@ -1,6 +1,14 @@
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
-import { Business, BusinessAddress, BusinessContact, BusinessCustomer } from '../../domain/entities/business.entity';
-import { BusinessRepository, BUSINESS_REPOSITORY } from '../../domain/repositories/business.repository';
+import {
+  Business,
+  BusinessAddress,
+  BusinessContact,
+  BusinessCustomer,
+} from '../../domain/entities/business.entity';
+import {
+  BusinessRepository,
+  BUSINESS_REPOSITORY,
+} from '../../domain/repositories/business.repository';
 import { CreateBusinessDto } from '../../dto/create-business.dto';
 import { BusinessCustomerDto } from '../../dto/business-customer.dto';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
@@ -19,7 +27,7 @@ export class BusinessesService {
     private readonly businessRepository: BusinessRepository,
     private readonly businessCategoriesService: BusinessCategoriesService,
     private readonly keywordsService: KeywordsService,
-    private readonly eventsService: EventsService
+    private readonly eventsService: EventsService,
   ) {}
 
   public async getAll(): Promise<Business[]> {
@@ -46,7 +54,7 @@ export class BusinessesService {
       benefit: data.benefit,
       hasAccount: data.hasAccount,
       isPromoted: data.isPromoted || false,
-      status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING
+      status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING,
     });
 
     return this.businessRepository.create(business);
@@ -79,7 +87,10 @@ export class BusinessesService {
     return this.businessRepository.update(id, updatedBusiness);
   }
 
-  public async addCustomerScan(businessId: string, scanData: BusinessCustomerDto): Promise<Business> {
+  public async addCustomerScan(
+    businessId: string,
+    scanData: BusinessCustomerDto,
+  ): Promise<Business> {
     this.logger.debug(`Adding customer scan to business ${businessId}`);
     const existingBusiness = await this.businessRepository.findById(businessId);
     if (!existingBusiness) {
@@ -92,7 +103,7 @@ export class BusinessesService {
       price: scanData.price,
       numberOfPeople: scanData.numberOfPeople,
       additionalInfo: scanData.additionalInfo,
-      benefit: existingBusiness.benefit
+      benefit: existingBusiness.benefit,
     });
 
     const updatedBusiness = existingBusiness.addCustomer(customer);
@@ -110,8 +121,13 @@ export class BusinessesService {
     return this.businessRepository.update(id, updatedBusiness);
   }
 
-  public async getBusinessesByStatus(filter: { hasAccount: boolean; status: BusinessStatus }): Promise<Business[]> {
-    this.logger.debug(`Getting businesses with status ${filter.status} and hasAccount ${filter.hasAccount}`);
+  public async getBusinessesByStatus(filter: {
+    hasAccount: boolean;
+    status: BusinessStatus;
+  }): Promise<Business[]> {
+    this.logger.debug(
+      `Getting businesses with status ${filter.status} and hasAccount ${filter.hasAccount}`,
+    );
     return this.businessRepository.findByStatusAndHasAccount(filter.status, filter.hasAccount);
   }
 
@@ -125,4 +141,4 @@ export class BusinessesService {
     const updatedBusiness = existingBusiness.update({ hasAccount });
     return this.businessRepository.update(id, updatedBusiness);
   }
-} 
+}

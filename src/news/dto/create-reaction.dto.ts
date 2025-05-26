@@ -8,4 +8,4 @@ export class CreateReactionDto {
   @IsString()
   @IsNotEmpty()
   public readonly userId: string;
-} 
+}

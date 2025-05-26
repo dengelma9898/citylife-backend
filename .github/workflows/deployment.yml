@@ -17,7 +17,29 @@ env:
   BASE_URL_PRD: /prd
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test
+
   build-and-push-dev:
+    needs: test
     environment: dev
     runs-on: ubuntu-latest
     permissions:
@@ -94,8 +116,8 @@ jobs:
               ${{ env.IMAGE_NAME_DEV }}:latest
 
   build-and-push-prd:
+    needs: [test, build-and-push-dev]
     environment: prd
-    needs: build-and-push-dev
     runs-on: ubuntu-latest
     permissions:
       contents: read

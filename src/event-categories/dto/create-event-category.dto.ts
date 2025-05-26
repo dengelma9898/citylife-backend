@@ -27,4 +27,4 @@ export class CreateEventCategoryDto {
   @IsArray()
   @IsString({ each: true })
   fallbackImages?: string[];
-} 
+}

@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Logger, NotFoundException, Patch, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Logger,
+  NotFoundException,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import { ContactService } from '../services/contact.service';
 import { ContactRequest } from '../../domain/entities/contact-request.entity';
 import { GeneralContactRequestDto } from '../dto/general-contact-request.dto';
@@ -17,53 +27,61 @@ export class ContactController {
 
   @Post('general')
   @ApiOperation({ summary: 'Create a new general contact request' })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'The general contact request has been successfully created'
+  @ApiResponse({
+    status: 201,
+    description: 'The general contact request has been successfully created',
   })
-  public async createGeneralContact(@Body() generalContactRequestDto: GeneralContactRequestDto): Promise<ContactRequest> {
+  public async createGeneralContact(
+    @Body() generalContactRequestDto: GeneralContactRequestDto,
+  ): Promise<ContactRequest> {
     this.logger.log('POST /contact/general');
     return this.contactService.createGeneralContactRequest(generalContactRequestDto);
   }
 
   @Post('feedback')
   @ApiOperation({ summary: 'Create a new feedback request' })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'The feedback request has been successfully created'
+  @ApiResponse({
+    status: 201,
+    description: 'The feedback request has been successfully created',
   })
-  public async createFeedback(@Body() feedbackRequestDto: FeedbackRequestDto): Promise<ContactRequest> {
+  public async createFeedback(
+    @Body() feedbackRequestDto: FeedbackRequestDto,
+  ): Promise<ContactRequest> {
     this.logger.log('POST /contact/feedback');
     return this.contactService.createFeedbackRequest(feedbackRequestDto);
   }
 
   @Post('business-claim')
   @ApiOperation({ summary: 'Create a new business claim request' })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'The business claim request has been successfully created'
+  @ApiResponse({
+    status: 201,
+    description: 'The business claim request has been successfully created',
   })
-  public async createBusinessClaim(@Body() businessClaimRequestDto: BusinessClaimRequestDto): Promise<ContactRequest> {
+  public async createBusinessClaim(
+    @Body() businessClaimRequestDto: BusinessClaimRequestDto,
+  ): Promise<ContactRequest> {
     this.logger.log('POST /contact/business-claim');
     return this.contactService.createBusinessClaimRequest(businessClaimRequestDto);
   }
 
   @Post('business')
   @ApiOperation({ summary: 'Create a new business request' })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'The business request has been successfully created'
+  @ApiResponse({
+    status: 201,
+    description: 'The business request has been successfully created',
   })
-  public async createBusinessRequest(@Body() businessRequestDto: BusinessRequestDto): Promise<ContactRequest> {
+  public async createBusinessRequest(
+    @Body() businessRequestDto: BusinessRequestDto,
+  ): Promise<ContactRequest> {
     this.logger.log('POST /contact/business');
     return this.contactService.createBusinessRequest(businessRequestDto);
   }
 
   @Post(':id/response')
   @ApiOperation({ summary: 'Add an admin response to a contact request' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'The admin response has been added to the contact request'
+  @ApiResponse({
+    status: 200,
+    description: 'The admin response has been added to the contact request',
   })
   public async addAdminResponse(
     @Param('id') id: string,
@@ -75,9 +93,9 @@ export class ContactController {
 
   @Get()
   @ApiOperation({ summary: 'Get all contact requests' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Returns all contact requests'
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all contact requests',
   })
   public async getAll(): Promise<ContactRequest[]> {
     this.logger.log('GET /contact');
@@ -86,13 +104,13 @@ export class ContactController {
 
   @Get('user/:userId/request/:id')
   @ApiOperation({ summary: 'Get a specific contact request for a user' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Returns the contact request with the specified id for the specified user'
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the contact request with the specified id for the specified user',
   })
   public async getById(
     @Param('userId') userId: string,
-    @Param('id') id: string
+    @Param('id') id: string,
   ): Promise<ContactRequest> {
     this.logger.log(`GET /contact/user/${userId}/request/${id}`);
     const contactRequest = await this.contactService.getById(id, userId);
@@ -104,13 +122,13 @@ export class ContactController {
 
   @Patch('user/:userId/request/:id/processed')
   @ApiOperation({ summary: 'Mark a contact request as processed' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'The contact request has been marked as processed'
+  @ApiResponse({
+    status: 200,
+    description: 'The contact request has been marked as processed',
   })
   public async markAsProcessed(
     @Param('userId') userId: string,
-    @Param('id') id: string
+    @Param('id') id: string,
   ): Promise<ContactRequest> {
     this.logger.log(`PATCH /contact/user/${userId}/request/${id}/processed`);
     const contactRequest = await this.contactService.getById(id, userId);
@@ -122,21 +140,23 @@ export class ContactController {
 
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get all contact requests for a specific user' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Returns all contact requests for the specified user'
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all contact requests for the specified user',
   })
-  public async getContactRequestsByUserId(@Param('userId') userId: string): Promise<ContactRequest[]> {
+  public async getContactRequestsByUserId(
+    @Param('userId') userId: string,
+  ): Promise<ContactRequest[]> {
     this.logger.log(`GET /contact/user/${userId}`);
     return this.contactService.getContactRequestsByUserId(userId);
   }
 
   @Get('open-requests/count')
   @ApiOperation({ summary: 'Get the number of open (unresponded) contact requests' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Returns the number of contact requests that have not been responded to yet',
-    type: Number
+    type: Number,
   })
   public async getOpenRequestsCount(): Promise<number> {
     this.logger.log('GET /contact/open-requests/count');
@@ -145,28 +165,29 @@ export class ContactController {
 
   @Patch('user/:userId/request/:id')
   @ApiOperation({ summary: 'Fügt eine neue Nachricht zu einer Kontaktanfrage hinzu' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Die Nachricht wurde erfolgreich zur Kontaktanfrage hinzugefügt'
+  @ApiResponse({
+    status: 200,
+    description: 'Die Nachricht wurde erfolgreich zur Kontaktanfrage hinzugefügt',
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Nicht autorisiert - Sie haben keine Berechtigung, diese Kontaktanfrage zu bearbeiten'
+  @ApiResponse({
+    status: 401,
+    description:
+      'Nicht autorisiert - Sie haben keine Berechtigung, diese Kontaktanfrage zu bearbeiten',
   })
   @ApiParam({
     name: 'userId',
-    description: 'ID des Benutzers'
+    description: 'ID des Benutzers',
   })
   @ApiParam({
     name: 'id',
-    description: 'ID der Kontaktanfrage'
+    description: 'ID der Kontaktanfrage',
   })
   public async addMessage(
     @Param('userId') userId: string,
     @Param('id') id: string,
-    @Body() messageDto: AddMessageDto
+    @Body() messageDto: AddMessageDto,
   ): Promise<ContactRequest> {
     this.logger.log(`PATCH /contact/user/${userId}/request/${id}/message`);
     return this.contactService.addMessage(id, userId, messageDto);
   }
-} 
+}

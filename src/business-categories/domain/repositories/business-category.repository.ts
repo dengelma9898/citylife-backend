@@ -8,4 +8,4 @@ export interface BusinessCategoryRepository {
   create(category: BusinessCategory): Promise<BusinessCategory>;
   update(id: string, category: BusinessCategory): Promise<BusinessCategory>;
   delete(id: string): Promise<void>;
-} 
+}

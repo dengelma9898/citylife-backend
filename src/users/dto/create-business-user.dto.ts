@@ -12,4 +12,4 @@ export class CreateBusinessUserDto {
 
   @IsBoolean()
   public readonly needsReview: boolean;
-} 
+}

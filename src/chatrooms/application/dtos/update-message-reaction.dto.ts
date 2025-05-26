@@ -6,12 +6,11 @@ export enum ReactionType {
   LAUGH = 'laugh',
   WOW = 'wow',
   SAD = 'sad',
-  ANGRY = 'angry'
+  ANGRY = 'angry',
 }
 
 export class UpdateMessageReactionDto {
   @IsNotEmpty()
   @IsEnum(ReactionType)
   type!: ReactionType;
-
-} 
+}

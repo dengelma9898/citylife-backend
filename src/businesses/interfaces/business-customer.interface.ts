@@ -47,4 +47,4 @@ export interface BusinessCustomerWithBusinessName extends BusinessCustomer {
    * Der Name des Businesses, bei dem der Scan durchgeführt wurde
    */
   businessName: string;
-} 
+}

@@ -1,7 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+} from 'firebase/firestore';
 import { FirebaseService } from 'src/firebase/firebase.service';
-import { BusinessCategory, BusinessCategoryProps } from '../../domain/entities/business-category.entity';
+import {
+  BusinessCategory,
+  BusinessCategoryProps,
+} from '../../domain/entities/business-category.entity';
 import { BusinessCategoryRepository } from '../../domain/repositories/business-category.repository';
 
 @Injectable()
@@ -34,7 +46,7 @@ export class FirebaseBusinessCategoryRepository implements BusinessCategoryRepos
       description: data.description,
       keywordIds: data.keywordIds || [],
       createdAt: data.createdAt,
-      updatedAt: data.updatedAt
+      updatedAt: data.updatedAt,
     };
   }
 
@@ -42,9 +54,9 @@ export class FirebaseBusinessCategoryRepository implements BusinessCategoryRepos
     const db = this.firebaseService.getClientFirestore();
     const categoriesCol = collection(db, 'business_categories');
     const snapshot = await getDocs(categoriesCol);
-    
-    return snapshot.docs.map(doc => 
-      BusinessCategory.fromProps(this.toBusinessCategoryProps(doc.data(), doc.id))
+
+    return snapshot.docs.map(doc =>
+      BusinessCategory.fromProps(this.toBusinessCategoryProps(doc.data(), doc.id)),
     );
   }
 
@@ -52,26 +64,24 @@ export class FirebaseBusinessCategoryRepository implements BusinessCategoryRepos
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'business_categories', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       return null;
     }
 
-    return BusinessCategory.fromProps(
-      this.toBusinessCategoryProps(docSnap.data(), docSnap.id)
-    );
+    return BusinessCategory.fromProps(this.toBusinessCategoryProps(docSnap.data(), docSnap.id));
   }
 
   async create(category: BusinessCategory): Promise<BusinessCategory> {
     const db = this.firebaseService.getClientFirestore();
     const docRef = await addDoc(
       collection(db, 'business_categories'),
-      this.toPlainObject(category)
+      this.toPlainObject(category),
     );
-    
+
     return BusinessCategory.fromProps({
       ...category.toJSON(),
-      id: docRef.id
+      id: docRef.id,
     });
   }
 
@@ -79,16 +89,16 @@ export class FirebaseBusinessCategoryRepository implements BusinessCategoryRepos
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'business_categories', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new NotFoundException('Business category not found');
     }
 
     await updateDoc(docRef, this.toPlainObject(category));
-    
+
     return BusinessCategory.fromProps({
       ...category.toJSON(),
-      id
+      id,
     });
   }
 
@@ -96,11 +106,11 @@ export class FirebaseBusinessCategoryRepository implements BusinessCategoryRepos
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'business_categories', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new NotFoundException('Business category not found');
     }
 
     await deleteDoc(docRef);
   }
-} 
+}

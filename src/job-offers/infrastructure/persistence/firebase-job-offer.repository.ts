@@ -1,5 +1,14 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+} from 'firebase/firestore';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { JobOffer } from '../../domain/entities/job-offer.entity';
 import { JobOfferRepository } from '../../domain/repositories/job-offer.repository.interface';
@@ -14,14 +23,14 @@ export class FirebaseJobOfferRepository implements JobOfferRepository {
   private toJobOfferProps(data: any, id: string) {
     return {
       id,
-      ...data
+      ...data,
     };
   }
 
   private toPlainObject(jobOffer: JobOffer) {
     const { id, ...data } = jobOffer;
     return this.removeUndefined({
-      ...data
+      ...data,
     });
   }
 
@@ -64,7 +73,7 @@ export class FirebaseJobOfferRepository implements JobOfferRepository {
     const db = this.firebaseService.getClientFirestore();
     const offersCol = collection(db, this.collectionName);
     const snapshot = await getDocs(offersCol);
-    
+
     return snapshot.docs.map(doc => new JobOffer(this.toJobOfferProps(doc.data(), doc.id)));
   }
 
@@ -104,4 +113,4 @@ export class FirebaseJobOfferRepository implements JobOfferRepository {
 
     await deleteDoc(docRef);
   }
-} 
+}

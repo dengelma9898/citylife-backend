@@ -21,7 +21,7 @@ export class AppSettingsService {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'app_settings', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       return null;
     }
@@ -31,4 +31,4 @@ export class AppSettingsService {
       preferences: docSnap.data().preferences || [],
     };
   }
-} 
+}

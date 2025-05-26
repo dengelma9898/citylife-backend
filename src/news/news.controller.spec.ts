@@ -2,7 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NewsController } from './news.controller';
 import { NewsService } from './news.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
-import { NewsItem, TextNewsItem, ImageNewsItem, PollNewsItem } from './interfaces/news-item.interface';
+import {
+  NewsItem,
+  TextNewsItem,
+  ImageNewsItem,
+  PollNewsItem,
+} from './interfaces/news-item.interface';
 import { CreateTextNewsDto } from './dto/create-text-news.dto';
 import { CreateImageNewsDto } from './dto/create-image-news.dto';
 import { CreatePollNewsDto, PollInfoDto } from './dto/create-poll-news.dto';
@@ -26,11 +31,11 @@ describe('NewsController', () => {
     postReaction: jest.fn(),
     delete: jest.fn(),
     update: jest.fn(),
-    incrementViewCount: jest.fn().mockResolvedValue(undefined)
+    incrementViewCount: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockFirebaseStorageService = {
-    uploadFile: jest.fn()
+    uploadFile: jest.fn(),
   };
 
   const mockTextNewsItem: TextNewsItem = {
@@ -43,7 +48,7 @@ describe('NewsController', () => {
     authorName: 'Test User',
     authorImageUrl: 'https://example.com/avatar.jpg',
     reactions: [],
-    views: 0
+    views: 0,
   };
 
   const mockImageNewsItem: ImageNewsItem = {
@@ -57,7 +62,7 @@ describe('NewsController', () => {
     authorName: 'Test User',
     authorImageUrl: 'https://example.com/avatar.jpg',
     reactions: [],
-    views: 0
+    views: 0,
   };
 
   const mockPollNewsItem: PollNewsItem = {
@@ -66,7 +71,7 @@ describe('NewsController', () => {
     question: 'Test Question?',
     options: [
       { id: 'opt1', text: 'Option 1', voters: [] },
-      { id: 'opt2', text: 'Option 2', voters: [] }
+      { id: 'opt2', text: 'Option 2', voters: [] },
     ],
     allowMultipleAnswers: false,
     votes: 0,
@@ -76,7 +81,7 @@ describe('NewsController', () => {
     authorName: 'Test User',
     authorImageUrl: 'https://example.com/avatar.jpg',
     reactions: [],
-    views: 0
+    views: 0,
   };
 
   beforeEach(async () => {
@@ -85,12 +90,12 @@ describe('NewsController', () => {
       providers: [
         {
           provide: NewsService,
-          useValue: mockNewsService
+          useValue: mockNewsService,
         },
         {
           provide: FirebaseStorageService,
-          useValue: mockFirebaseStorageService
-        }
+          useValue: mockFirebaseStorageService,
+        },
       ],
     }).compile();
 
@@ -131,9 +136,7 @@ describe('NewsController', () => {
     it('should throw NotFoundException if news item not found', async () => {
       mockNewsService.getById.mockResolvedValue(null);
 
-      await expect(controller.getById('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.getById('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -141,7 +144,7 @@ describe('NewsController', () => {
     it('should create a new text news item', async () => {
       const createDto: CreateTextNewsDto = {
         content: 'New Text News',
-        authorId: 'user1'
+        authorId: 'user1',
       };
 
       mockNewsService.createTextNews.mockResolvedValue(mockTextNewsItem);
@@ -159,7 +162,7 @@ describe('NewsController', () => {
       const createDto: CreateImageNewsDto = {
         content: 'New Image News',
         imageUrls: ['https://example.com/image1.jpg'],
-        authorId: 'user1'
+        authorId: 'user1',
       };
 
       mockNewsService.createImageNews.mockResolvedValue(mockImageNewsItem);
@@ -177,15 +180,15 @@ describe('NewsController', () => {
       const pollInfo: PollInfoDto = {
         options: [
           { id: 'opt1', text: 'Option 1' },
-          { id: 'opt2', text: 'Option 2' }
+          { id: 'opt2', text: 'Option 2' },
         ],
-        allowMultipleChoices: false
+        allowMultipleChoices: false,
       };
 
       const createDto: CreatePollNewsDto = {
         content: 'New Poll Question?',
         authorId: 'user1',
-        pollInfo
+        pollInfo,
       };
 
       mockNewsService.createPollNews.mockResolvedValue(mockPollNewsItem);
@@ -202,16 +205,16 @@ describe('NewsController', () => {
     it('should vote on a poll', async () => {
       const voteDto: VotePollDto = {
         optionId: 'opt1',
-        userId: 'user1'
+        userId: 'user1',
       };
 
       const updatedPoll = {
         ...mockPollNewsItem,
         options: [
           { ...mockPollNewsItem.options[0], voters: ['user1'] },
-          mockPollNewsItem.options[1]
+          mockPollNewsItem.options[1],
         ],
-        votes: 1
+        votes: 1,
       };
 
       mockNewsService.votePoll.mockResolvedValue(updatedPoll);
@@ -228,12 +231,12 @@ describe('NewsController', () => {
     it('should add a reaction to a news item', async () => {
       const reactionDto: CreateReactionDto = {
         userId: 'user1',
-        reactionType: 'like'
+        reactionType: 'like',
       };
 
       const updatedNews = {
         ...mockTextNewsItem,
-        reactions: [{ userId: 'user1', type: 'like' }]
+        reactions: [{ userId: 'user1', type: 'like' }],
       };
 
       mockNewsService.postReaction.mockResolvedValue(updatedNews);
@@ -259,12 +262,12 @@ describe('NewsController', () => {
   describe('update', () => {
     it('should update a text news item', async () => {
       const updateData = {
-        content: 'Updated Content'
+        content: 'Updated Content',
       };
 
       const updatedNews = {
         ...mockTextNewsItem,
-        content: 'Updated Content'
+        content: 'Updated Content',
       };
 
       mockNewsService.update.mockResolvedValue(updatedNews);
@@ -279,12 +282,12 @@ describe('NewsController', () => {
     it('should not allow changing the type', async () => {
       const updateData = {
         type: 'image' as const,
-        content: 'Updated Content'
+        content: 'Updated Content',
       };
 
       const updatedNews = {
         ...mockTextNewsItem,
-        content: 'Updated Content'
+        content: 'Updated Content',
       };
 
       mockNewsService.update.mockResolvedValue(updatedNews);
@@ -308,7 +311,7 @@ describe('NewsController', () => {
       destination: '',
       filename: '',
       path: '',
-      stream: new Readable()
+      stream: new Readable(),
     });
 
     it('should update images for an image news item', async () => {
@@ -319,7 +322,7 @@ describe('NewsController', () => {
 
       const updatedNews = {
         ...mockImageNewsItem,
-        imageUrls: [...mockImageNewsItem.imageUrls, 'https://example.com/new-image.jpg']
+        imageUrls: [...mockImageNewsItem.imageUrls, 'https://example.com/new-image.jpg'],
       };
 
       mockNewsService.update.mockResolvedValue(updatedNews);
@@ -333,9 +336,7 @@ describe('NewsController', () => {
     });
 
     it('should throw BadRequestException if no files are uploaded', async () => {
-      await expect(controller.updateNewsImages('news2', []))
-        .rejects
-        .toThrow(BadRequestException);
+      await expect(controller.updateNewsImages('news2', [])).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException if news item not found', async () => {
@@ -343,9 +344,9 @@ describe('NewsController', () => {
 
       mockNewsService.getById.mockResolvedValue(null);
 
-      await expect(controller.updateNewsImages('nonexistent', mockFiles))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.updateNewsImages('nonexistent', mockFiles)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException if news item is not an image type', async () => {
@@ -353,9 +354,9 @@ describe('NewsController', () => {
 
       mockNewsService.getById.mockResolvedValue(mockTextNewsItem);
 
-      await expect(controller.updateNewsImages('news1', mockFiles))
-        .rejects
-        .toThrow(BadRequestException);
+      await expect(controller.updateNewsImages('news1', mockFiles)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
-}); 
+});

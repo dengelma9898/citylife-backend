@@ -1,9 +1,23 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
-import { SpecialPoll, SpecialPollStatus, SpecialPollResponse } from './interfaces/special-poll.interface';
+import {
+  SpecialPoll,
+  SpecialPollStatus,
+  SpecialPollResponse,
+} from './interfaces/special-poll.interface';
 import { CreateSpecialPollDto } from './dto/create-special-poll.dto';
 import { UpdateSpecialPollStatusDto } from './dto/update-special-poll-status.dto';
-import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  orderBy,
+} from 'firebase/firestore';
 import { DateTimeUtils } from '../utils/date-time.utils';
 import { UsersService } from '../users/users.service';
 
@@ -13,7 +27,7 @@ export class SpecialPollsService {
 
   constructor(
     private readonly firebaseService: FirebaseService,
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
   ) {}
 
   async findAll(): Promise<SpecialPoll[]> {
@@ -22,10 +36,13 @@ export class SpecialPollsService {
     const pollsRef = collection(db, 'special_polls');
     const q = query(pollsRef, orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as SpecialPoll));
+    return snapshot.docs.map(
+      doc =>
+        ({
+          id: doc.id,
+          ...doc.data(),
+        }) as SpecialPoll,
+    );
   }
 
   async findOne(id: string): Promise<SpecialPoll> {
@@ -33,14 +50,14 @@ export class SpecialPollsService {
     const db = this.firebaseService.getClientFirestore();
     const pollRef = doc(db, 'special_polls', id);
     const pollDoc = await getDoc(pollRef);
-    
+
     if (!pollDoc.exists()) {
       throw new NotFoundException('Special poll not found');
     }
 
     return {
       id: pollDoc.id,
-      ...pollDoc.data()
+      ...pollDoc.data(),
     } as SpecialPoll;
   }
 
@@ -48,33 +65,36 @@ export class SpecialPollsService {
     this.logger.debug('Creating new special poll');
     const db = this.firebaseService.getClientFirestore();
     const pollsRef = collection(db, 'special_polls');
-    
+
     const pollData = {
       ...createSpecialPollDto,
       responses: [],
       status: SpecialPollStatus.PENDING,
       createdAt: DateTimeUtils.getBerlinTime(),
-      updatedAt: DateTimeUtils.getBerlinTime()
+      updatedAt: DateTimeUtils.getBerlinTime(),
     };
 
     const docRef = await addDoc(pollsRef, pollData);
-    
+
     return {
       id: docRef.id,
-      ...pollData
+      ...pollData,
     } as SpecialPoll;
   }
 
-  async updateStatus(id: string, updateStatusDto: UpdateSpecialPollStatusDto): Promise<SpecialPoll> {
+  async updateStatus(
+    id: string,
+    updateStatusDto: UpdateSpecialPollStatusDto,
+  ): Promise<SpecialPoll> {
     this.logger.debug(`Updating status of special poll ${id}`);
     const poll = await this.findOne(id);
 
     const db = this.firebaseService.getClientFirestore();
     const pollRef = doc(db, 'special_polls', id);
-    
+
     await updateDoc(pollRef, {
       status: updateStatusDto.status,
-      updatedAt: DateTimeUtils.getBerlinTime()
+      updatedAt: DateTimeUtils.getBerlinTime(),
     });
 
     return this.findOne(id);
@@ -83,7 +103,7 @@ export class SpecialPollsService {
   async addResponse(id: string, userId: string, response: string): Promise<SpecialPoll> {
     this.logger.debug(`Adding response to special poll ${id}`);
     const poll = await this.findOne(id);
-    
+
     if (poll.status !== SpecialPollStatus.ACTIVE) {
       throw new BadRequestException('Can only add responses to active polls');
     }
@@ -102,15 +122,15 @@ export class SpecialPollsService {
       userId,
       userName: userData.name,
       response,
-      createdAt: DateTimeUtils.getBerlinTime()
+      createdAt: DateTimeUtils.getBerlinTime(),
     };
 
     const db = this.firebaseService.getClientFirestore();
     const pollRef = doc(db, 'special_polls', id);
-    
+
     await updateDoc(pollRef, {
       responses: [...poll.responses, newResponse],
-      updatedAt: DateTimeUtils.getBerlinTime()
+      updatedAt: DateTimeUtils.getBerlinTime(),
     });
 
     return this.findOne(id);
@@ -121,13 +141,13 @@ export class SpecialPollsService {
     const poll = await this.findOne(id);
 
     const updatedResponses = poll.responses.filter(response => response.userId !== userId);
-    
+
     const db = this.firebaseService.getClientFirestore();
     const pollRef = doc(db, 'special_polls', id);
-    
+
     await updateDoc(pollRef, {
       responses: updatedResponses,
-      updatedAt: DateTimeUtils.getBerlinTime()
+      updatedAt: DateTimeUtils.getBerlinTime(),
     });
 
     return this.findOne(id);
@@ -137,12 +157,12 @@ export class SpecialPollsService {
     this.logger.debug(`Deleting special poll ${id}`);
     const db = this.firebaseService.getClientFirestore();
     const pollRef = doc(db, 'special_polls', id);
-    
+
     const pollDoc = await getDoc(pollRef);
     if (!pollDoc.exists()) {
       throw new NotFoundException('Special poll not found');
     }
-    
+
     await deleteDoc(pollRef);
   }
 
@@ -152,12 +172,12 @@ export class SpecialPollsService {
 
     const db = this.firebaseService.getClientFirestore();
     const pollRef = doc(db, 'special_polls', id);
-    
+
     await updateDoc(pollRef, {
       responses,
-      updatedAt: DateTimeUtils.getBerlinTime()
+      updatedAt: DateTimeUtils.getBerlinTime(),
     });
 
     return this.findOne(id);
   }
-} 
+}

@@ -5,7 +5,18 @@ import { UsersService } from '../../../users/users.service';
 import { CHAT_MESSAGE_REPOSITORY } from '../../domain/repositories/chat-message.repository';
 import { ChatMessage } from '../../domain/entities/chat-message.entity';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, limit } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  orderBy,
+  limit,
+} from 'firebase/firestore';
 import { ReactionType, UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
 
 jest.mock('firebase/firestore', () => ({
@@ -18,7 +29,7 @@ jest.mock('firebase/firestore', () => ({
   deleteDoc: jest.fn(),
   query: jest.fn(),
   orderBy: jest.fn(),
-  limit: jest.fn()
+  limit: jest.fn(),
 }));
 
 describe('ChatMessagesService', () => {
@@ -28,11 +39,11 @@ describe('ChatMessagesService', () => {
   let chatMessageRepository: any;
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn()
+    getClientFirestore: jest.fn(),
   };
 
   const mockUsersService = {
-    getById: jest.fn()
+    getById: jest.fn(),
   };
 
   const mockChatMessageRepository = {
@@ -43,7 +54,7 @@ describe('ChatMessagesService', () => {
     delete: jest.fn(),
     findByChatroom: jest.fn(),
     addReaction: jest.fn(),
-    removeReaction: jest.fn()
+    removeReaction: jest.fn(),
   };
 
   const mockMessages = [
@@ -54,7 +65,7 @@ describe('ChatMessagesService', () => {
       senderName: 'User 1',
       reactions: [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     }),
     ChatMessage.fromProps({
       id: 'message2',
@@ -63,8 +74,8 @@ describe('ChatMessagesService', () => {
       senderName: 'User 2',
       reactions: [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    })
+      updatedAt: new Date().toISOString(),
+    }),
   ];
 
   beforeEach(async () => {
@@ -73,16 +84,16 @@ describe('ChatMessagesService', () => {
         ChatMessagesService,
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
+          useValue: mockFirebaseService,
         },
         {
           provide: UsersService,
-          useValue: mockUsersService
+          useValue: mockUsersService,
         },
         {
           provide: CHAT_MESSAGE_REPOSITORY,
-          useValue: mockChatMessageRepository
-        }
+          useValue: mockChatMessageRepository,
+        },
       ],
     }).compile();
 
@@ -135,21 +146,19 @@ describe('ChatMessagesService', () => {
     it('should throw NotFoundException if message not found', async () => {
       mockChatMessageRepository.findById.mockResolvedValue(null);
 
-      await expect(service.getById('chatroom1', 'nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.getById('chatroom1', 'nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('create', () => {
     const createDto = {
-      content: 'New Message'
+      content: 'New Message',
     };
 
     it('should create a new message', async () => {
       const mockUser = {
         id: 'user1',
-        name: 'User 1'
+        name: 'User 1',
       };
 
       mockUsersService.getById.mockResolvedValue(mockUser);
@@ -158,7 +167,7 @@ describe('ChatMessagesService', () => {
         content: createDto.content,
         senderId: 'user1',
         senderName: 'User 1',
-        reactions: []
+        reactions: [],
       });
 
       mockChatMessageRepository.create.mockResolvedValue(mockCreatedMessage);
@@ -175,22 +184,22 @@ describe('ChatMessagesService', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getById.mockResolvedValue(null);
 
-      await expect(service.create('chatroom1', 'user1', createDto))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.create('chatroom1', 'user1', createDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('update', () => {
     const updateDto = {
-      content: 'Updated Message'
+      content: 'Updated Message',
     };
 
     it('should update an existing message', async () => {
       const updatedMessage = ChatMessage.fromProps({
         ...mockMessages[0],
         content: updateDto.content,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
 
       mockChatMessageRepository.update.mockResolvedValue(updatedMessage);
@@ -200,15 +209,19 @@ describe('ChatMessagesService', () => {
       expect(result).toBeDefined();
       expect(result.id).toBe('message1');
       expect(result.content).toBe(updateDto.content);
-      expect(mockChatMessageRepository.update).toHaveBeenCalledWith('chatroom1', 'message1', updateDto);
+      expect(mockChatMessageRepository.update).toHaveBeenCalledWith(
+        'chatroom1',
+        'message1',
+        updateDto,
+      );
     });
 
     it('should throw NotFoundException if message not found', async () => {
       mockChatMessageRepository.update.mockResolvedValue(null);
 
-      await expect(service.update('chatroom1', 'nonexistent', updateDto))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.update('chatroom1', 'nonexistent', updateDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -236,14 +249,14 @@ describe('ChatMessagesService', () => {
 
   describe('addReaction', () => {
     const reactionDto: UpdateMessageReactionDto = {
-      type: ReactionType.LIKE
+      type: ReactionType.LIKE,
     };
 
     it('should add a reaction to a message', async () => {
       const updatedMessage = ChatMessage.fromProps({
         ...mockMessages[0],
         reactions: [{ userId: 'user1', type: ReactionType.LIKE }],
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
 
       mockChatMessageRepository.addReaction.mockResolvedValue(updatedMessage);
@@ -254,15 +267,20 @@ describe('ChatMessagesService', () => {
       expect(result.reactions).toHaveLength(1);
       expect(result.reactions![0].userId).toBe('user1');
       expect(result.reactions![0].type).toBe(ReactionType.LIKE);
-      expect(mockChatMessageRepository.addReaction).toHaveBeenCalledWith('chatroom1', 'message1', 'user1', reactionDto);
+      expect(mockChatMessageRepository.addReaction).toHaveBeenCalledWith(
+        'chatroom1',
+        'message1',
+        'user1',
+        reactionDto,
+      );
     });
 
     it('should throw NotFoundException if message not found', async () => {
       mockChatMessageRepository.addReaction.mockResolvedValue(null);
 
-      await expect(service.addReaction('chatroom1', 'nonexistent', 'user1', reactionDto))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(
+        service.addReaction('chatroom1', 'nonexistent', 'user1', reactionDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -271,7 +289,7 @@ describe('ChatMessagesService', () => {
       const updatedMessage = ChatMessage.fromProps({
         ...mockMessages[0],
         reactions: [],
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
 
       mockChatMessageRepository.removeReaction.mockResolvedValue(updatedMessage);
@@ -280,15 +298,19 @@ describe('ChatMessagesService', () => {
 
       expect(result).toBeDefined();
       expect(result.reactions).toHaveLength(0);
-      expect(mockChatMessageRepository.removeReaction).toHaveBeenCalledWith('chatroom1', 'message1', 'user1');
+      expect(mockChatMessageRepository.removeReaction).toHaveBeenCalledWith(
+        'chatroom1',
+        'message1',
+        'user1',
+      );
     });
 
     it('should throw NotFoundException if message not found', async () => {
       mockChatMessageRepository.removeReaction.mockResolvedValue(null);
 
-      await expect(service.removeReaction('chatroom1', 'nonexistent', 'user1'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.removeReaction('chatroom1', 'nonexistent', 'user1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -314,9 +336,9 @@ describe('ChatMessagesService', () => {
             senderName: msg.senderName,
             reactions: msg.reactions,
             createdAt: msg.createdAt,
-            updatedAt: msg.updatedAt
-          })
-        }))
+            updatedAt: msg.updatedAt,
+          }),
+        })),
       });
 
       const result = await service.findAll('chatroom1');
@@ -347,8 +369,8 @@ describe('ChatMessagesService', () => {
           senderName: 'User 1',
           reactions: [],
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        })
+          updatedAt: new Date().toISOString(),
+        }),
       });
 
       const result = await service.findOne('chatroom1', 'message1');
@@ -367,12 +389,10 @@ describe('ChatMessagesService', () => {
       (doc as jest.Mock).mockReturnValue(mockDoc);
 
       (getDoc as jest.Mock).mockResolvedValue({
-        exists: () => false
+        exists: () => false,
       });
 
-      await expect(service.findOne('chatroom1', 'nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.findOne('chatroom1', 'nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -393,8 +413,8 @@ describe('ChatMessagesService', () => {
           senderName: 'User 1',
           reactions: [],
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        })
+          updatedAt: new Date().toISOString(),
+        }),
       });
 
       await service.remove('chatroom1', 'message1', 'user1');
@@ -419,19 +439,19 @@ describe('ChatMessagesService', () => {
           senderName: 'User 2',
           reactions: [],
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        })
+          updatedAt: new Date().toISOString(),
+        }),
       });
 
-      await expect(service.remove('chatroom1', 'message1', 'user1'))
-        .rejects
-        .toThrow(BadRequestException);
+      await expect(service.remove('chatroom1', 'message1', 'user1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
   describe('adminUpdate', () => {
     const updateDto = {
-      content: 'Admin Updated Message'
+      content: 'Admin Updated Message',
     };
 
     it('should update a message as admin', async () => {
@@ -451,8 +471,8 @@ describe('ChatMessagesService', () => {
             senderName: 'User 1',
             reactions: [],
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          })
+            updatedAt: new Date().toISOString(),
+          }),
         })
         .mockResolvedValueOnce({
           exists: () => true,
@@ -465,8 +485,8 @@ describe('ChatMessagesService', () => {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             editedAt: expect.any(String),
-            editedByAdmin: true
-          })
+            editedByAdmin: true,
+          }),
         });
 
       const result = await service.adminUpdate('chatroom1', 'message1', updateDto);
@@ -492,4 +512,4 @@ describe('ChatMessagesService', () => {
       expect(deleteDoc).toHaveBeenCalledWith(mockDoc);
     });
   });
-}); 
+});

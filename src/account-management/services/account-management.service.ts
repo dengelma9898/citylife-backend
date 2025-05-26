@@ -22,12 +22,12 @@ export class AccountManagementService {
     try {
       // Get all users
       const listUsersResult = await auth.listUsers();
-      
+
       // Filter anonymous users older than MAX_ANONYMOUS_AGE_DAYS
       const oldAnonymousUsers = listUsersResult.users.filter((user: UserRecord) => {
         if (user.providerData.length > 0) return false;
         if (!user.metadata.creationTime) return false;
-        
+
         const creationDate = new Date(user.metadata.creationTime);
         return creationDate < cutoffDate;
       });
@@ -64,8 +64,8 @@ export class AccountManagementService {
     cutoffDate.setDate(cutoffDate.getDate() - this.MAX_ANONYMOUS_AGE_DAYS);
 
     const listUsersResult = await auth.listUsers();
-    const anonymousUsers = listUsersResult.users.filter((user: UserRecord) => 
-      user.providerData.length === 0
+    const anonymousUsers = listUsersResult.users.filter(
+      (user: UserRecord) => user.providerData.length === 0,
     );
     this.logger.log(`Found ${anonymousUsers.length} anonymous users`);
 
@@ -80,7 +80,7 @@ export class AccountManagementService {
     return {
       total: anonymousUsers.length,
       oldAccounts: oldAnonymousUsers.length,
-      cutoffDate: cutoffDate.toISOString()
+      cutoffDate: cutoffDate.toISOString(),
     };
   }
-} 
+}

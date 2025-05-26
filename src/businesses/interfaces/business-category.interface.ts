@@ -4,4 +4,4 @@ export interface BusinessCategory {
   iconName: string;
   createdAt: string;
   updatedAt: string;
-} 
+}

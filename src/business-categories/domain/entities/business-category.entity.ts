@@ -30,13 +30,15 @@ export class BusinessCategory {
     this.updatedAt = props.updatedAt;
   }
 
-  static create(props: Omit<BusinessCategoryProps, 'id' | 'createdAt' | 'updatedAt'>): BusinessCategory {
+  static create(
+    props: Omit<BusinessCategoryProps, 'id' | 'createdAt' | 'updatedAt'>,
+  ): BusinessCategory {
     const now = new Date().toISOString();
     return new BusinessCategory({
       id: crypto.randomUUID(),
       ...props,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     });
   }
 
@@ -48,7 +50,7 @@ export class BusinessCategory {
     return new BusinessCategory({
       ...this,
       ...props,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -61,7 +63,7 @@ export class BusinessCategory {
       keywordIds: this.keywordIds,
       keywords: this.keywords,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
     };
   }
-} 
+}

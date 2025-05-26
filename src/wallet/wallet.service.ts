@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Barcode, PKPass } from 'passkit-generator';
+import { PKPass } from 'passkit-generator';
 import * as path from 'path';
-import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
 
 interface PersonalizedPassData {
@@ -35,26 +34,29 @@ export class WalletService {
       const signerKey = Buffer.from(signerKeyStr, 'base64');
 
       // Create pass from template
-      const pass = await PKPass.from({
-        model: path.join(process.cwd(), 'pass-templates', 'nuernbergspots.pass'),
-        certificates: {
-          wwdr,
-          signerCert,
-          signerKey,
-          signerKeyPassphrase: passphrase
-        }
-      }, {
-        serialNumber: data.customerId,
-        description: 'Nuernbergspots Mitgliedskarte',
-        backgroundColor: '#000000',
-        foregroundColor: '#FFFFFF',
-        labelColor: '#FFFFFF',
-        logoText: 'Nuernbergspots',
-        formatVersion: 1,
-        organizationName: 'Nuernbergspots',
-        teamIdentifier: '4T9BXP692G',
-        passTypeIdentifier: 'pass.de.dengelma.nuernbergspots'
-      });
+      const pass = await PKPass.from(
+        {
+          model: path.join(process.cwd(), 'pass-templates', 'nuernbergspots.pass'),
+          certificates: {
+            wwdr,
+            signerCert,
+            signerKey,
+            signerKeyPassphrase: passphrase,
+          },
+        },
+        {
+          serialNumber: data.customerId,
+          description: 'Nuernbergspots Mitgliedskarte',
+          backgroundColor: '#000000',
+          foregroundColor: '#FFFFFF',
+          labelColor: '#FFFFFF',
+          logoText: 'Nuernbergspots',
+          formatVersion: 1,
+          organizationName: 'Nuernbergspots',
+          teamIdentifier: '4T9BXP692G',
+          passTypeIdentifier: 'pass.de.dengelma.nuernbergspots',
+        },
+      );
 
       // Set pass type to generic
       pass.type = 'generic';
@@ -63,7 +65,7 @@ export class WalletService {
       pass.primaryFields.push({
         key: 'name',
         label: 'Name',
-        value: data.userName
+        value: data.userName,
       });
 
       // Format date to German format (MM.YYYY)
@@ -73,7 +75,7 @@ export class WalletService {
       pass.secondaryFields.push({
         key: 'memberSince',
         label: 'Mitglied seit',
-        value: formattedDate
+        value: formattedDate,
       });
 
       pass.languages.push('de-DE');
@@ -81,24 +83,24 @@ export class WalletService {
       pass.auxiliaryFields.push({
         key: 'description',
         label: 'Deine Benefits',
-        value: 'Lasse den Barcode bei teilnehmenden Unternehmen scannen und erhalte diverse Vorteile.'
+        value:
+          'Lasse den Barcode bei teilnehmenden Unternehmen scannen und erhalte diverse Vorteile.',
       });
 
-      pass.setBarcodes(({
+      pass.setBarcodes({
         message: data.customerId,
         format: 'PKBarcodeFormatQR',
-        messageEncoding: 'iso-8859-1'
-      }));
+        messageEncoding: 'iso-8859-1',
+      });
 
       // Generate signed pass buffer
       const passBuffer = pass.getAsBuffer();
-      
+
       this.logger.debug('Personalized pass generated successfully');
       return passBuffer;
-
     } catch (error) {
       this.logger.error('Error generating pass:', error.message);
       throw error;
     }
   }
-} 
+}

@@ -1,7 +1,10 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { CreateJobOfferDto } from '../../dto/create-job-offer.dto';
 import { JobOffer } from '../../domain/entities/job-offer.entity';
-import { JobOfferRepository, JOB_OFFER_REPOSITORY } from '../../domain/repositories/job-offer.repository.interface';
+import {
+  JobOfferRepository,
+  JOB_OFFER_REPOSITORY,
+} from '../../domain/repositories/job-offer.repository.interface';
 
 @Injectable()
 export class JobOffersService {
@@ -9,7 +12,7 @@ export class JobOffersService {
 
   constructor(
     @Inject(JOB_OFFER_REPOSITORY)
-    private readonly jobOfferRepository: JobOfferRepository
+    private readonly jobOfferRepository: JobOfferRepository,
   ) {}
 
   async create(createJobOfferDto: CreateJobOfferDto): Promise<JobOffer> {
@@ -40,4 +43,4 @@ export class JobOffersService {
     await this.findOne(id); // Verify existence
     await this.jobOfferRepository.delete(id);
   }
-} 
+}

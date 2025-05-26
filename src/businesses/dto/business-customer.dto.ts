@@ -20,5 +20,4 @@ export class BusinessCustomerDto {
   @IsOptional()
   @IsString()
   public readonly additionalInfo?: string | null;
-
-} 
+}

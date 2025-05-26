@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JobOffersService } from './job-offers.service';
 import { JobOffer } from '../../domain/entities/job-offer.entity';
-import { JobOfferRepository, JOB_OFFER_REPOSITORY } from '../../domain/repositories/job-offer.repository.interface';
+import {
+  JobOfferRepository,
+  JOB_OFFER_REPOSITORY,
+} from '../../domain/repositories/job-offer.repository.interface';
 import { CreateJobOfferDto } from '../../dto/create-job-offer.dto';
 import { NotFoundException } from '@nestjs/common';
 
@@ -14,7 +17,7 @@ describe('JobOffersService', () => {
     findAll: jest.fn(),
     findById: jest.fn(),
     update: jest.fn(),
-    delete: jest.fn()
+    delete: jest.fn(),
   };
 
   const mockJobOffer: JobOffer = JobOffer.create({
@@ -24,13 +27,13 @@ describe('JobOffersService', () => {
     location: {
       address: 'Test Street',
       latitude: 49.4521,
-      longitude: 11.0767
+      longitude: 11.0767,
     },
     typeOfEmployment: 'Full-time',
     homeOffice: false,
     startDate: '2024-01-01',
     contactData: {
-      email: 'test@example.com'
+      email: 'test@example.com',
     },
     link: 'https://example.com',
     isHighlight: false,
@@ -38,7 +41,7 @@ describe('JobOffersService', () => {
     tasks: [],
     benefits: [],
     images: [],
-    companyLogo: ''
+    companyLogo: '',
   });
 
   beforeEach(async () => {
@@ -47,8 +50,8 @@ describe('JobOffersService', () => {
         JobOffersService,
         {
           provide: JOB_OFFER_REPOSITORY,
-          useValue: mockJobOfferRepository
-        }
+          useValue: mockJobOfferRepository,
+        },
       ],
     }).compile();
 
@@ -69,13 +72,13 @@ describe('JobOffersService', () => {
         location: {
           address: 'New Street',
           latitude: 49.4521,
-          longitude: 11.0767
+          longitude: 11.0767,
         },
         typeOfEmployment: 'Full-time',
         homeOffice: false,
         startDate: '2024-01-01',
         contactData: {
-          email: 'new@example.com'
+          email: 'new@example.com',
         },
         link: 'https://example.com',
         isHighlight: false,
@@ -83,7 +86,7 @@ describe('JobOffersService', () => {
         tasks: [],
         benefits: [],
         images: [],
-        companyLogo: ''
+        companyLogo: '',
       };
 
       mockJobOfferRepository.save.mockResolvedValue(mockJobOffer);
@@ -122,11 +125,11 @@ describe('JobOffersService', () => {
     });
 
     it('should throw NotFoundException if job offer not found', async () => {
-      mockJobOfferRepository.findById.mockRejectedValue(new NotFoundException('Job offer not found'));
+      mockJobOfferRepository.findById.mockRejectedValue(
+        new NotFoundException('Job offer not found'),
+      );
 
-      await expect(service.findOne('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -134,12 +137,12 @@ describe('JobOffersService', () => {
     it('should update a job offer', async () => {
       const updateDto = {
         title: 'Updated Job',
-        generalDescription: 'Updated Description'
+        generalDescription: 'Updated Description',
       };
 
       const updatedJobOffer = JobOffer.create({
         ...mockJobOffer,
-        ...updateDto
+        ...updateDto,
       });
 
       mockJobOfferRepository.findById.mockResolvedValue(mockJobOffer);
@@ -151,15 +154,20 @@ describe('JobOffersService', () => {
       expect(result.title).toBe(updateDto.title);
       expect(result.generalDescription).toBe(updateDto.generalDescription);
       expect(mockJobOfferRepository.findById).toHaveBeenCalledWith('job1');
-      expect(mockJobOfferRepository.update).toHaveBeenCalledWith('job1', expect.objectContaining(updateDto));
+      expect(mockJobOfferRepository.update).toHaveBeenCalledWith(
+        'job1',
+        expect.objectContaining(updateDto),
+      );
     });
 
     it('should throw NotFoundException if job offer not found', async () => {
-      mockJobOfferRepository.findById.mockRejectedValue(new NotFoundException('Job offer not found'));
+      mockJobOfferRepository.findById.mockRejectedValue(
+        new NotFoundException('Job offer not found'),
+      );
 
-      await expect(service.update('nonexistent', { title: 'Updated' }))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.update('nonexistent', { title: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -175,11 +183,11 @@ describe('JobOffersService', () => {
     });
 
     it('should throw NotFoundException if job offer not found', async () => {
-      mockJobOfferRepository.findById.mockRejectedValue(new NotFoundException('Job offer not found'));
+      mockJobOfferRepository.findById.mockRejectedValue(
+        new NotFoundException('Job offer not found'),
+      );
 
-      await expect(service.remove('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.remove('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
-}); 
+});

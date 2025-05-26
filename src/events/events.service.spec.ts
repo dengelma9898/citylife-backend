@@ -1,7 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventsService } from './events.service';
 import { FirebaseService } from '../firebase/firebase.service';
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, runTransaction } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  runTransaction,
+} from 'firebase/firestore';
 import { NotFoundException } from '@nestjs/common';
 import { Event, DailyTimeSlot } from './interfaces/event.interface';
 
@@ -13,7 +22,7 @@ jest.mock('firebase/firestore', () => ({
   addDoc: jest.fn(),
   updateDoc: jest.fn(),
   deleteDoc: jest.fn(),
-  runTransaction: jest.fn()
+  runTransaction: jest.fn(),
 }));
 
 describe('EventsService', () => {
@@ -21,12 +30,12 @@ describe('EventsService', () => {
   let firebaseService: FirebaseService;
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn()
+    getClientFirestore: jest.fn(),
   };
 
   const mockFirestore = {
     collection: jest.fn(),
-    doc: jest.fn()
+    doc: jest.fn(),
   };
 
   const mockEvent: Event = {
@@ -36,7 +45,7 @@ describe('EventsService', () => {
     location: {
       address: 'Test Address',
       latitude: 52.520008,
-      longitude: 13.404954
+      longitude: 13.404954,
     },
     imageUrls: [],
     titleImageUrl: '',
@@ -49,18 +58,18 @@ describe('EventsService', () => {
     socialMedia: {
       instagram: '',
       facebook: '',
-      tiktok: ''
+      tiktok: '',
     },
     isPromoted: false,
     dailyTimeSlots: [
       {
         date: '2024-03-20',
         from: '10:00',
-        to: '18:00'
-      }
+        to: '18:00',
+      },
     ],
     createdAt: '2024-03-20T10:00:00.000Z',
-    updatedAt: '2024-03-20T10:00:00.000Z'
+    updatedAt: '2024-03-20T10:00:00.000Z',
   };
 
   beforeEach(async () => {
@@ -69,8 +78,8 @@ describe('EventsService', () => {
         EventsService,
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
-        }
+          useValue: mockFirebaseService,
+        },
       ],
     }).compile();
 
@@ -87,12 +96,14 @@ describe('EventsService', () => {
   describe('getAll', () => {
     it('should return all events', async () => {
       const mockSnapshot = {
-        docs: [{
-          id: mockEvent.id,
-          data: () => ({
-            ...mockEvent,
-          })
-        }]
+        docs: [
+          {
+            id: mockEvent.id,
+            data: () => ({
+              ...mockEvent,
+            }),
+          },
+        ],
       };
 
       (collection as jest.Mock).mockReturnValue('mockCollection');
@@ -116,7 +127,7 @@ describe('EventsService', () => {
         id: mockEvent.id,
         data: () => ({
           ...mockEvent,
-        })
+        }),
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -136,7 +147,7 @@ describe('EventsService', () => {
 
     it('should return null if event not found', async () => {
       const mockDocSnap = {
-        exists: () => false
+        exists: () => false,
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -161,13 +172,13 @@ describe('EventsService', () => {
           {
             date: '2024-03-20',
             from: '10:00',
-            to: '18:00'
-          }
-        ]
+            to: '18:00',
+          },
+        ],
       };
 
       const mockDocRef = {
-        id: 'newEventId'
+        id: 'newEventId',
       };
 
       (collection as jest.Mock).mockReturnValue('mockCollection');
@@ -188,7 +199,7 @@ describe('EventsService', () => {
     it('should update an event', async () => {
       const updateDto = {
         title: 'Updated Event',
-        description: 'Updated Description'
+        description: 'Updated Description',
       };
 
       const mockDocSnap = {
@@ -196,7 +207,7 @@ describe('EventsService', () => {
         id: mockEvent.id,
         data: () => ({
           ...mockEvent,
-        })
+        }),
       };
 
       const mockUpdatedDocSnap = {
@@ -205,7 +216,7 @@ describe('EventsService', () => {
         data: () => ({
           ...mockEvent,
           ...updateDto,
-        })
+        }),
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -229,22 +240,22 @@ describe('EventsService', () => {
 
     it('should throw NotFoundException if event not found', async () => {
       const mockDocSnap = {
-        exists: () => false
+        exists: () => false,
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
       (getDoc as jest.Mock).mockResolvedValue(mockDocSnap);
 
-      await expect(service.update('nonexistent', { title: 'Updated' }))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.update('nonexistent', { title: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('delete', () => {
     it('should delete an event', async () => {
       const mockDocSnap = {
-        exists: () => true
+        exists: () => true,
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -259,15 +270,13 @@ describe('EventsService', () => {
 
     it('should throw NotFoundException if event not found', async () => {
       const mockDocSnap = {
-        exists: () => false
+        exists: () => false,
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
       (getDoc as jest.Mock).mockResolvedValue(mockDocSnap);
 
-      await expect(service.delete('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.delete('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -276,13 +285,13 @@ describe('EventsService', () => {
       const mockEventDoc = {
         exists: () => true,
         data: () => ({
-          favoriteCount: 5
-        })
+          favoriteCount: 5,
+        }),
       };
 
       const mockTransaction = {
         get: jest.fn().mockResolvedValue(mockEventDoc),
-        update: jest.fn()
+        update: jest.fn(),
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -301,13 +310,13 @@ describe('EventsService', () => {
       const mockEventDoc = {
         exists: () => true,
         data: () => ({
-          favoriteCount: 5
-        })
+          favoriteCount: 5,
+        }),
       };
 
       const mockTransaction = {
         get: jest.fn().mockResolvedValue(mockEventDoc),
-        update: jest.fn()
+        update: jest.fn(),
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -324,12 +333,12 @@ describe('EventsService', () => {
 
     it('should throw NotFoundException if event not found', async () => {
       const mockEventDoc = {
-        exists: () => false
+        exists: () => false,
       };
 
       const mockTransaction = {
         get: jest.fn().mockResolvedValue(mockEventDoc),
-        update: jest.fn()
+        update: jest.fn(),
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -337,9 +346,9 @@ describe('EventsService', () => {
         await callback(mockTransaction);
       });
 
-      await expect(service.updateFavoriteCount('nonexistent', true))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.updateFavoriteCount('nonexistent', true)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -350,7 +359,7 @@ describe('EventsService', () => {
         id: mockEvent.id,
         data: () => ({
           ...mockEvent,
-        })
+        }),
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -373,7 +382,7 @@ describe('EventsService', () => {
 
     it('should filter out non-existent events', async () => {
       const mockDocSnap = {
-        exists: () => false
+        exists: () => false,
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -385,4 +394,4 @@ describe('EventsService', () => {
       expect(result).toHaveLength(0);
     });
   });
-}); 
+});

@@ -17,12 +17,12 @@ describe('JobOffersController', () => {
     findAll: jest.fn(),
     findOne: jest.fn(),
     update: jest.fn(),
-    remove: jest.fn()
+    remove: jest.fn(),
   };
 
   const mockFirebaseStorageService = {
     uploadFile: jest.fn(),
-    deleteFile: jest.fn()
+    deleteFile: jest.fn(),
   };
 
   const mockJobOffer: JobOffer = JobOffer.create({
@@ -32,13 +32,13 @@ describe('JobOffersController', () => {
     location: {
       address: 'Test Street',
       latitude: 49.4521,
-      longitude: 11.0767
+      longitude: 11.0767,
     },
     typeOfEmployment: 'Full-time',
     homeOffice: false,
     startDate: '2024-01-01',
     contactData: {
-      email: 'test@example.com'
+      email: 'test@example.com',
     },
     link: 'https://example.com',
     isHighlight: false,
@@ -46,7 +46,7 @@ describe('JobOffersController', () => {
     tasks: [],
     benefits: [],
     images: [],
-    companyLogo: ''
+    companyLogo: '',
   });
 
   beforeEach(async () => {
@@ -55,12 +55,12 @@ describe('JobOffersController', () => {
       providers: [
         {
           provide: JobOffersService,
-          useValue: mockJobOffersService
+          useValue: mockJobOffersService,
         },
         {
           provide: FirebaseStorageService,
-          useValue: mockFirebaseStorageService
-        }
+          useValue: mockFirebaseStorageService,
+        },
       ],
     }).compile();
 
@@ -82,13 +82,13 @@ describe('JobOffersController', () => {
         location: {
           address: 'New Street',
           latitude: 49.4521,
-          longitude: 11.0767
+          longitude: 11.0767,
         },
         typeOfEmployment: 'Full-time',
         homeOffice: false,
         startDate: '2024-01-01',
         contactData: {
-          email: 'new@example.com'
+          email: 'new@example.com',
         },
         link: 'https://example.com',
         isHighlight: false,
@@ -96,7 +96,7 @@ describe('JobOffersController', () => {
         tasks: [],
         benefits: [],
         images: [],
-        companyLogo: ''
+        companyLogo: '',
       };
 
       mockJobOffersService.create.mockResolvedValue(mockJobOffer);
@@ -136,9 +136,7 @@ describe('JobOffersController', () => {
     it('should throw NotFoundException if job offer not found', async () => {
       mockJobOffersService.findOne.mockRejectedValue(new NotFoundException('Job offer not found'));
 
-      await expect(controller.findOne('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -146,12 +144,12 @@ describe('JobOffersController', () => {
     it('should update a job offer', async () => {
       const updateDto = {
         title: 'Updated Job',
-        generalDescription: 'Updated Description'
+        generalDescription: 'Updated Description',
       };
 
       mockJobOffersService.update.mockResolvedValue({
         ...mockJobOffer,
-        ...updateDto
+        ...updateDto,
       });
 
       const result = await controller.update('job1', updateDto);
@@ -165,9 +163,9 @@ describe('JobOffersController', () => {
     it('should throw NotFoundException if job offer not found', async () => {
       mockJobOffersService.update.mockRejectedValue(new NotFoundException('Job offer not found'));
 
-      await expect(controller.update('nonexistent', { title: 'Updated' }))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.update('nonexistent', { title: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -176,7 +174,7 @@ describe('JobOffersController', () => {
       const jobOfferWithImages = {
         ...mockJobOffer,
         companyLogo: 'https://example.com/logo.jpg',
-        images: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg']
+        images: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
       };
 
       mockJobOffersService.findOne.mockResolvedValue(jobOfferWithImages);
@@ -192,9 +190,7 @@ describe('JobOffersController', () => {
     it('should throw NotFoundException if job offer not found', async () => {
       mockJobOffersService.findOne.mockRejectedValue(new NotFoundException('Job offer not found'));
 
-      await expect(controller.remove('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -210,14 +206,14 @@ describe('JobOffersController', () => {
         destination: '',
         filename: '',
         path: '',
-        stream: new Readable()
+        stream: new Readable(),
       };
 
       mockJobOffersService.findOne.mockResolvedValue(mockJobOffer);
       mockFirebaseStorageService.uploadFile.mockResolvedValue('https://example.com/new-logo.jpg');
       mockJobOffersService.update.mockResolvedValue({
         ...mockJobOffer,
-        companyLogo: 'https://example.com/new-logo.jpg'
+        companyLogo: 'https://example.com/new-logo.jpg',
       });
 
       const result = await controller.updateCompanyLogo('job1', mockFile);
@@ -241,12 +237,12 @@ describe('JobOffersController', () => {
         destination: '',
         filename: '',
         path: '',
-        stream: new Readable()
+        stream: new Readable(),
       };
 
-      await expect(controller.updateCompanyLogo('nonexistent', mockFile))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.updateCompanyLogo('nonexistent', mockFile)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -263,7 +259,7 @@ describe('JobOffersController', () => {
           destination: '',
           filename: '',
           path: '',
-          stream: new Readable()
+          stream: new Readable(),
         },
         {
           fieldname: 'file',
@@ -275,15 +271,15 @@ describe('JobOffersController', () => {
           destination: '',
           filename: '',
           path: '',
-          stream: new Readable()
-        }
+          stream: new Readable(),
+        },
       ];
 
       mockJobOffersService.findOne.mockResolvedValue(mockJobOffer);
       mockFirebaseStorageService.uploadFile.mockResolvedValue('https://example.com/image.jpg');
       mockJobOffersService.update.mockResolvedValue({
         ...mockJobOffer,
-        images: ['https://example.com/image.jpg']
+        images: ['https://example.com/image.jpg'],
       });
 
       const result = await controller.addImages('job1', mockFiles);
@@ -297,9 +293,7 @@ describe('JobOffersController', () => {
     it('should throw NotFoundException if job offer not found', async () => {
       mockJobOffersService.findOne.mockRejectedValue(new NotFoundException('Job offer not found'));
 
-      await expect(controller.addImages('nonexistent', []))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.addImages('nonexistent', [])).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -308,13 +302,13 @@ describe('JobOffersController', () => {
       const imageUrl = 'https://example.com/image.jpg';
       const jobOfferWithImage = {
         ...mockJobOffer,
-        images: [imageUrl]
+        images: [imageUrl],
       };
 
       mockJobOffersService.findOne.mockResolvedValue(jobOfferWithImage);
       mockJobOffersService.update.mockResolvedValue({
         ...mockJobOffer,
-        images: []
+        images: [],
       });
 
       const result = await controller.removeImage('job1', imageUrl);
@@ -328,25 +322,23 @@ describe('JobOffersController', () => {
     it('should throw NotFoundException if job offer not found', async () => {
       mockJobOffersService.findOne.mockRejectedValue(new NotFoundException('Job offer not found'));
 
-      await expect(controller.removeImage('nonexistent', 'https://example.com/image.jpg'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(
+        controller.removeImage('nonexistent', 'https://example.com/image.jpg'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException if image not found in job offer', async () => {
       mockJobOffersService.findOne.mockResolvedValue(mockJobOffer);
 
-      await expect(controller.removeImage('job1', 'https://example.com/nonexistent.jpg'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(
+        controller.removeImage('job1', 'https://example.com/nonexistent.jpg'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException if imageUrl is not provided', async () => {
       mockJobOffersService.findOne.mockResolvedValue(mockJobOffer);
 
-      await expect(controller.removeImage('job1', ''))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.removeImage('job1', '')).rejects.toThrow(NotFoundException);
     });
   });
-}); 
+});

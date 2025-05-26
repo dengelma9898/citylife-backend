@@ -1,4 +1,15 @@
-import { IsString, IsArray, IsBoolean, IsOptional, IsEmail, IsUrl, ValidateNested, IsNumber, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsArray,
+  IsBoolean,
+  IsOptional,
+  IsEmail,
+  IsUrl,
+  ValidateNested,
+  IsNumber,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class ContactDataDto {
@@ -115,4 +126,4 @@ export class CreateJobOfferDto {
 
   @IsString()
   jobOfferCategoryId: string;
-} 
+}

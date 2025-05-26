@@ -7,18 +7,15 @@ import { CONTACT_REQUEST_REPOSITORY } from './domain/repositories/contact-reques
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [
-    forwardRef(() => UsersModule),
-    FirebaseModule
-  ],
+  imports: [forwardRef(() => UsersModule), FirebaseModule],
   controllers: [ContactController],
   providers: [
     ContactService,
     {
       provide: CONTACT_REQUEST_REPOSITORY,
-      useClass: FirebaseContactRequestRepository
-    }
+      useClass: FirebaseContactRequestRepository,
+    },
   ],
-  exports: [ContactService]
+  exports: [ContactService],
 })
-export class ContactModule {} 
+export class ContactModule {}

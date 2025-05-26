@@ -22,4 +22,4 @@ export class CreateBlogPostDto {
   // blogPictures wird nicht als Teil des DTOs übergeben
   // Es wird durch den FilesInterceptor als separate Dateien verarbeitet
   // und erst nach dem Upload als URLs im BlogPost-Objekt gespeichert
-} 
+}

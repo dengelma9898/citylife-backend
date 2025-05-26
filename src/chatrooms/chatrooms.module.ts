@@ -20,13 +20,13 @@ import { CHAT_MESSAGE_REPOSITORY } from './domain/repositories/chat-message.repo
     FirebaseStorageService,
     {
       provide: CHATROOM_REPOSITORY,
-      useClass: FirebaseChatroomRepository
+      useClass: FirebaseChatroomRepository,
     },
     {
       provide: CHAT_MESSAGE_REPOSITORY,
-      useClass: FirebaseChatMessageRepository
-    }
+      useClass: FirebaseChatMessageRepository,
+    },
   ],
-  exports: [ChatroomsService, ChatMessagesService]
+  exports: [ChatroomsService, ChatMessagesService],
 })
-export class ChatroomsModule {} 
+export class ChatroomsModule {}

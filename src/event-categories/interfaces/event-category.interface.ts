@@ -7,4 +7,4 @@ export interface EventCategory {
   fallbackImages?: string[];
   createdAt: string;
   updatedAt: string;
-} 
+}

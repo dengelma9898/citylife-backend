@@ -1,4 +1,19 @@
-import { Controller, Get, Post, Put, Patch, Delete, Body, Param, NotFoundException, Logger, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  NotFoundException,
+  Logger,
+  UseInterceptors,
+  UploadedFile,
+  UploadedFiles,
+  BadRequestException,
+} from '@nestjs/common';
 import { BusinessesService } from '../services/businesses.service';
 import { Business } from '../../domain/entities/business.entity';
 import { CreateBusinessDto } from '../../dto/create-business.dto';
@@ -17,7 +32,7 @@ export class BusinessesController {
   constructor(
     private readonly businessesService: BusinessesService,
     private readonly firebaseStorageService: FirebaseStorageService,
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
   ) {}
 
   @Get()
@@ -45,7 +60,7 @@ export class BusinessesController {
   @Put(':id')
   public async update(
     @Param('id') id: string,
-    @Body() updateBusinessDto: Partial<CreateBusinessDto>
+    @Body() updateBusinessDto: Partial<CreateBusinessDto>,
   ): Promise<Business> {
     this.logger.log(`PUT /businesses/${id}`);
     return this.businessesService.update(id, updateBusinessDto as Partial<Business>);
@@ -54,7 +69,7 @@ export class BusinessesController {
   @Patch(':id')
   public async patchBusiness(
     @Param('id') id: string,
-    @Body() patchData: Partial<Business>
+    @Body() patchData: Partial<Business>,
   ): Promise<Business> {
     this.logger.log(`PATCH /businesses/${id}`);
     return this.businessesService.update(id, patchData);
@@ -63,7 +78,7 @@ export class BusinessesController {
   @Patch(':id/scan')
   public async scanCustomer(
     @Param('id') businessId: string,
-    @Body() scanData: BusinessCustomerDto
+    @Body() scanData: BusinessCustomerDto,
   ): Promise<Business> {
     this.logger.log(`PATCH /businesses/${businessId}/scan`);
     return this.businessesService.addCustomerScan(businessId, scanData);
@@ -73,10 +88,10 @@ export class BusinessesController {
   @UseInterceptors(FileInterceptor('file'))
   public async uploadLogo(
     @Param('id') businessId: string,
-    @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File
+    @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File,
   ): Promise<Business> {
     this.logger.log(`POST /businesses/${businessId}/logo`);
-    
+
     const business = await this.businessesService.getById(businessId);
     if (!business) {
       throw new NotFoundException('Business not found');
@@ -100,10 +115,10 @@ export class BusinessesController {
   @UseInterceptors(FilesInterceptor('images', 10))
   public async uploadImages(
     @Param('id') businessId: string,
-    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
+    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[],
   ): Promise<Business> {
     this.logger.log(`POST /businesses/${businessId}/images`);
-    
+
     if (!files || files.length === 0) {
       throw new BadRequestException('No files uploaded');
     }
@@ -127,10 +142,10 @@ export class BusinessesController {
   @Delete(':id/images')
   public async removeImage(
     @Param('id') businessId: string,
-    @Body('imageUrl') imageUrl: string
+    @Body('imageUrl') imageUrl: string,
   ): Promise<Business> {
     this.logger.log(`DELETE /businesses/${businessId}/images`);
-    
+
     if (!imageUrl) {
       throw new BadRequestException('Image URL is required');
     }
@@ -158,10 +173,10 @@ export class BusinessesController {
   @Patch(':id/nuernbergspots-review')
   public async updateNuernbergspotsReview(
     @Param('id') businessId: string,
-    @Body() reviewData: NuernbergspotsReviewDto
+    @Body() reviewData: NuernbergspotsReviewDto,
   ): Promise<Business> {
     this.logger.log(`PATCH /businesses/${businessId}/nuernbergspots-review`);
-    
+
     const business = await this.businessesService.getById(businessId);
     if (!business) {
       throw new NotFoundException('Business not found');
@@ -170,7 +185,7 @@ export class BusinessesController {
     const review = {
       reviewText: reviewData.reviewText || '',
       reviewImageUrls: reviewData.reviewImageUrls || [],
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     return this.businessesService.update(businessId, { nuernbergspotsReview: review });
@@ -180,10 +195,10 @@ export class BusinessesController {
   @UseInterceptors(FilesInterceptor('images', 10))
   public async uploadReviewImages(
     @Param('id') businessId: string,
-    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
+    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[],
   ): Promise<Business> {
     this.logger.log(`POST /businesses/${businessId}/nuernbergspots-review/images`);
-    
+
     if (!files || files.length === 0) {
       throw new BadRequestException('No files uploaded');
     }
@@ -196,7 +211,7 @@ export class BusinessesController {
     const review = business.nuernbergspotsReview || {
       reviewText: '',
       reviewImageUrls: [],
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     const uploadPromises = files.map(file => {
@@ -210,7 +225,7 @@ export class BusinessesController {
     const updatedReview = {
       ...review,
       reviewImageUrls,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     return this.businessesService.update(businessId, { nuernbergspotsReview: updatedReview });
@@ -219,10 +234,10 @@ export class BusinessesController {
   @Delete(':id/nuernbergspots-review/images')
   public async removeReviewImage(
     @Param('id') businessId: string,
-    @Body('imageUrl') imageUrl: string
+    @Body('imageUrl') imageUrl: string,
   ): Promise<Business> {
     this.logger.log(`DELETE /businesses/${businessId}/nuernbergspots-review/images`);
-    
+
     if (!imageUrl) {
       throw new BadRequestException('Image URL is required');
     }
@@ -252,7 +267,7 @@ export class BusinessesController {
     const updatedReview = {
       ...review,
       reviewImageUrls: updatedReviewImageUrls,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     return this.businessesService.update(businessId, { nuernbergspotsReview: updatedReview });
@@ -261,44 +276,44 @@ export class BusinessesController {
   @Patch(':id/has-account')
   public async updateHasAccount(
     @Param('id') businessId: string,
-    @Body('hasAccount') hasAccount: boolean
+    @Body('hasAccount') hasAccount: boolean,
   ): Promise<Business> {
     this.logger.log(`PATCH /businesses/${businessId}/has-account`);
-    
+
     if (hasAccount === undefined) {
       throw new BadRequestException('hasAccount field is required');
     }
-    
+
     return this.businessesService.update(businessId, { hasAccount });
   }
 
   @Post('users/:id')
   public async createBusinessForUser(
     @Param('id') userId: string,
-    @Body() createBusinessDto: CreateBusinessDto
+    @Body() createBusinessDto: CreateBusinessDto,
   ): Promise<Business> {
     this.logger.log(`POST /businesses/users/${userId}`);
-    
+
     const businessUser = await this.usersService.getBusinessUser(userId);
     if (!businessUser) {
       throw new NotFoundException(`Business user with ID ${userId} not found`);
     }
-    
+
     const createdBusiness = await this.businessesService.create(createBusinessDto);
     await this.usersService.addBusinessToUser(userId, createdBusiness.id);
-    
+
     return createdBusiness;
   }
 
   @Get('pending-approvals/count')
   public async getPendingApprovalsCount(): Promise<{ count: number }> {
     this.logger.log('GET /businesses/pending-approvals/count');
-    
+
     const pendingBusinesses = await this.businessesService.getBusinessesByStatus({
       hasAccount: true,
-      status: BusinessStatus.PENDING
+      status: BusinessStatus.PENDING,
     });
-    
+
     return { count: pendingBusinesses.length };
   }
-} 
+}

@@ -8,7 +8,7 @@ jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
   doc: jest.fn(),
   getDocs: jest.fn(),
-  getDoc: jest.fn()
+  getDoc: jest.fn(),
 }));
 
 describe('AppSettingsService', () => {
@@ -18,16 +18,16 @@ describe('AppSettingsService', () => {
   const mockPreferences: Preference[] = [
     {
       id: 'settings1',
-      preferences: ['pref1', 'pref2']
+      preferences: ['pref1', 'pref2'],
     },
     {
       id: 'settings2',
-      preferences: ['pref3', 'pref4']
-    }
+      preferences: ['pref3', 'pref4'],
+    },
   ];
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn()
+    getClientFirestore: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -36,8 +36,8 @@ describe('AppSettingsService', () => {
         AppSettingsService,
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
-        }
+          useValue: mockFirebaseService,
+        },
       ],
     }).compile();
 
@@ -60,8 +60,8 @@ describe('AppSettingsService', () => {
       (getDocs as jest.Mock).mockResolvedValue({
         docs: mockPreferences.map(pref => ({
           id: pref.id,
-          data: () => ({ preferences: pref.preferences })
-        }))
+          data: () => ({ preferences: pref.preferences }),
+        })),
       });
 
       const result = await service.getAll();
@@ -83,7 +83,7 @@ describe('AppSettingsService', () => {
       (collection as jest.Mock).mockReturnValue(mockCollection);
 
       (getDocs as jest.Mock).mockResolvedValue({
-        docs: []
+        docs: [],
       });
 
       const result = await service.getAll();
@@ -105,7 +105,7 @@ describe('AppSettingsService', () => {
       (getDoc as jest.Mock).mockResolvedValue({
         exists: () => true,
         id: 'settings1',
-        data: () => ({ preferences: ['pref1', 'pref2'] })
+        data: () => ({ preferences: ['pref1', 'pref2'] }),
       });
 
       const result = await service.getById('settings1');
@@ -124,7 +124,7 @@ describe('AppSettingsService', () => {
       (doc as jest.Mock).mockReturnValue(mockDoc);
 
       (getDoc as jest.Mock).mockResolvedValue({
-        exists: () => false
+        exists: () => false,
       });
 
       const result = await service.getById('nonexistent');
@@ -133,4 +133,4 @@ describe('AppSettingsService', () => {
       expect(doc).toHaveBeenCalledWith(mockFirestore, 'app_settings', 'nonexistent');
     });
   });
-}); 
+});

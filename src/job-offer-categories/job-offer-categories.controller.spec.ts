@@ -19,12 +19,12 @@ describe('JobOfferCategoriesController', () => {
     update: jest.fn(),
     remove: jest.fn(),
     addFallbackImages: jest.fn(),
-    removeFallbackImage: jest.fn()
+    removeFallbackImage: jest.fn(),
   };
 
   const mockFirebaseStorageService = {
     uploadFile: jest.fn(),
-    deleteFile: jest.fn()
+    deleteFile: jest.fn(),
   };
 
   const mockJobCategory: JobCategory = JobCategory.create({
@@ -32,7 +32,7 @@ describe('JobOfferCategoriesController', () => {
     description: 'Test Description',
     colorCode: '#FF0000',
     iconName: 'test-icon',
-    fallbackImages: []
+    fallbackImages: [],
   });
 
   beforeEach(async () => {
@@ -41,12 +41,12 @@ describe('JobOfferCategoriesController', () => {
       providers: [
         {
           provide: JobOfferCategoriesService,
-          useValue: mockJobOfferCategoriesService
+          useValue: mockJobOfferCategoriesService,
         },
         {
           provide: FirebaseStorageService,
-          useValue: mockFirebaseStorageService
-        }
+          useValue: mockFirebaseStorageService,
+        },
       ],
     }).compile();
 
@@ -66,7 +66,7 @@ describe('JobOfferCategoriesController', () => {
         description: 'New Description',
         colorCode: '#00FF00',
         iconName: 'new-icon',
-        fallbackImages: []
+        fallbackImages: [],
       };
 
       mockJobOfferCategoriesService.create.mockResolvedValue(mockJobCategory);
@@ -104,11 +104,11 @@ describe('JobOfferCategoriesController', () => {
     });
 
     it('should throw NotFoundException if category not found', async () => {
-      mockJobOfferCategoriesService.findOne.mockRejectedValue(new NotFoundException('Category not found'));
+      mockJobOfferCategoriesService.findOne.mockRejectedValue(
+        new NotFoundException('Category not found'),
+      );
 
-      await expect(controller.findOne('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -119,12 +119,12 @@ describe('JobOfferCategoriesController', () => {
         description: 'Updated Description',
         colorCode: '#00FF00',
         iconName: 'updated-icon',
-        fallbackImages: []
+        fallbackImages: [],
       };
 
       mockJobOfferCategoriesService.update.mockResolvedValue({
         ...mockJobCategory,
-        ...updateDto
+        ...updateDto,
       });
 
       const result = await controller.update('category1', updateDto);
@@ -136,11 +136,13 @@ describe('JobOfferCategoriesController', () => {
     });
 
     it('should throw NotFoundException if category not found', async () => {
-      mockJobOfferCategoriesService.update.mockRejectedValue(new NotFoundException('Category not found'));
+      mockJobOfferCategoriesService.update.mockRejectedValue(
+        new NotFoundException('Category not found'),
+      );
 
-      await expect(controller.update('nonexistent', { name: 'Updated' }))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.update('nonexistent', { name: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -154,11 +156,11 @@ describe('JobOfferCategoriesController', () => {
     });
 
     it('should throw NotFoundException if category not found', async () => {
-      mockJobOfferCategoriesService.remove.mockRejectedValue(new NotFoundException('Category not found'));
+      mockJobOfferCategoriesService.remove.mockRejectedValue(
+        new NotFoundException('Category not found'),
+      );
 
-      await expect(controller.remove('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.remove('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -175,7 +177,7 @@ describe('JobOfferCategoriesController', () => {
           destination: '',
           filename: '',
           path: '',
-          stream: new Readable()
+          stream: new Readable(),
         },
         {
           fieldname: 'file',
@@ -187,13 +189,13 @@ describe('JobOfferCategoriesController', () => {
           destination: '',
           filename: '',
           path: '',
-          stream: new Readable()
-        }
+          stream: new Readable(),
+        },
       ];
 
       const categoryWithImages = {
         ...mockJobCategory,
-        fallbackImages: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg']
+        fallbackImages: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
       };
 
       mockJobOfferCategoriesService.findOne.mockResolvedValue(mockJobCategory);
@@ -211,9 +213,9 @@ describe('JobOfferCategoriesController', () => {
     it('should throw NotFoundException if category not found', async () => {
       mockJobOfferCategoriesService.findOne.mockResolvedValue(null);
 
-      await expect(controller.addFallbackImages('nonexistent', []))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.addFallbackImages('nonexistent', [])).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -222,11 +224,11 @@ describe('JobOfferCategoriesController', () => {
       const imageUrl = 'https://example.com/image.jpg';
       const categoryWithImage = {
         ...mockJobCategory,
-        fallbackImages: [imageUrl]
+        fallbackImages: [imageUrl],
       };
       const categoryWithoutImage = {
         ...mockJobCategory,
-        fallbackImages: []
+        fallbackImages: [],
       };
 
       mockJobOfferCategoriesService.findOne.mockResolvedValue(categoryWithImage);
@@ -243,25 +245,25 @@ describe('JobOfferCategoriesController', () => {
     it('should throw NotFoundException if category not found', async () => {
       mockJobOfferCategoriesService.findOne.mockResolvedValue(null);
 
-      await expect(controller.removeFallbackImage('nonexistent', 'https://example.com/image.jpg'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(
+        controller.removeFallbackImage('nonexistent', 'https://example.com/image.jpg'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException if image not found in category', async () => {
       mockJobOfferCategoriesService.findOne.mockResolvedValue(mockJobCategory);
 
-      await expect(controller.removeFallbackImage('category1', 'https://example.com/nonexistent.jpg'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(
+        controller.removeFallbackImage('category1', 'https://example.com/nonexistent.jpg'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException if imageUrl is not provided', async () => {
       mockJobOfferCategoriesService.findOne.mockResolvedValue(mockJobCategory);
 
-      await expect(controller.removeFallbackImage('category1', ''))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.removeFallbackImage('category1', '')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
-}); 
+});

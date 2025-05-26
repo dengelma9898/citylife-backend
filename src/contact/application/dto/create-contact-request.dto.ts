@@ -17,4 +17,4 @@ export class CreateContactRequestDto {
   @IsString()
   @IsOptional()
   businessId?: string;
-} 
+}

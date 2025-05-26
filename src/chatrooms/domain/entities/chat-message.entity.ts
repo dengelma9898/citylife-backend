@@ -43,7 +43,7 @@ export class ChatMessage {
       id: crypto.randomUUID(),
       ...props,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -55,7 +55,7 @@ export class ChatMessage {
     return new ChatMessage({
       ...this,
       ...props,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -69,7 +69,7 @@ export class ChatMessage {
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       editedAt: this.editedAt,
-      editedByAdmin: this.editedByAdmin
+      editedByAdmin: this.editedByAdmin,
     };
   }
-} 
+}

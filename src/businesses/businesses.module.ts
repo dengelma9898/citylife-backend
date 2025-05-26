@@ -16,7 +16,7 @@ import { BUSINESS_REPOSITORY } from './domain/repositories/business.repository';
     forwardRef(() => UsersModule),
     BusinessCategoriesModule,
     KeywordsModule,
-    forwardRef(() => EventsModule)
+    forwardRef(() => EventsModule),
   ],
   controllers: [BusinessesController],
   providers: [
@@ -24,9 +24,9 @@ import { BUSINESS_REPOSITORY } from './domain/repositories/business.repository';
     FirebaseStorageService,
     {
       provide: BUSINESS_REPOSITORY,
-      useClass: FirebaseBusinessRepository
-    }
+      useClass: FirebaseBusinessRepository,
+    },
   ],
-  exports: [BusinessesService]
+  exports: [BusinessesService],
 })
-export class BusinessesModule {} 
+export class BusinessesModule {}

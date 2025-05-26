@@ -4,5 +4,4 @@ export class UpdateMessageDto {
   @IsNotEmpty()
   @IsString()
   content!: string;
-
-} 
+}

@@ -13,9 +13,9 @@ import { BUSINESS_CATEGORY_REPOSITORY } from './domain/repositories/business-cat
     BusinessCategoriesService,
     {
       provide: BUSINESS_CATEGORY_REPOSITORY,
-      useClass: FirebaseBusinessCategoryRepository
-    }
+      useClass: FirebaseBusinessCategoryRepository,
+    },
   ],
-  exports: [BusinessCategoriesService]
+  exports: [BusinessCategoriesService],
 })
-export class BusinessCategoriesModule {} 
+export class BusinessCategoriesModule {}

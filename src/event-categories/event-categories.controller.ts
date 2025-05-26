@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ValidationPipe, UseInterceptors, UploadedFiles, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  ValidationPipe,
+  UseInterceptors,
+  UploadedFiles,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventCategoriesService } from './services/event-categories.service';
 import { CreateEventCategoryDto } from './dto/create-event-category.dto';
 import { UpdateEventCategoryDto } from './dto/update-event-category.dto';
@@ -13,14 +25,16 @@ import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 export class EventCategoriesController {
   constructor(
     private readonly eventCategoriesService: EventCategoriesService,
-    private readonly firebaseStorageService: FirebaseStorageService
+    private readonly firebaseStorageService: FirebaseStorageService,
   ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new event category' })
   @ApiResponse({ status: 201, description: 'The event category has been successfully created.' })
   @ApiResponse({ status: 400, description: 'Bad request.' })
-  create(@Body(ValidationPipe) createEventCategoryDto: CreateEventCategoryDto): Promise<EventCategory> {
+  create(
+    @Body(ValidationPipe) createEventCategoryDto: CreateEventCategoryDto,
+  ): Promise<EventCategory> {
     return this.eventCategoriesService.create(createEventCategoryDto);
   }
 
@@ -45,7 +59,7 @@ export class EventCategoriesController {
   @ApiResponse({ status: 404, description: 'Event category not found.' })
   update(
     @Param('id') id: string,
-    @Body(ValidationPipe) updateEventCategoryDto: UpdateEventCategoryDto
+    @Body(ValidationPipe) updateEventCategoryDto: UpdateEventCategoryDto,
   ): Promise<EventCategory | null> {
     return this.eventCategoriesService.update(id, updateEventCategoryDto);
   }
@@ -65,7 +79,7 @@ export class EventCategoriesController {
   @ApiResponse({ status: 404, description: 'Event category not found.' })
   public async addFallbackImages(
     @Param('id') categoryId: string,
-    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
+    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[],
   ): Promise<EventCategory> {
     // Get current category
     const currentCategory = await this.eventCategoriesService.findOne(categoryId);
@@ -75,7 +89,7 @@ export class EventCategoriesController {
 
     // Initialize fallbackImages array if it doesn't exist
     let fallbackImages = currentCategory.fallbackImages || [];
-    
+
     if (files && files.length > 0) {
       // Upload each file and collect URLs
       for (const file of files) {
@@ -84,7 +98,7 @@ export class EventCategoriesController {
         fallbackImages.push(imageUrl);
       }
     }
-    
+
     // Update the category with the new fallback image URLs
     return this.eventCategoriesService.update(categoryId, { fallbackImages });
   }
@@ -95,30 +109,32 @@ export class EventCategoriesController {
   @ApiResponse({ status: 404, description: 'Event category or image not found.' })
   public async removeFallbackImage(
     @Param('id') categoryId: string,
-    @Body('imageUrl') imageUrl: string
+    @Body('imageUrl') imageUrl: string,
   ): Promise<EventCategory> {
     if (!imageUrl) {
       throw new NotFoundException('imageUrl is required');
     }
-    
+
     // Get current category
     const currentCategory = await this.eventCategoriesService.findOne(categoryId);
     if (!currentCategory) {
       throw new NotFoundException('Event category not found');
     }
-    
+
     // Check if the image exists in the category
     if (!currentCategory.fallbackImages || !currentCategory.fallbackImages.includes(imageUrl)) {
       throw new NotFoundException('Image not found in event category');
     }
-    
+
     // Delete the image from Firebase Storage
     await this.firebaseStorageService.deleteFile(imageUrl);
-    
+
     // Remove the URL from the category's fallbackImages array
     const updatedFallbackImages = currentCategory.fallbackImages.filter(url => url !== imageUrl);
-    
+
     // Update the category
-    return this.eventCategoriesService.update(categoryId, { fallbackImages: updatedFallbackImages });
+    return this.eventCategoriesService.update(categoryId, {
+      fallbackImages: updatedFallbackImages,
+    });
   }
-} 
+}

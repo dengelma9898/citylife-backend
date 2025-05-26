@@ -10,12 +10,13 @@ export class DateTimeUtils {
    */
   public static convertUTCToBerlinTime(utcDate: string | Date): string | null {
     if (!utcDate) return null;
-    
+
     try {
       // Parse das Datum und setze es explizit als UTC
-      const date = typeof utcDate === 'string' 
-        ? DateTime.fromISO(utcDate, { zone: 'utc' })
-        : DateTime.fromJSDate(utcDate, { zone: 'utc' });
+      const date =
+        typeof utcDate === 'string'
+          ? DateTime.fromISO(utcDate, { zone: 'utc' })
+          : DateTime.fromJSDate(utcDate, { zone: 'utc' });
 
       if (!date.isValid) return null;
 
@@ -62,9 +63,10 @@ export class DateTimeUtils {
    * @returns {string} Datum im Format DD.MM.YYYY
    */
   public static formatGermanDate(utcDate: string | Date): string {
-    const date = typeof utcDate === 'string' 
-      ? DateTime.fromISO(utcDate, { zone: 'utc' })
-      : DateTime.fromJSDate(utcDate, { zone: 'utc' });
+    const date =
+      typeof utcDate === 'string'
+        ? DateTime.fromISO(utcDate, { zone: 'utc' })
+        : DateTime.fromJSDate(utcDate, { zone: 'utc' });
 
     if (!date.isValid) return '';
 
@@ -77,12 +79,13 @@ export class DateTimeUtils {
    * @returns {string} Uhrzeit im Format HH:mm
    */
   public static formatGermanTime(utcDate: string | Date): string {
-    const date = typeof utcDate === 'string' 
-      ? DateTime.fromISO(utcDate, { zone: 'utc' })
-      : DateTime.fromJSDate(utcDate, { zone: 'utc' });
+    const date =
+      typeof utcDate === 'string'
+        ? DateTime.fromISO(utcDate, { zone: 'utc' })
+        : DateTime.fromJSDate(utcDate, { zone: 'utc' });
 
     if (!date.isValid) return '';
 
     return date.setZone(this.BERLIN_TIMEZONE).toFormat('HH:mm');
   }
-} 
+}

@@ -7,8 +7,7 @@ export class BusinessRequestDto {
   @IsString()
   message: string;
 
-
   @IsString()
   @IsOptional()
   businessId: string;
-} 
+}

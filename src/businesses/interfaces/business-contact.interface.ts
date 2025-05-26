@@ -30,4 +30,4 @@ export interface BusinessContact {
    * Optional website URL of the business.
    */
   website?: string;
-} 
+}

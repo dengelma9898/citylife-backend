@@ -9,7 +9,7 @@ describe('LocationController', () => {
   let service: LocationService;
 
   const mockLocationService = {
-    searchLocations: jest.fn()
+    searchLocations: jest.fn(),
   };
 
   const mockLocationResult: LocationResult = {
@@ -25,12 +25,12 @@ describe('LocationController', () => {
       city: 'Test City',
       district: 'Test District',
       street: 'Test Street',
-      postalCode: '12345'
+      postalCode: '12345',
     },
     position: {
       lat: 49.4521,
-      lng: 11.0767
-    }
+      lng: 11.0767,
+    },
   };
 
   beforeEach(async () => {
@@ -39,8 +39,8 @@ describe('LocationController', () => {
       providers: [
         {
           provide: LocationService,
-          useValue: mockLocationService
-        }
+          useValue: mockLocationService,
+        },
       ],
     }).compile();
 
@@ -81,9 +81,7 @@ describe('LocationController', () => {
       const error = new Error('API Error');
       mockLocationService.searchLocations.mockRejectedValue(error);
 
-      await expect(controller.searchLocations(searchDto))
-        .rejects
-        .toThrow(error);
+      await expect(controller.searchLocations(searchDto)).rejects.toThrow(error);
     });
   });
-}); 
+});

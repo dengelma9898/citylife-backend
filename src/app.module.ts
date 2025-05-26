@@ -25,9 +25,7 @@ import { AccountManagementModule } from './account-management/account-management
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [
-        process.env.NODE_ENV === 'prd' ? '.env.prd' : '.env.dev',
-      ],
+      envFilePath: [process.env.NODE_ENV === 'prd' ? '.env.prd' : '.env.dev'],
     }),
     CoreModule,
     FirebaseModule,
@@ -55,4 +53,4 @@ import { AccountManagementModule } from './account-management/account-management
     },
   ],
 })
-export class AppModule {} 
+export class AppModule {}

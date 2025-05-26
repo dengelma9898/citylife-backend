@@ -8,6 +8,6 @@ import { UsersModule } from '../users/users.module';
   imports: [FirebaseModule, UsersModule],
   controllers: [SpecialPollsController],
   providers: [SpecialPollsService],
-  exports: [SpecialPollsService]
+  exports: [SpecialPollsService],
 })
-export class SpecialPollsModule {} 
+export class SpecialPollsModule {}

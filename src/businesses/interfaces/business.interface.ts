@@ -6,7 +6,7 @@ import { Event } from '../../events/interfaces/event.interface';
 export enum BusinessStatus {
   PENDING = 'PENDING',
   ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE'
+  INACTIVE = 'INACTIVE',
 }
 
 export interface NuernbergspotsReview {
@@ -80,4 +80,4 @@ export interface BusinessListResponse extends Omit<Business, 'eventIds' | 'categ
  */
 export interface BusinessResponse extends BusinessListResponse {
   events?: Event[];
-} 
+}

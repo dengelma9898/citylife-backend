@@ -19,4 +19,4 @@ export class AppSettingsController {
     this.logger.log(`GET /app-settings/${id}`);
     return this.appSettingsService.getById(id);
   }
-} 
+}

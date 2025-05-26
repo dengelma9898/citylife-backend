@@ -4,7 +4,7 @@ export enum ContactRequestType {
   GENERAL = 'GENERAL',
   FEEDBACK = 'FEEDBACK',
   BUSINESS_CLAIM = 'BUSINESS_CLAIM',
-  BUSINESS_REQUEST = 'BUSINESS_REQUEST'
+  BUSINESS_REQUEST = 'BUSINESS_REQUEST',
 }
 
 export interface ContactRequest {
@@ -18,4 +18,4 @@ export interface ContactRequest {
   updatedAt: string;
   isProcessed: boolean;
   responded: boolean; // Gibt an, ob ein Admin bereits auf die Anfrage reagiert hat
-} 
+}

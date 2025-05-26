@@ -7,6 +7,6 @@ import { FirebaseModule } from '../firebase/firebase.module';
   imports: [FirebaseModule],
   controllers: [KeywordsController],
   providers: [KeywordsService],
-  exports: [KeywordsService]
+  exports: [KeywordsService],
 })
-export class KeywordsModule {} 
+export class KeywordsModule {}

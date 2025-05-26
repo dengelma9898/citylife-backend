@@ -28,12 +28,12 @@ describe('UsersController', () => {
     toggleFavoriteEvent: jest.fn(),
     toggleFavoriteBusiness: jest.fn(),
     getUserProfile: jest.fn(),
-    getBusinessUser: jest.fn()
+    getBusinessUser: jest.fn(),
   };
 
   const mockFirebaseStorageService = {
     uploadFile: jest.fn(),
-    deleteFile: jest.fn()
+    deleteFile: jest.fn(),
   };
 
   const mockUserProfile: UserProfile = {
@@ -46,7 +46,7 @@ describe('UsersController', () => {
     businessHistory: [],
     preferences: [],
     language: 'de',
-    livingInCitySinceYear: 2020
+    livingInCitySinceYear: 2020,
   };
 
   const mockBusinessUser: BusinessUser = {
@@ -56,7 +56,7 @@ describe('UsersController', () => {
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
     isDeleted: false,
-    needsReview: false
+    needsReview: false,
   };
 
   beforeEach(async () => {
@@ -65,12 +65,12 @@ describe('UsersController', () => {
       providers: [
         {
           provide: UsersService,
-          useValue: mockUsersService
+          useValue: mockUsersService,
         },
         {
           provide: FirebaseStorageService,
-          useValue: mockFirebaseStorageService
-        }
+          useValue: mockFirebaseStorageService,
+        },
       ],
     }).compile();
 
@@ -127,9 +127,7 @@ describe('UsersController', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getById.mockResolvedValue(null);
 
-      await expect(controller.getProfile('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.getProfile('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -140,12 +138,12 @@ describe('UsersController', () => {
         email: 'new@example.com',
         preferences: [],
         language: 'de',
-        livingInCitySinceYear: 2020
+        livingInCitySinceYear: 2020,
       };
 
       mockUsersService.createUserProfile.mockResolvedValue({
         ...mockUserProfile,
-        ...createDto
+        ...createDto,
       });
 
       const result = await controller.createUserProfile('user1', createDto);
@@ -162,7 +160,7 @@ describe('UsersController', () => {
         userId: 'business1',
         email: 'business@example.com',
         businessId: 'business1',
-        needsReview: false
+        needsReview: false,
       };
 
       mockUsersService.createBusinessUser.mockResolvedValue(mockBusinessUser);
@@ -177,12 +175,12 @@ describe('UsersController', () => {
   describe('updateProfile', () => {
     it('should update a user profile', async () => {
       const updateDto = {
-        name: 'Updated User'
+        name: 'Updated User',
       };
 
       mockUsersService.update.mockResolvedValue({
         ...mockUserProfile,
-        ...updateDto
+        ...updateDto,
       });
 
       const result = await controller.updateProfile('user1', updateDto);
@@ -206,28 +204,30 @@ describe('UsersController', () => {
       mockUsersService.getBusinessUser.mockResolvedValue(mockBusinessUser);
       mockUsersService.updateBusinessUser.mockResolvedValue({
         ...mockBusinessUser,
-        needsReview: true
+        needsReview: true,
       });
 
       const result = await controller.updateNeedsReview('business1', true);
 
       expect(result.needsReview).toBe(true);
-      expect(usersService.updateBusinessUser).toHaveBeenCalledWith('business1', { needsReview: true });
+      expect(usersService.updateBusinessUser).toHaveBeenCalledWith('business1', {
+        needsReview: true,
+      });
     });
 
     it('should throw BadRequestException if needsReview is not a boolean', async () => {
       // @ts-expect-error - Testing invalid input
-      await expect(controller.updateNeedsReview('business1', undefined))
-        .rejects
-        .toThrow(BadRequestException);
+      await expect(controller.updateNeedsReview('business1', undefined)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException if business user not found', async () => {
       mockUsersService.getBusinessUser.mockResolvedValue(null);
 
-      await expect(controller.updateNeedsReview('nonexistent', true))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.updateNeedsReview('nonexistent', true)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -245,9 +245,9 @@ describe('UsersController', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getUserProfile.mockResolvedValue(null);
 
-      await expect(controller.toggleFavoriteEvent('nonexistent', 'event1'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.toggleFavoriteEvent('nonexistent', 'event1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -265,9 +265,9 @@ describe('UsersController', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getUserProfile.mockResolvedValue(null);
 
-      await expect(controller.toggleFavoriteBusiness('nonexistent', 'business1'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.toggleFavoriteBusiness('nonexistent', 'business1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -275,7 +275,7 @@ describe('UsersController', () => {
     it('should return favorite events', async () => {
       const mockProfile = {
         ...mockUserProfile,
-        favoriteEventIds: ['event1', 'event2']
+        favoriteEventIds: ['event1', 'event2'],
       };
       mockUsersService.getUserProfile.mockResolvedValue(mockProfile);
 
@@ -295,9 +295,7 @@ describe('UsersController', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getUserProfile.mockResolvedValue(null);
 
-      await expect(controller.getFavoriteEvents('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.getFavoriteEvents('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -305,7 +303,7 @@ describe('UsersController', () => {
     it('should return favorite businesses', async () => {
       const mockProfile = {
         ...mockUserProfile,
-        favoriteBusinessIds: ['business1', 'business2']
+        favoriteBusinessIds: ['business1', 'business2'],
       };
       mockUsersService.getUserProfile.mockResolvedValue(mockProfile);
 
@@ -325,9 +323,9 @@ describe('UsersController', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getUserProfile.mockResolvedValue(null);
 
-      await expect(controller.getFavoriteBusinesses('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.getFavoriteBusinesses('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -353,9 +351,7 @@ describe('UsersController', () => {
       mockUsersService.getUserProfile.mockResolvedValue(null);
       mockUsersService.getBusinessUser.mockResolvedValue(null);
 
-      await expect(controller.getUserType('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.getUserType('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -381,9 +377,7 @@ describe('UsersController', () => {
       mockUsersService.getUserProfile.mockResolvedValue(null);
       mockUsersService.getBusinessUser.mockResolvedValue(null);
 
-      await expect(controller.getTypeOfUser('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(controller.getTypeOfUser('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
-}); 
+});

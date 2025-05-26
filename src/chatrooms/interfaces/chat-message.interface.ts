@@ -13,4 +13,4 @@ export interface ChatMessage {
   updatedAt: string;
   editedAt?: string;
   editedByAdmin?: boolean;
-} 
+}

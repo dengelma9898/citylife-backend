@@ -21,4 +21,4 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message: exceptionResponse.message || exception.message,
     });
   }
-} 
+}

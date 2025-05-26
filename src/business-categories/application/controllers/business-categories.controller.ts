@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { BusinessCategoriesService } from '../services/business-categories.service';
 import { BusinessCategory } from '../../domain/entities/business-category.entity';
 import { CreateBusinessCategoryDto } from '../../dto/create-business-category.dto';
@@ -37,7 +47,9 @@ export class BusinessCategoriesController {
   }
 
   @Post()
-  public async create(@Body() createCategoryDto: CreateBusinessCategoryDto): Promise<BusinessCategory> {
+  public async create(
+    @Body() createCategoryDto: CreateBusinessCategoryDto,
+  ): Promise<BusinessCategory> {
     this.logger.log('POST /business-categories');
     return this.businessCategoriesService.create(createCategoryDto);
   }
@@ -45,7 +57,7 @@ export class BusinessCategoriesController {
   @Patch(':id')
   public async update(
     @Param('id') id: string,
-    @Body() updateCategoryDto: UpdateBusinessCategoryDto
+    @Body() updateCategoryDto: UpdateBusinessCategoryDto,
   ): Promise<BusinessCategory> {
     this.logger.log(`PATCH /business-categories/${id}`);
     return this.businessCategoriesService.update(id, updateCategoryDto);
@@ -56,4 +68,4 @@ export class BusinessCategoriesController {
     this.logger.log(`DELETE /business-categories/${id}`);
     return this.businessCategoriesService.delete(id);
   }
-} 
+}

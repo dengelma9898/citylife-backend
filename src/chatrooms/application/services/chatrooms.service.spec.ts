@@ -14,7 +14,7 @@ describe('ChatroomsService', () => {
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
-    findByParticipant: jest.fn()
+    findByParticipant: jest.fn(),
   };
 
   const mockChatrooms = [
@@ -26,7 +26,7 @@ describe('ChatroomsService', () => {
       createdBy: 'user1',
       participants: ['user1', 'user2'],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     }),
     Chatroom.fromProps({
       id: 'chatroom2',
@@ -36,8 +36,8 @@ describe('ChatroomsService', () => {
       createdBy: 'user2',
       participants: ['user2', 'user3'],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    })
+      updatedAt: new Date().toISOString(),
+    }),
   ];
 
   beforeEach(async () => {
@@ -46,8 +46,8 @@ describe('ChatroomsService', () => {
         ChatroomsService,
         {
           provide: CHATROOM_REPOSITORY,
-          useValue: mockChatroomRepository
-        }
+          useValue: mockChatroomRepository,
+        },
       ],
     }).compile();
 
@@ -88,9 +88,7 @@ describe('ChatroomsService', () => {
     it('should throw NotFoundException if chatroom not found', async () => {
       mockChatroomRepository.findById.mockResolvedValue(null);
 
-      await expect(service.getById('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.getById('nonexistent')).rejects.toThrow(NotFoundException);
       expect(mockChatroomRepository.findById).toHaveBeenCalledWith('nonexistent');
     });
   });
@@ -99,7 +97,7 @@ describe('ChatroomsService', () => {
     const createDto = {
       title: 'New Chatroom',
       description: 'New Description',
-      image: 'new-image.jpg'
+      image: 'new-image.jpg',
     };
 
     it('should create a new chatroom', async () => {
@@ -107,7 +105,7 @@ describe('ChatroomsService', () => {
         ...createDto,
         imageUrl: createDto.image,
         createdBy: 'user1',
-        participants: ['user1']
+        participants: ['user1'],
       });
 
       mockChatroomRepository.create.mockResolvedValue(mockCreatedChatroom);
@@ -127,14 +125,14 @@ describe('ChatroomsService', () => {
   describe('update', () => {
     const updateDto = {
       title: 'Updated Chatroom',
-      description: 'Updated Description'
+      description: 'Updated Description',
     };
 
     it('should update an existing chatroom', async () => {
       const updatedChatroom = Chatroom.fromProps({
         ...mockChatrooms[0],
         ...updateDto,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
 
       mockChatroomRepository.update.mockResolvedValue(updatedChatroom);
@@ -151,9 +149,7 @@ describe('ChatroomsService', () => {
     it('should throw NotFoundException if chatroom not found', async () => {
       mockChatroomRepository.update.mockResolvedValue(null);
 
-      await expect(service.update('nonexistent', updateDto))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.update('nonexistent', updateDto)).rejects.toThrow(NotFoundException);
       expect(mockChatroomRepository.update).toHaveBeenCalledWith('nonexistent', updateDto);
     });
   });
@@ -186,7 +182,7 @@ describe('ChatroomsService', () => {
       const updatedChatroom = Chatroom.fromProps({
         ...mockChatrooms[0],
         imageUrl: 'new-image.jpg',
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
 
       mockChatroomRepository.update.mockResolvedValue(updatedChatroom);
@@ -196,16 +192,20 @@ describe('ChatroomsService', () => {
       expect(result).toBeDefined();
       expect(result.id).toBe('chatroom1');
       expect(result.imageUrl).toBe('new-image.jpg');
-      expect(mockChatroomRepository.update).toHaveBeenCalledWith('chatroom1', { imageUrl: 'new-image.jpg' });
+      expect(mockChatroomRepository.update).toHaveBeenCalledWith('chatroom1', {
+        imageUrl: 'new-image.jpg',
+      });
     });
 
     it('should throw NotFoundException if chatroom not found', async () => {
       mockChatroomRepository.update.mockResolvedValue(null);
 
-      await expect(service.updateImage('nonexistent', 'new-image.jpg'))
-        .rejects
-        .toThrow(NotFoundException);
-      expect(mockChatroomRepository.update).toHaveBeenCalledWith('nonexistent', { imageUrl: 'new-image.jpg' });
+      await expect(service.updateImage('nonexistent', 'new-image.jpg')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockChatroomRepository.update).toHaveBeenCalledWith('nonexistent', {
+        imageUrl: 'new-image.jpg',
+      });
     });
   });
-}); 
+});

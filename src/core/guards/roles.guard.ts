@@ -10,7 +10,7 @@ export class RolesGuard implements CanActivate {
 
   constructor(
     private reflector: Reflector,
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -43,4 +43,4 @@ export class RolesGuard implements CanActivate {
 
     return requiredRoles.includes(userData.userType);
   }
-} 
+}

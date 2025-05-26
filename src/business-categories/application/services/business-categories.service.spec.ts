@@ -16,21 +16,21 @@ describe('BusinessCategoriesService', () => {
     findById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    delete: jest.fn()
+    delete: jest.fn(),
   };
 
   const mockKeywordsService = {
-    getById: jest.fn()
+    getById: jest.fn(),
   };
 
   const mockConfigService = {
-    get: jest.fn()
+    get: jest.fn(),
   };
 
   const mockFirebaseService = {
     getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
-    getClientStorage: jest.fn()
+    getClientStorage: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -39,20 +39,20 @@ describe('BusinessCategoriesService', () => {
         BusinessCategoriesService,
         {
           provide: BUSINESS_CATEGORY_REPOSITORY,
-          useValue: mockBusinessCategoryRepository
+          useValue: mockBusinessCategoryRepository,
         },
         {
           provide: KeywordsService,
-          useValue: mockKeywordsService
+          useValue: mockKeywordsService,
         },
         {
           provide: ConfigService,
-          useValue: mockConfigService
+          useValue: mockConfigService,
         },
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
-        }
+          useValue: mockFirebaseService,
+        },
       ],
     }).compile();
 
@@ -74,7 +74,7 @@ describe('BusinessCategoriesService', () => {
         description: 'Restaurants and food services',
         keywordIds: ['keyword1', 'keyword2'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       }),
       BusinessCategory.fromProps({
         id: 'category2',
@@ -83,8 +83,8 @@ describe('BusinessCategoriesService', () => {
         description: 'Retail stores and shops',
         keywordIds: ['keyword3'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      })
+        updatedAt: new Date().toISOString(),
+      }),
     ];
 
     it('should return all business categories', async () => {
@@ -108,7 +108,7 @@ describe('BusinessCategoriesService', () => {
       description: 'Restaurants and food services',
       keywordIds: ['keyword1', 'keyword2'],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
 
     it('should return a business category by id', async () => {
@@ -137,14 +137,14 @@ describe('BusinessCategoriesService', () => {
       name: 'Restaurant',
       iconName: 'restaurant',
       description: 'Restaurants and food services',
-      keywordIds: ['keyword1', 'keyword2']
+      keywordIds: ['keyword1', 'keyword2'],
     };
 
     const mockCreatedCategory = BusinessCategory.fromProps({
       id: 'new-category',
       ...createDto,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
 
     it('should create a new business category', async () => {
@@ -167,7 +167,7 @@ describe('BusinessCategoriesService', () => {
       name: 'Updated Restaurant',
       iconName: 'updated-icon',
       description: 'Updated description',
-      keywordIds: ['keyword3']
+      keywordIds: ['keyword3'],
     };
 
     const existingCategory = BusinessCategory.fromProps({
@@ -177,14 +177,14 @@ describe('BusinessCategoriesService', () => {
       description: 'Restaurants and food services',
       keywordIds: ['keyword1', 'keyword2'],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
 
     const updatedCategory = BusinessCategory.fromProps({
       id: 'category1',
       ...updateDto,
       createdAt: existingCategory.createdAt,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
 
     it('should update an existing business category', async () => {
@@ -199,15 +199,18 @@ describe('BusinessCategoriesService', () => {
       expect(result.iconName).toBe(updateDto.iconName);
       expect(result.description).toBe(updateDto.description);
       expect(result.keywordIds).toEqual(updateDto.keywordIds);
-      expect(mockBusinessCategoryRepository.update).toHaveBeenCalledWith('category1', expect.any(BusinessCategory));
+      expect(mockBusinessCategoryRepository.update).toHaveBeenCalledWith(
+        'category1',
+        expect.any(BusinessCategory),
+      );
     });
 
     it('should throw error if category not found', async () => {
       mockBusinessCategoryRepository.findById.mockResolvedValue(null);
 
-      await expect(service.update('nonexistent', updateDto))
-        .rejects
-        .toThrow('Business category not found');
+      await expect(service.update('nonexistent', updateDto)).rejects.toThrow(
+        'Business category not found',
+      );
     });
   });
 
@@ -230,13 +233,13 @@ describe('BusinessCategoriesService', () => {
         description: 'Restaurants and food services',
         keywordIds: ['keyword1', 'keyword2'],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      })
+        updatedAt: new Date().toISOString(),
+      }),
     ];
 
     const mockKeywords = [
       { id: 'keyword1', name: 'Italian' },
-      { id: 'keyword2', name: 'Pizza' }
+      { id: 'keyword2', name: 'Pizza' },
     ];
 
     it('should return categories with their keywords', async () => {
@@ -263,7 +266,7 @@ describe('BusinessCategoriesService', () => {
         description: 'Retail stores',
         keywordIds: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
 
       mockBusinessCategoryRepository.findAll.mockResolvedValue([categoryWithoutKeywords]);
@@ -276,4 +279,4 @@ describe('BusinessCategoriesService', () => {
       expect(result[0].keywords).toHaveLength(0);
     });
   });
-}); 
+});

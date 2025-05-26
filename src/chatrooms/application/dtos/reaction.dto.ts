@@ -4,4 +4,4 @@ export class ReactionDto {
   @IsNotEmpty()
   @IsString()
   type!: string;
-} 
+}

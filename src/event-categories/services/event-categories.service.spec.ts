@@ -11,7 +11,7 @@ jest.mock('firebase/firestore', () => ({
   getDoc: jest.fn(),
   addDoc: jest.fn(),
   updateDoc: jest.fn(),
-  deleteDoc: jest.fn()
+  deleteDoc: jest.fn(),
 }));
 
 describe('EventCategoriesService', () => {
@@ -19,12 +19,12 @@ describe('EventCategoriesService', () => {
   let firebaseService: FirebaseService;
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn()
+    getClientFirestore: jest.fn(),
   };
 
   const mockFirestore = {
     collection: jest.fn(),
-    doc: jest.fn()
+    doc: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -33,8 +33,8 @@ describe('EventCategoriesService', () => {
         EventCategoriesService,
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService
-        }
+          useValue: mockFirebaseService,
+        },
       ],
     }).compile();
 
@@ -58,8 +58,8 @@ describe('EventCategoriesService', () => {
           colorCode: '#FF0000',
           iconName: 'icon1',
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       ];
 
       const mockSnapshot = {
@@ -71,9 +71,9 @@ describe('EventCategoriesService', () => {
             colorCode: cat.colorCode,
             iconName: cat.iconName,
             createdAt: cat.createdAt,
-            updatedAt: cat.updatedAt
-          })
-        }))
+            updatedAt: cat.updatedAt,
+          }),
+        })),
       };
 
       (collection as jest.Mock).mockReturnValue('mockCollection');
@@ -99,7 +99,7 @@ describe('EventCategoriesService', () => {
         colorCode: '#FF0000',
         iconName: 'icon1',
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       const mockDocSnap = {
@@ -111,8 +111,8 @@ describe('EventCategoriesService', () => {
           colorCode: mockCategory.colorCode,
           iconName: mockCategory.iconName,
           createdAt: mockCategory.createdAt,
-          updatedAt: mockCategory.updatedAt
-        })
+          updatedAt: mockCategory.updatedAt,
+        }),
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -132,7 +132,7 @@ describe('EventCategoriesService', () => {
 
     it('should return null if category not found', async () => {
       const mockDocSnap = {
-        exists: () => false
+        exists: () => false,
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -150,11 +150,11 @@ describe('EventCategoriesService', () => {
         name: 'New Category',
         description: 'New Description',
         colorCode: '#00FF00',
-        iconName: 'newIcon'
+        iconName: 'newIcon',
       };
 
       const mockDocRef = {
-        id: 'newCategoryId'
+        id: 'newCategoryId',
       };
 
       (collection as jest.Mock).mockReturnValue('mockCollection');
@@ -175,7 +175,7 @@ describe('EventCategoriesService', () => {
     it('should update an event category', async () => {
       const updateDto = {
         name: 'Updated Category',
-        description: 'Updated Description'
+        description: 'Updated Description',
       };
 
       const mockDocSnap = {
@@ -187,8 +187,8 @@ describe('EventCategoriesService', () => {
           colorCode: '#FF0000',
           iconName: 'icon1',
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        })
+          updatedAt: new Date().toISOString(),
+        }),
       };
 
       const mockUpdatedDocSnap = {
@@ -196,8 +196,8 @@ describe('EventCategoriesService', () => {
         data: () => ({
           ...mockDocSnap.data(),
           ...updateDto,
-          updatedAt: new Date().toISOString()
-        })
+          updatedAt: new Date().toISOString(),
+        }),
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -221,22 +221,22 @@ describe('EventCategoriesService', () => {
 
     it('should throw NotFoundException if category not found', async () => {
       const mockDocSnap = {
-        exists: () => false
+        exists: () => false,
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
       (getDoc as jest.Mock).mockResolvedValue(mockDocSnap);
 
-      await expect(service.update('nonexistent', { name: 'Updated' }))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.update('nonexistent', { name: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('remove', () => {
     it('should remove an event category', async () => {
       const mockDocSnap = {
-        exists: () => true
+        exists: () => true,
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
@@ -251,15 +251,13 @@ describe('EventCategoriesService', () => {
 
     it('should throw NotFoundException if category not found', async () => {
       const mockDocSnap = {
-        exists: () => false
+        exists: () => false,
       };
 
       (doc as jest.Mock).mockReturnValue('mockDoc');
       (getDoc as jest.Mock).mockResolvedValue(mockDocSnap);
 
-      await expect(service.remove('nonexistent'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.remove('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
-}); 
+});

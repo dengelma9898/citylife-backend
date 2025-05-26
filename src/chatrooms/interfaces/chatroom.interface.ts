@@ -12,4 +12,4 @@ export interface Chatroom {
   };
   createdAt: string;
   updatedAt: string;
-} 
+}

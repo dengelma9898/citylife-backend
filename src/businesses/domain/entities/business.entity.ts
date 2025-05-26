@@ -38,7 +38,7 @@ export class BusinessContact {
       instagram: this.instagram,
       facebook: this.facebook,
       tiktok: this.tiktok,
-      website: this.website
+      website: this.website,
     };
   }
 }
@@ -80,7 +80,7 @@ export class BusinessAddress {
       postalCode: this.postalCode,
       city: this.city,
       latitude: this.latitude,
-      longitude: this.longitude
+      longitude: this.longitude,
     };
   }
 }
@@ -122,7 +122,7 @@ export class BusinessCustomer {
       price: this.price,
       numberOfPeople: this.numberOfPeople,
       additionalInfo: this.additionalInfo,
-      benefit: this.benefit
+      benefit: this.benefit,
     };
   }
 }
@@ -201,7 +201,12 @@ export class Business {
     this.nuernbergspotsReview = props.nuernbergspotsReview;
   }
 
-  static create(props: Omit<BusinessProps, 'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'customers' | 'previousBenefits'>): Business {
+  static create(
+    props: Omit<
+      BusinessProps,
+      'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'customers' | 'previousBenefits'
+    >,
+  ): Business {
     const now = new Date().toISOString();
     return new Business({
       id: crypto.randomUUID(),
@@ -210,7 +215,7 @@ export class Business {
       updatedAt: now,
       isDeleted: false,
       customers: [],
-      previousBenefits: []
+      previousBenefits: [],
     });
   }
 
@@ -222,13 +227,13 @@ export class Business {
     return new Business({
       ...this,
       ...props,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 
   addCustomer(customer: BusinessCustomer): Business {
     return this.update({
-      customers: [...this.customers, customer]
+      customers: [...this.customers, customer],
     });
   }
 
@@ -239,7 +244,7 @@ export class Business {
   updateBenefit(benefit: string): Business {
     return this.update({
       benefit,
-      previousBenefits: [...(this.previousBenefits || []), this.benefit]
+      previousBenefits: [...(this.previousBenefits || []), this.benefit],
     });
   }
 
@@ -266,7 +271,7 @@ export class Business {
       customers: this.customers,
       hasAccount: this.hasAccount,
       isPromoted: this.isPromoted,
-      nuernbergspotsReview: this.nuernbergspotsReview
+      nuernbergspotsReview: this.nuernbergspotsReview,
     };
   }
-} 
+}

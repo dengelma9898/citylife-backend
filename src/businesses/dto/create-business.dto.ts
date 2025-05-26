@@ -1,4 +1,13 @@
-import { IsString, IsNotEmpty, IsArray, ValidateNested, IsObject, IsDateString, IsBoolean, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsArray,
+  ValidateNested,
+  IsObject,
+  IsDateString,
+  IsBoolean,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { BusinessContactDto } from './business-contact.dto';
 import { BusinessAddressDto } from './business-address.dto';
@@ -56,4 +65,4 @@ export class CreateBusinessDto {
   @IsBoolean()
   @IsOptional()
   public readonly isPromoted?: boolean = false;
-} 
+}
