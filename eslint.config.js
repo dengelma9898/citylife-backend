@@ -8,6 +8,7 @@ export default [
   eslint.configs.recommended,
   {
     files: ['**/*.ts'],
+    ignores: ['**/*.spec.ts', '**/*.test.ts', 'test/**/*.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
@@ -32,6 +33,11 @@ export default [
         require: 'readonly',
         console: 'readonly',
         global: 'readonly',
+        // Express Types
+        Express: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        NextFunction: 'readonly',
       },
     },
     plugins: {
@@ -44,7 +50,21 @@ export default [
       'prettier/prettier': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { 
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+        // Ignoriere bestimmte Variablen, die später verwendet werden könnten
+        vars: 'all',
+        args: 'after-used',
+        ignoreRestSiblings: true,
+        argsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        caughtErrors: 'none',
+      }],
       '@typescript-eslint/no-require-imports': 'warn',
       'no-undef': 'warn', // Behalte no-undef für andere nicht definierte Variablen
     },

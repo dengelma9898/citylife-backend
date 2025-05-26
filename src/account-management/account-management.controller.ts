@@ -1,4 +1,4 @@
-import { Controller, Post, Get, UseGuards, Delete } from '@nestjs/common';
+import { Controller, Get, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AccountManagementService } from './services/account-management.service';
 import { Roles } from '../core/decorators/roles.decorator';

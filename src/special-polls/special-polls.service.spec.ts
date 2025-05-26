@@ -3,15 +3,11 @@ import { SpecialPollsService } from './special-polls.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { UsersService } from '../users/users.service';
 import {
-  collection,
   getDocs,
-  doc,
   getDoc,
   addDoc,
   updateDoc,
   deleteDoc,
-  query,
-  orderBy,
 } from 'firebase/firestore';
 import {
   SpecialPoll,

@@ -7,7 +7,6 @@ import {
   Logger,
   NotFoundException,
   Patch,
-  UseGuards,
 } from '@nestjs/common';
 import { ContactService } from '../services/contact.service';
 import { ContactRequest } from '../../domain/entities/contact-request.entity';

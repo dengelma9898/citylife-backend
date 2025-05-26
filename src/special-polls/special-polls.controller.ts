@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
   Logger,
 } from '@nestjs/common';
 import { SpecialPollsService } from './special-polls.service';
@@ -17,7 +16,7 @@ import { UpdateSpecialPollResponsesDto } from './dto/update-special-poll-respons
 import { SpecialPoll } from './interfaces/special-poll.interface';
 import { RolesGuard } from '../core/guards/roles.guard';
 import { Roles } from '../core/decorators/roles.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CurrentUser } from '../core/decorators/current-user.decorator';
 
 @ApiTags('special-polls')

@@ -1,6 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
-  getFirestore,
   collection,
   getDocs,
   doc,

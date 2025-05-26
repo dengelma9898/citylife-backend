@@ -3,7 +3,6 @@ import { NewsController } from './news.controller';
 import { NewsService } from './news.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import {
-  NewsItem,
   TextNewsItem,
   ImageNewsItem,
   PollNewsItem,

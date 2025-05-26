@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsEnum } from 'class-validator';
 
 export enum ReactionType {
   LIKE = 'like',

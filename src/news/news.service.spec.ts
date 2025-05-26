@@ -3,9 +3,7 @@ import { NewsService } from './news.service';
 import { UsersService } from '../users/users.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import {
-  collection,
   getDocs,
-  doc,
   getDoc,
   addDoc,
   updateDoc,
@@ -13,7 +11,6 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import {
-  NewsItem,
   TextNewsItem,
   ImageNewsItem,
   PollNewsItem,

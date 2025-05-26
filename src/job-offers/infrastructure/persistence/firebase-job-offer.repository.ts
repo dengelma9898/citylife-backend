@@ -1,14 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-} from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { JobOffer } from '../../domain/entities/job-offer.entity';
 import { JobOfferRepository } from '../../domain/repositories/job-offer.repository.interface';

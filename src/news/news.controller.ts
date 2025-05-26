@@ -11,9 +11,7 @@ import {
   BadRequestException,
   UseInterceptors,
   UploadedFiles,
-  UploadedFile,
   Delete,
-  Request,
 } from '@nestjs/common';
 import { NewsService } from './news.service';
 import {
@@ -25,11 +23,8 @@ import {
 import { CreateReactionDto } from './dto/create-reaction.dto';
 import { CreateImageNewsDto } from './dto/create-image-news.dto';
 import { CreatePollNewsDto } from './dto/create-poll-news.dto';
-import { CreateAudioNewsDto } from './dto/create-audio-news.dto';
 import { VotePollDto } from './dto/vote-poll.dto';
-import { CreateSurveyNewsDto } from './dto/create-survey-news.dto';
-import { VoteSurveyDto } from './dto/vote-survey.dto';
-import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { CreateTextNewsDto } from './dto/create-text-news.dto';

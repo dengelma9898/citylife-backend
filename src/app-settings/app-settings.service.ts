@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Preference } from './interfaces/preference.interface';
 import { FirebaseService } from '../firebase/firebase.service';
 

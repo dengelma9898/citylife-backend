@@ -87,7 +87,7 @@ export class SpecialPollsService {
     updateStatusDto: UpdateSpecialPollStatusDto,
   ): Promise<SpecialPoll> {
     this.logger.debug(`Updating status of special poll ${id}`);
-    const poll = await this.findOne(id);
+    await this.findOne(id);
 
     const db = this.firebaseService.getClientFirestore();
     const pollRef = doc(db, 'special_polls', id);
@@ -168,7 +168,7 @@ export class SpecialPollsService {
 
   async updateResponses(id: string, responses: SpecialPollResponse[]): Promise<SpecialPoll> {
     this.logger.debug(`Updating responses for special poll ${id}`);
-    const poll = await this.findOne(id);
+    await this.findOne(id);
 
     const db = this.firebaseService.getClientFirestore();
     const pollRef = doc(db, 'special_polls', id);

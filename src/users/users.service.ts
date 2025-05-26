@@ -7,7 +7,6 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import {
-  getFirestore,
   collection,
   getDocs,
   doc,

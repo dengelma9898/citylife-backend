@@ -1,5 +1,5 @@
 import { UpdateMessageReactionDto } from 'src/chatrooms/application/dtos/update-message-reaction.dto';
-import { ChatMessage, Reaction } from '../entities/chat-message.entity';
+import { ChatMessage } from '../entities/chat-message.entity';
 
 export const CHAT_MESSAGE_REPOSITORY = 'CHAT_MESSAGE_REPOSITORY';
 

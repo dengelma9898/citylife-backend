@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Put,
   Body,
   Param,
   NotFoundException,
@@ -11,13 +10,12 @@ import {
   BadRequestException,
   UseInterceptors,
   UploadedFiles,
-  UploadedFile,
   Delete,
 } from '@nestjs/common';
 import { BlogPostsService } from './blog-posts.service';
 import { BlogPost } from './interfaces/blog-post.interface';
 import { CreateBlogPostDto } from './dto/create-blog-post.dto';
-import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 

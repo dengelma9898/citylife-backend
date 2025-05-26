@@ -7,8 +7,6 @@ import {
   IsUrl,
   ValidateNested,
   IsNumber,
-  Min,
-  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 

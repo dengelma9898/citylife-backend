@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { AppSettings, AppSettingsProps } from '../../domain/entities/app-settings.entity';
 import { AppSettingsRepository } from '../../domain/repositories/app-settings.repository';

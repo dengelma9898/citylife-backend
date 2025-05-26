@@ -1,14 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-} from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { JobCategory, JobCategoryProps } from '../../domain/entities/job-category.entity';
 import { JobCategoryRepository } from '../../domain/repositories/job-category.repository';

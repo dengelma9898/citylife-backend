@@ -16,7 +16,6 @@ import { BusinessCategoriesService } from '../../../business-categories/applicat
 import { KeywordsService } from '../../../keywords/keywords.service';
 import { EventsService } from '../../../events/events.service';
 import { DateTimeUtils } from '../../../utils/date-time.utils';
-import { UpdateBusinessCategoryDto } from 'src/business-categories/dto/update-business-category.dto';
 
 @Injectable()
 export class BusinessesService {
