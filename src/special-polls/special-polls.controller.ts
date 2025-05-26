@@ -7,7 +7,7 @@ import { SpecialPoll } from './interfaces/special-poll.interface';
 import { RolesGuard } from '../core/guards/roles.guard';
 import { Roles } from '../core/decorators/roles.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { CurrentUser } from 'src/core/decorators/current-user.decorator';
+import { CurrentUser } from '../core/decorators/current-user.decorator';
 
 @ApiTags('special-polls')
 @Controller('special-polls')

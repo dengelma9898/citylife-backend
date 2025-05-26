@@ -137,6 +137,12 @@ export class SpecialPollsService {
     this.logger.debug(`Deleting special poll ${id}`);
     const db = this.firebaseService.getClientFirestore();
     const pollRef = doc(db, 'special_polls', id);
+    
+    const pollDoc = await getDoc(pollRef);
+    if (!pollDoc.exists()) {
+      throw new NotFoundException('Special poll not found');
+    }
+    
     await deleteDoc(pollRef);
   }
 
