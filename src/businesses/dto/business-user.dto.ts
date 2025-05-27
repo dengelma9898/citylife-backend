@@ -27,4 +27,4 @@ export class BusinessUserDto {
   @IsString({ each: true })
   @IsOptional()
   public readonly eventIds?: string[];
-} 
+}

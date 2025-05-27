@@ -7,4 +7,4 @@ export class PreferenceDto {
   @IsArray()
   @IsString({ each: true })
   public readonly preferences: string[];
-} 
+}

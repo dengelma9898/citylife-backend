@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Logger,
+} from '@nestjs/common';
 import { SpecialPollsService } from './special-polls.service';
 import { CreateSpecialPollDto } from './dto/create-special-poll.dto';
 import { UpdateSpecialPollStatusDto } from './dto/update-special-poll-status.dto';
@@ -6,8 +16,8 @@ import { UpdateSpecialPollResponsesDto } from './dto/update-special-poll-respons
 import { SpecialPoll } from './interfaces/special-poll.interface';
 import { RolesGuard } from '../core/guards/roles.guard';
 import { Roles } from '../core/decorators/roles.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { CurrentUser } from 'src/core/decorators/current-user.decorator';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { CurrentUser } from '../core/decorators/current-user.decorator';
 
 @ApiTags('special-polls')
 @Controller('special-polls')
@@ -20,7 +30,11 @@ export class SpecialPollsController {
   @Post()
   @Roles('super_admin')
   @ApiOperation({ summary: 'Erstellt eine neue Special Poll' })
-  @ApiResponse({ status: 201, description: 'Die Special Poll wurde erfolgreich erstellt', type: CreateSpecialPollDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Die Special Poll wurde erfolgreich erstellt',
+    type: CreateSpecialPollDto,
+  })
   async create(@Body() createSpecialPollDto: CreateSpecialPollDto): Promise<SpecialPoll> {
     this.logger.log('POST /special-polls');
     return this.specialPollsService.create(createSpecialPollDto);
@@ -50,7 +64,7 @@ export class SpecialPollsController {
   @ApiResponse({ status: 200, description: 'Der Status wurde erfolgreich aktualisiert' })
   async updateStatus(
     @Param('id') id: string,
-    @Body() updateStatusDto: UpdateSpecialPollStatusDto
+    @Body() updateStatusDto: UpdateSpecialPollStatusDto,
   ): Promise<SpecialPoll> {
     this.logger.log(`PATCH /special-polls/${id}/status`);
     return this.specialPollsService.updateStatus(id, updateStatusDto);
@@ -63,7 +77,7 @@ export class SpecialPollsController {
   async addResponse(
     @Param('id') id: string,
     @CurrentUser() userId: string,
-    @Body('response') response: string
+    @Body('response') response: string,
   ): Promise<SpecialPoll> {
     this.logger.log(`POST /special-polls/${id}/responses`);
     return this.specialPollsService.addResponse(id, userId, response);
@@ -75,7 +89,7 @@ export class SpecialPollsController {
   @ApiResponse({ status: 200, description: 'Die Antworten wurden erfolgreich aktualisiert' })
   async updateResponses(
     @Param('id') id: string,
-    @Body() updateResponsesDto: UpdateSpecialPollResponsesDto
+    @Body() updateResponsesDto: UpdateSpecialPollResponsesDto,
   ): Promise<SpecialPoll> {
     this.logger.log(`PATCH /special-polls/${id}/responses`);
     return this.specialPollsService.updateResponses(id, updateResponsesDto.responses);
@@ -89,4 +103,4 @@ export class SpecialPollsController {
     this.logger.log(`DELETE /special-polls/${id}`);
     return this.specialPollsService.remove(id);
   }
-} 
+}

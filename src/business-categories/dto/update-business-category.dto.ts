@@ -16,4 +16,4 @@ export class UpdateBusinessCategoryDto {
   @IsOptional()
   @IsArray()
   keywordIds?: string[];
-} 
+}

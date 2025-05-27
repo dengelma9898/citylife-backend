@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ValidationPipe, UseInterceptors, UploadedFiles, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  ValidationPipe,
+  UseInterceptors,
+  UploadedFiles,
+  NotFoundException,
+} from '@nestjs/common';
 import { JobOfferCategoriesService } from './services/job-offer-categories.service';
 import { CreateJobCategoryDto } from './dto/create-job-category.dto';
 
@@ -13,12 +25,15 @@ import { JobCategory } from './domain/entities/job-category.entity';
 export class JobOfferCategoriesController {
   constructor(
     private readonly jobOfferCategoriesService: JobOfferCategoriesService,
-    private readonly firebaseStorageService: FirebaseStorageService
+    private readonly firebaseStorageService: FirebaseStorageService,
   ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new job offer category' })
-  @ApiResponse({ status: 201, description: 'The job offer category has been successfully created.' })
+  @ApiResponse({
+    status: 201,
+    description: 'The job offer category has been successfully created.',
+  })
   @ApiResponse({ status: 400, description: 'Bad request.' })
   create(@Body(ValidationPipe) createJobCategoryDto: CreateJobCategoryDto): Promise<JobCategory> {
     return this.jobOfferCategoriesService.create(createJobCategoryDto);
@@ -28,7 +43,6 @@ export class JobOfferCategoriesController {
   @ApiOperation({ summary: 'Get all job offer categories' })
   @ApiResponse({ status: 200, description: 'Return all job offer categories.' })
   findAll(): Promise<JobCategory[]> {
-    console.log('findAll');
     return this.jobOfferCategoriesService.findAll();
   }
 
@@ -42,18 +56,24 @@ export class JobOfferCategoriesController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a job offer category' })
-  @ApiResponse({ status: 200, description: 'The job offer category has been successfully updated.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The job offer category has been successfully updated.',
+  })
   @ApiResponse({ status: 404, description: 'Job offer category not found.' })
   update(
     @Param('id') id: string,
-    @Body(ValidationPipe) updateJobCategoryDto: Partial<CreateJobCategoryDto>
+    @Body(ValidationPipe) updateJobCategoryDto: Partial<CreateJobCategoryDto>,
   ): Promise<JobCategory> {
     return this.jobOfferCategoriesService.update(id, updateJobCategoryDto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a job offer category' })
-  @ApiResponse({ status: 200, description: 'The job offer category has been successfully deleted.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The job offer category has been successfully deleted.',
+  })
   @ApiResponse({ status: 404, description: 'Job offer category not found.' })
   remove(@Param('id') id: string): Promise<void> {
     return this.jobOfferCategoriesService.remove(id);
@@ -66,7 +86,7 @@ export class JobOfferCategoriesController {
   @ApiResponse({ status: 404, description: 'Job offer category not found.' })
   public async addFallbackImages(
     @Param('id') categoryId: string,
-    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
+    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[],
   ): Promise<JobCategory> {
     // Get current category
     const currentCategory = await this.jobOfferCategoriesService.findOne(categoryId);
@@ -76,7 +96,7 @@ export class JobOfferCategoriesController {
 
     // Initialize fallbackImages array if it doesn't exist
     let fallbackImages = currentCategory.fallbackImages || [];
-    
+
     if (files && files.length > 0) {
       // Upload each file and collect URLs
       for (const file of files) {
@@ -85,7 +105,7 @@ export class JobOfferCategoriesController {
         fallbackImages.push(imageUrl);
       }
     }
-    
+
     // Update the category with the new fallback image URLs
     return this.jobOfferCategoriesService.update(categoryId, { fallbackImages });
   }
@@ -96,31 +116,32 @@ export class JobOfferCategoriesController {
   @ApiResponse({ status: 404, description: 'Job offer category or image not found.' })
   public async removeFallbackImage(
     @Param('id') categoryId: string,
-    @Body('imageUrl') imageUrl: string
+    @Body('imageUrl') imageUrl: string,
   ): Promise<JobCategory> {
-    console.log('removeFallbackImage', categoryId, imageUrl);
     if (!imageUrl) {
       throw new NotFoundException('imageUrl is required');
     }
-    
+
     // Get current category
     const currentCategory = await this.jobOfferCategoriesService.findOne(categoryId);
     if (!currentCategory) {
       throw new NotFoundException('Job offer category not found');
     }
-    
+
     // Check if the image exists in the category
     if (!currentCategory.fallbackImages || !currentCategory.fallbackImages.includes(imageUrl)) {
       throw new NotFoundException('Image not found in job offer category');
     }
-    
+
     // Delete the image from Firebase Storage
     await this.firebaseStorageService.deleteFile(imageUrl);
-    
+
     // Remove the URL from the category's fallbackImages array
     const updatedFallbackImages = currentCategory.fallbackImages.filter(url => url !== imageUrl);
-    
+
     // Update the category
-    return this.jobOfferCategoriesService.update(categoryId, { fallbackImages: updatedFallbackImages });
+    return this.jobOfferCategoriesService.update(categoryId, {
+      fallbackImages: updatedFallbackImages,
+    });
   }
-} 
+}

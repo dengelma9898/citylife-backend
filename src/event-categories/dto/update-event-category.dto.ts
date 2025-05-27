@@ -16,4 +16,4 @@ export class UpdateEventCategoryDto extends PartialType(CreateEventCategoryDto) 
 
   @ApiProperty({ required: false, description: 'The fallback images of the event category' })
   fallbackImages?: string[];
-} 
+}

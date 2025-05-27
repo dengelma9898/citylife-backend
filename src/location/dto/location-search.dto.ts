@@ -4,4 +4,4 @@ export class LocationSearchDto {
   @IsNotEmpty()
   @IsString()
   query: string;
-} 
+}

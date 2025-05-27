@@ -2,7 +2,6 @@ import { Injectable, CanActivate, ExecutionContext, Logger } from '@nestjs/commo
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { UsersService } from '../../users/users.service';
-import { BusinessUser } from '../../users/interfaces/business-user.interface';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -10,7 +9,7 @@ export class RolesGuard implements CanActivate {
 
   constructor(
     private reflector: Reflector,
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -43,4 +42,4 @@ export class RolesGuard implements CanActivate {
 
     return requiredRoles.includes(userData.userType);
   }
-} 
+}

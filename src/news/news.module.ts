@@ -9,6 +9,6 @@ import { UsersModule } from '../users/users.module';
   imports: [FirebaseModule, UsersModule],
   controllers: [NewsController],
   providers: [NewsService, FirebaseStorageService],
-  exports: [NewsService]
+  exports: [NewsService],
 })
-export class NewsModule {} 
+export class NewsModule {}

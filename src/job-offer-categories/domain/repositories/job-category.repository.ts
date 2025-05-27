@@ -8,4 +8,4 @@ export interface JobCategoryRepository {
   save(jobCategory: JobCategory): Promise<void>;
   update(id: string, jobCategory: JobCategory): Promise<void>;
   delete(id: string): Promise<void>;
-} 
+}

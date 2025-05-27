@@ -7,13 +7,9 @@ import { UsersModule } from '../users/users.module';
 import { BusinessesModule } from '../businesses/businesses.module';
 
 @Module({
-  imports: [
-    FirebaseModule, 
-    forwardRef(() => UsersModule),
-    forwardRef(() => BusinessesModule)
-  ],
+  imports: [FirebaseModule, forwardRef(() => UsersModule), forwardRef(() => BusinessesModule)],
   controllers: [EventsController],
   providers: [EventsService, FirebaseStorageService],
-  exports: [EventsService]
+  exports: [EventsService],
 })
-export class EventsModule {} 
+export class EventsModule {}

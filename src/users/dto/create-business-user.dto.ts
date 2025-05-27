@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsArray, IsBoolean, IsOptional } from 'class-validator';
+import { IsString, IsEmail, IsBoolean } from 'class-validator';
 
 export class CreateBusinessUserDto {
   @IsString()
@@ -12,4 +12,4 @@ export class CreateBusinessUserDto {
 
   @IsBoolean()
   public readonly needsReview: boolean;
-} 
+}

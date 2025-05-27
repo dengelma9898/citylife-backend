@@ -4,6 +4,6 @@ import { FirebaseStorageService } from './firebase-storage.service';
 
 @Module({
   providers: [FirebaseService, FirebaseStorageService],
-  exports: [FirebaseService, FirebaseStorageService]
+  exports: [FirebaseService, FirebaseStorageService],
 })
-export class FirebaseModule {} 
+export class FirebaseModule {}

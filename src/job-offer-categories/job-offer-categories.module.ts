@@ -12,9 +12,9 @@ import { JOB_CATEGORY_REPOSITORY } from './domain/repositories/job-category.repo
     JobOfferCategoriesService,
     {
       provide: JOB_CATEGORY_REPOSITORY,
-      useClass: FirebaseJobCategoryRepository
-    }
+      useClass: FirebaseJobCategoryRepository,
+    },
   ],
-  exports: [JobOfferCategoriesService]
+  exports: [JobOfferCategoriesService],
 })
-export class JobOfferCategoriesModule {} 
+export class JobOfferCategoriesModule {}

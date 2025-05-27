@@ -5,21 +5,25 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "type": "module",
   "scripts": {
     "build": "nest build",
     "build:prd": "NODE_ENV=prd nest build",
     "build:dev": "NODE_ENV=dev nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" --ignore-path .prettierignore",
+    "format:check": "prettier --check \"src/**/*.ts\" --ignore-path .prettierignore",
     "start": "nest start",
     "start:debug": "nest start --debug --watch",
     "start:prd": "NODE_ENV=prd nest start",
     "start:dev": "NODE_ENV=dev nest start",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "sonar": "sonar-scanner",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.17",
@@ -42,6 +46,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
     "@nestjs/cli": "^11.0.6",
     "@nestjs/schematics": "^11.0.5",
     "@nestjs/testing": "^11.0.17",
@@ -66,7 +71,10 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "sonarqube-scanner": "^2.8.1"
   },
   "jest": {
     "moduleFileExtensions": [

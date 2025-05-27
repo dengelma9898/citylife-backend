@@ -1,7 +1,6 @@
 import { IsEmail, IsOptional, IsPhoneNumber, IsString, IsUrl } from 'class-validator';
 
 export class BusinessContactDto {
-
   @IsOptional()
   @IsEmail()
   public readonly email?: string;
@@ -25,4 +24,4 @@ export class BusinessContactDto {
   @IsOptional()
   @IsUrl()
   public readonly website?: string;
-} 
+}

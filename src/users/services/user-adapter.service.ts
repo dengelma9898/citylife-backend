@@ -9,17 +9,22 @@ export class UserAdapterService {
 
   constructor(
     @Inject(forwardRef(() => UsersService))
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
   ) {}
 
-  public async addBusinessToHistory(userId: string, businessId: string, businessName: string, benefit: string): Promise<void> {
+  public async addBusinessToHistory(
+    userId: string,
+    businessId: string,
+    businessName: string,
+    benefit: string,
+  ): Promise<void> {
     this.logger.debug(`Adding business ${businessId} to history of user ${userId}`);
-    
+
     const historyEntry: BusinessHistory = {
       businessId: businessId,
       businessName: businessName,
       benefit: benefit,
-      visitedAt: DateTimeUtils.getUTCTime()
+      visitedAt: DateTimeUtils.getUTCTime(),
     };
 
     const user = await this.usersService.getUserProfile(userId);
@@ -31,4 +36,4 @@ export class UserAdapterService {
     const updatedHistory = [...(user.businessHistory || []), historyEntry];
     await this.usersService.update(userId, { businessHistory: updatedHistory });
   }
-} 
+}

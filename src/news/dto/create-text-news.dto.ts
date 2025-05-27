@@ -8,4 +8,4 @@ export class CreateTextNewsDto {
   @IsString()
   @IsNotEmpty()
   public readonly authorId: string;
-} 
+}

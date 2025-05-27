@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { KeywordsService } from './keywords.service';
 import { Keyword } from './interfaces/keyword.interface';
 import { CreateKeywordDto } from './dto/create-keyword.dto';
@@ -35,7 +45,7 @@ export class KeywordsController {
   @Patch(':id')
   public async update(
     @Param('id') id: string,
-    @Body() updateKeywordDto: UpdateKeywordDto
+    @Body() updateKeywordDto: UpdateKeywordDto,
   ): Promise<Keyword> {
     this.logger.log(`PATCH /keywords/${id}`);
     return this.keywordsService.update(id, updateKeywordDto);
@@ -46,4 +56,4 @@ export class KeywordsController {
     this.logger.log(`DELETE /keywords/${id}`);
     return this.keywordsService.delete(id);
   }
-} 
+}

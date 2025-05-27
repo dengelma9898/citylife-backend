@@ -12,7 +12,7 @@ export class LocationService {
 
   /**
    * Sucht nach Adressen basierend auf dem Suchbegriff
-   * 
+   *
    * @param searchQuery - Der Suchbegriff für die Adresssuche
    * @returns Array von LocationResults mit gefundenen Adressen
    */
@@ -44,4 +44,4 @@ export class LocationService {
       throw error;
     }
   }
-} 
+}

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { JobCategory, JobCategoryProps } from '../../domain/entities/job-category.entity';
 import { JobCategoryRepository } from '../../domain/repositories/job-category.repository';
@@ -34,7 +34,7 @@ export class FirebaseJobCategoryRepository implements JobCategoryRepository {
       id,
       ...data,
       createdAt: data.createdAt?.toDate?.() || data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
     };
   }
 
@@ -56,9 +56,9 @@ export class FirebaseJobCategoryRepository implements JobCategoryRepository {
     const db = this.firebaseService.getClientFirestore();
     const categoriesCol = collection(db, this.collectionName);
     const snapshot = await getDocs(categoriesCol);
-    
-    return snapshot.docs.map(doc => 
-      JobCategory.fromProps(this.toJobCategoryProps(doc.data(), doc.id))
+
+    return snapshot.docs.map(doc =>
+      JobCategory.fromProps(this.toJobCategoryProps(doc.data(), doc.id)),
     );
   }
 
@@ -83,4 +83,4 @@ export class FirebaseJobCategoryRepository implements JobCategoryRepository {
     const docRef = doc(db, this.collectionName, id);
     await deleteDoc(docRef);
   }
-} 
+}

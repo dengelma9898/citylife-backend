@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { BlogPost } from './interfaces/blog-post.interface';
 import { CreateBlogPostDto } from './dto/create-blog-post.dto';
 import { FirebaseService } from 'src/firebase/firebase.service';
@@ -14,10 +14,13 @@ export class BlogPostsService {
     const db = this.firebaseService.getClientFirestore();
     const postsCol = collection(db, 'blog_posts');
     const snapshot = await getDocs(postsCol);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as BlogPost));
+    return snapshot.docs.map(
+      doc =>
+        ({
+          id: doc.id,
+          ...doc.data(),
+        }) as BlogPost,
+    );
   }
 
   public async getById(id: string): Promise<BlogPost | null> {
@@ -25,35 +28,35 @@ export class BlogPostsService {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'blog_posts', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       return null;
     }
 
     return {
       id: docSnap.id,
-      ...docSnap.data()
+      ...docSnap.data(),
     } as BlogPost;
   }
 
   public async create(data: CreateBlogPostDto, blogPictures: string[]): Promise<BlogPost> {
     this.logger.debug('Creating blog post');
     const db = this.firebaseService.getClientFirestore();
-    
+
     const postData: Omit<BlogPost, 'id'> = {
       ...data,
       blogPictures: blogPictures || [],
       createdAt: DateTimeUtils.getBerlinTime(),
       updatedAt: DateTimeUtils.getBerlinTime(),
       likedByUsers: [],
-      views: 0
+      views: 0,
     };
 
     const docRef = await addDoc(collection(db, 'blog_posts'), postData);
-    
+
     return {
       id: docRef.id,
-      ...postData
+      ...postData,
     };
   }
 
@@ -62,36 +65,36 @@ export class BlogPostsService {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'blog_posts', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new NotFoundException('Blog post not found');
     }
 
     const updateData = {
       ...data,
-      updatedAt: DateTimeUtils.getBerlinTime()
+      updatedAt: DateTimeUtils.getBerlinTime(),
     };
 
     await updateDoc(docRef, updateData);
-    
+
     const updatedDoc = await getDoc(docRef);
     return {
       id: updatedDoc.id,
-      ...updatedDoc.data()
+      ...updatedDoc.data(),
     } as BlogPost;
   }
 
   public async toggleLike(postId: string, userId: string): Promise<BlogPost> {
     this.logger.debug(`Toggling like for post ${postId} by user ${userId}`);
     const post = await this.getById(postId);
-    
+
     if (!post) {
       throw new NotFoundException('Blog post not found');
     }
 
     const likedByUsers = post.likedByUsers || [];
     const userLikeIndex = likedByUsers.indexOf(userId);
-    
+
     if (userLikeIndex > -1) {
       likedByUsers.splice(userLikeIndex, 1);
     } else {
@@ -106,11 +109,11 @@ export class BlogPostsService {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'blog_posts', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new NotFoundException('Blog post not found');
     }
 
     await deleteDoc(docRef);
   }
-} 
+}

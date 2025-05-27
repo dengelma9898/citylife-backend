@@ -8,4 +8,4 @@ export interface BusinessUser {
   needsReview: boolean;
   eventIds?: string[];
   contactRequestIds?: string[];
-} 
+}

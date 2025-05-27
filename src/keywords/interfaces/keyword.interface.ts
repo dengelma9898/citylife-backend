@@ -4,4 +4,4 @@ export interface Keyword {
   description: string;
   createdAt: string;
   updatedAt: string;
-} 
+}

@@ -22,4 +22,4 @@ export class BusinessAddressDto {
 
   @IsNumber()
   public readonly longitude: number;
-} 
+}

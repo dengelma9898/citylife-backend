@@ -24,7 +24,7 @@ export class FirebaseService implements OnModuleInit {
 
       // Initialize Firebase Admin SDK
       const serviceAccountPath = this.configService.get<string>('GOOGLE_APPLICATION_CREDENTIALS');
-      
+
       if (!serviceAccountPath) {
         throw new Error('GOOGLE_APPLICATION_CREDENTIALS environment variable is not set');
       }
@@ -39,7 +39,7 @@ export class FirebaseService implements OnModuleInit {
 
       // Initialize Firebase App
       initializeApp(firebaseConfig);
-      
+
       this.logger.log('Firebase initialized successfully');
     } catch (error) {
       this.logger.error('Error initializing Firebase:', error);
@@ -61,4 +61,4 @@ export class FirebaseService implements OnModuleInit {
     }
     return getFirestore();
   }
-} 
+}

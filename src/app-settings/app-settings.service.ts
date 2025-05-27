@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Preference } from './interfaces/preference.interface';
-import { FirebaseService } from 'src/firebase/firebase.service';
+import { FirebaseService } from '../firebase/firebase.service';
+
 @Injectable()
 export class AppSettingsService {
   constructor(private readonly firebaseService: FirebaseService) {}
@@ -20,7 +21,7 @@ export class AppSettingsService {
     const db = this.firebaseService.getClientFirestore();
     const docRef = doc(db, 'app_settings', id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       return null;
     }
@@ -30,4 +31,4 @@ export class AppSettingsService {
       preferences: docSnap.data().preferences || [],
     };
   }
-} 
+}

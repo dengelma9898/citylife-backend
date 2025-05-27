@@ -7,6 +7,6 @@ import { FirebaseStorageService } from '../firebase/firebase-storage.service';
   imports: [FirebaseModule],
   controllers: [BlogPostsController],
   providers: [BlogPostsService, FirebaseStorageService],
-  exports: [BlogPostsService]
+  exports: [BlogPostsService],
 })
-export class BlogPostsModule {} 
+export class BlogPostsModule {}

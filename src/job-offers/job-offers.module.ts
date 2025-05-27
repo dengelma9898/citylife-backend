@@ -14,9 +14,9 @@ import { JOB_OFFER_REPOSITORY } from './domain/repositories/job-offer.repository
     FirebaseStorageService,
     {
       provide: JOB_OFFER_REPOSITORY,
-      useClass: FirebaseJobOfferRepository
-    }
+      useClass: FirebaseJobOfferRepository,
+    },
   ],
-  exports: [JobOffersService]
+  exports: [JobOffersService],
 })
-export class JobOffersModule {} 
+export class JobOffersModule {}

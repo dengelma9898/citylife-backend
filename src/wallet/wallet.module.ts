@@ -6,12 +6,8 @@ import { UsersModule } from '../users/users.module';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [
-    FirebaseModule,
-    UsersModule,
-    ConfigModule,
-  ],
+  imports: [FirebaseModule, UsersModule, ConfigModule],
   controllers: [WalletController],
   providers: [WalletService],
 })
-export class WalletModule {} 
+export class WalletModule {}

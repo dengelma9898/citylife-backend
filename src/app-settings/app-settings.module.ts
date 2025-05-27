@@ -8,4 +8,4 @@ import { FirebaseModule } from '../firebase/firebase.module';
   controllers: [AppSettingsController],
   providers: [AppSettingsService],
 })
-export class AppSettingsModule {} 
+export class AppSettingsModule {}

@@ -1,4 +1,17 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFiles, NotFoundException, Logger, UploadedFile } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseInterceptors,
+  UploadedFiles,
+  NotFoundException,
+  Logger,
+  UploadedFile,
+} from '@nestjs/common';
 import { JobOffersService } from './application/services/job-offers.service';
 import { CreateJobOfferDto } from './dto/create-job-offer.dto';
 import { JobOffer } from './domain/entities/job-offer.entity';
@@ -14,7 +27,7 @@ export class JobOffersController {
 
   constructor(
     private readonly jobOffersService: JobOffersService,
-    private readonly firebaseStorageService: FirebaseStorageService
+    private readonly firebaseStorageService: FirebaseStorageService,
   ) {}
 
   @Post()
@@ -48,7 +61,7 @@ export class JobOffersController {
   @ApiResponse({ status: 404, description: 'Job offer not found.' })
   update(
     @Param('id') id: string,
-    @Body() updateJobOfferDto: Partial<CreateJobOfferDto>
+    @Body() updateJobOfferDto: Partial<CreateJobOfferDto>,
   ): Promise<JobOffer> {
     this.logger.log(`PATCH /job-offers/${id}`);
     return this.jobOffersService.update(id, updateJobOfferDto);
@@ -60,7 +73,7 @@ export class JobOffersController {
   @ApiResponse({ status: 404, description: 'Job offer not found.' })
   async remove(@Param('id') id: string): Promise<void> {
     this.logger.log(`DELETE /job-offers/${id}`);
-    
+
     const currentJobOffer = await this.jobOffersService.findOne(id);
     if (!currentJobOffer) {
       throw new NotFoundException('Job offer not found');
@@ -97,7 +110,7 @@ export class JobOffersController {
   @ApiResponse({ status: 404, description: 'Job offer not found.' })
   public async updateCompanyLogo(
     @Param('id') jobOfferId: string,
-    @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File
+    @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File,
   ): Promise<JobOffer> {
     this.logger.log(`PATCH /job-offers/${jobOfferId}/company-logo`);
 
@@ -123,7 +136,7 @@ export class JobOffersController {
   @ApiResponse({ status: 404, description: 'Job offer not found.' })
   async addImages(
     @Param('id') jobOfferId: string,
-    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[]
+    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[],
   ): Promise<JobOffer> {
     this.logger.log(`PATCH /job-offers/${jobOfferId}/images`);
 
@@ -133,17 +146,17 @@ export class JobOffersController {
     }
 
     let images = currentJobOffer.images || [];
-    
+
     if (files && files.length > 0) {
       this.logger.debug(`Uploading ${files.length} new images for job offer ${jobOfferId}`);
-      
+
       for (const file of files) {
         const path = `job-offers/images/${jobOfferId}/${Date.now()}-${file.originalname}`;
         const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
         images.push(imageUrl);
       }
     }
-    
+
     return this.jobOffersService.update(jobOfferId, { images });
   }
 
@@ -153,27 +166,27 @@ export class JobOffersController {
   @ApiResponse({ status: 404, description: 'Job offer or image not found.' })
   async removeImage(
     @Param('id') jobOfferId: string,
-    @Body('imageUrl') imageUrl: string
+    @Body('imageUrl') imageUrl: string,
   ): Promise<JobOffer> {
     this.logger.log(`PATCH /job-offers/${jobOfferId}/images/remove`);
-    
+
     if (!imageUrl) {
       throw new NotFoundException('imageUrl is required');
     }
-    
+
     const currentJobOffer = await this.jobOffersService.findOne(jobOfferId);
     if (!currentJobOffer) {
       throw new NotFoundException('Job offer not found');
     }
-    
+
     if (!currentJobOffer.images || !currentJobOffer.images.includes(imageUrl)) {
       throw new NotFoundException('Image not found in job offer');
     }
-    
+
     await this.firebaseStorageService.deleteFile(imageUrl);
-    
+
     const updatedImages = currentJobOffer.images.filter(url => url !== imageUrl);
-    
+
     return this.jobOffersService.update(jobOfferId, { images: updatedImages });
   }
-} 
+}

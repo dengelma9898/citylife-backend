@@ -18,4 +18,4 @@ export interface BusinessHistory {
    * ISO string of when the business was visited
    */
   visitedAt: string;
-} 
+}

@@ -12,14 +12,16 @@ export class LocationController {
   /**
    * Sucht nach Adressen basierend auf dem Suchbegriff
    * Endpunkt: GET /location/search?query=...
-   * 
+   *
    * @param locationSearchDto - DTO mit dem Suchbegriff
    * @returns Array von LocationResults mit gefundenen Adressen
    */
   @Get('search')
   @UsePipes(new ValidationPipe({ transform: true }))
-  public async searchLocations(@Query() locationSearchDto: LocationSearchDto): Promise<LocationResult[]> {
+  public async searchLocations(
+    @Query() locationSearchDto: LocationSearchDto,
+  ): Promise<LocationResult[]> {
     this.logger.log(`GET /location/search?query=${locationSearchDto.query}`);
     return this.locationService.searchLocations(locationSearchDto.query);
   }
-} 
+}

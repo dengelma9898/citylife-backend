@@ -1,4 +1,19 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, NotFoundException, Logger, UseInterceptors, UploadedFile, Patch, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  NotFoundException,
+  Logger,
+  UseInterceptors,
+  UploadedFile,
+  Patch,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { UserProfileDto } from './dto/user-profile.dto';
@@ -17,7 +32,7 @@ export class UsersController {
 
   constructor(
     private readonly usersService: UsersService,
-    private readonly firebaseStorageService: FirebaseStorageService
+    private readonly firebaseStorageService: FirebaseStorageService,
   ) {}
 
   @Get()
@@ -35,9 +50,9 @@ export class UsersController {
   @Get('business-users/needs-review/count')
   public async getPendingBusinessUserReviewsCount(): Promise<{ count: number }> {
     this.logger.log('GET /users/business-users/needs-review/count');
-    
+
     const count = await this.usersService.getBusinessUsersNeedsReviewCount();
-    
+
     return { count };
   }
 
@@ -55,7 +70,7 @@ export class UsersController {
   @Post(':id/profile')
   public async createUserProfile(
     @Param('id') id: string,
-    @Body() userProfileDto: CreateUserProfileDto
+    @Body() userProfileDto: CreateUserProfileDto,
   ): Promise<UserProfile> {
     this.logger.log(`POST /users/${id}/profile`);
     return this.usersService.createUserProfile(id, userProfileDto);
@@ -64,7 +79,7 @@ export class UsersController {
   @Post(':id/business-profile')
   public async createBusinessProfile(
     @Param('id') id: string,
-    @Body() businessUserDto: CreateBusinessUserDto
+    @Body() businessUserDto: CreateBusinessUserDto,
   ): Promise<BusinessUser> {
     this.logger.log(`POST /users/${id}/business-profile`);
     return this.usersService.createBusinessUser(businessUserDto);
@@ -73,7 +88,7 @@ export class UsersController {
   @Patch(':id/profile')
   public async updateProfile(
     @Param('id') id: string,
-    @Body() userProfileDto: Partial<UserProfileDto>
+    @Body() userProfileDto: Partial<UserProfileDto>,
   ): Promise<UserProfile> {
     this.logger.log(`PATCH /users/${id}/profile`);
     return this.usersService.update(id, userProfileDto);
@@ -86,7 +101,9 @@ export class UsersController {
   }
 
   @Post(':id/business-profile')
-  public async createBusinessUser(@Body() createUserDto: CreateBusinessUserDto): Promise<BusinessUser> {
+  public async createBusinessUser(
+    @Body() createUserDto: CreateBusinessUserDto,
+  ): Promise<BusinessUser> {
     this.logger.log('POST /users/business-profile');
     return this.usersService.createBusinessUser(createUserDto);
   }
@@ -94,7 +111,7 @@ export class UsersController {
   @Put(':id/business-profile')
   public async updateBusinessUser(
     @Param('id') id: string,
-    @Body() updateUserDto: Partial<BusinessUser>
+    @Body() updateUserDto: Partial<BusinessUser>,
   ): Promise<BusinessUser> {
     this.logger.log(`PUT /users/${id}/business-profile`);
     return this.usersService.updateBusinessUser(id, updateUserDto);
@@ -103,19 +120,19 @@ export class UsersController {
   @Patch(':id/business-profile/needs-review')
   public async updateNeedsReview(
     @Param('id') id: string,
-    @Body('needsReview') needsReview: boolean
+    @Body('needsReview') needsReview: boolean,
   ): Promise<BusinessUser> {
     this.logger.log(`PATCH /users/${id}/business-profile/needs-review`);
-    
+
     if (needsReview === undefined) {
       throw new BadRequestException('needsReview field is required');
     }
-    
+
     const businessUser = await this.usersService.getBusinessUser(id);
     if (!businessUser) {
       throw new NotFoundException('Business user not found');
     }
-    
+
     return this.usersService.updateBusinessUser(id, { needsReview });
   }
 
@@ -128,31 +145,31 @@ export class UsersController {
   @Patch(':id/favorites/events/:eventId')
   public async toggleFavoriteEvent(
     @Param('id') userId: string,
-    @Param('eventId') eventId: string
+    @Param('eventId') eventId: string,
   ): Promise<{ added: boolean }> {
     this.logger.log(`PATCH /users/${userId}/favorites/events/${eventId}`);
-    
+
     const userProfile = await this.usersService.getUserProfile(userId);
     if (!userProfile) {
       throw new NotFoundException('User profile not found');
     }
-    
+
     const added = await this.usersService.toggleFavoriteEvent(userId, eventId);
     return { added };
   }
-  
+
   @Patch(':id/favorites/businesses/:businessId')
   public async toggleFavoriteBusiness(
     @Param('id') userId: string,
-    @Param('businessId') businessId: string
+    @Param('businessId') businessId: string,
   ): Promise<{ added: boolean }> {
     this.logger.log(`PATCH /users/${userId}/favorites/businesses/${businessId}`);
-    
+
     const userProfile = await this.usersService.getUserProfile(userId);
     if (!userProfile) {
       throw new NotFoundException('User profile not found');
     }
-    
+
     const added = await this.usersService.toggleFavoriteBusiness(userId, businessId);
     return { added };
   }
@@ -160,24 +177,24 @@ export class UsersController {
   @Get(':id/favorites/events')
   public async getFavoriteEvents(@Param('id') userId: string): Promise<string[]> {
     this.logger.log(`GET /users/${userId}/favorites/events`);
-    
+
     const userProfile = await this.usersService.getUserProfile(userId);
     if (!userProfile) {
       throw new NotFoundException('User profile not found');
     }
-    
+
     return userProfile.favoriteEventIds || [];
   }
-  
+
   @Get(':id/favorites/businesses')
   public async getFavoriteBusinesses(@Param('id') userId: string): Promise<string[]> {
     this.logger.log(`GET /users/${userId}/favorites/businesses`);
-    
+
     const userProfile = await this.usersService.getUserProfile(userId);
     if (!userProfile) {
       throw new NotFoundException('User profile not found');
     }
-    
+
     return userProfile.favoriteBusinessIds || [];
   }
 
@@ -225,7 +242,7 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('file'))
   public async uploadProfilePicture(
     @Param('id') userId: string,
-    @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File
+    @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File,
   ): Promise<UserProfile> {
     this.logger.log(`POST /users/${userId}/profile/picture`);
 
@@ -244,24 +261,22 @@ export class UsersController {
 
   @Get(':userId/business-users')
   @ApiOperation({ summary: 'Gibt alle Business-User zurück (nur für SUPER_ADMIN)' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Liste aller Business-User',
-    isArray: true
+    isArray: true,
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen'
+  @ApiResponse({
+    status: 401,
+    description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen',
   })
   @ApiParam({
     name: 'userId',
-    description: 'ID des anfragenden Benutzers (muss SUPER_ADMIN sein)'
+    description: 'ID des anfragenden Benutzers (muss SUPER_ADMIN sein)',
   })
-  public async getAllBusinessUsers(
-    @Param('userId') userId: string
-  ): Promise<BusinessUser[]> {
+  public async getAllBusinessUsers(@Param('userId') userId: string): Promise<BusinessUser[]> {
     this.logger.log(`GET /users/${userId}/business-users`);
-    
+
     // Überprüfe, ob der Benutzer ein SUPER_ADMIN ist
     const requestingUser = await this.usersService.getUserProfile(userId);
     if (!requestingUser || requestingUser.userType !== UserType.SUPER_ADMIN) {
@@ -273,31 +288,31 @@ export class UsersController {
 
   @Post(':userId/business-user/businesses/:businessId')
   @ApiOperation({ summary: 'Fügt ein Business zu einem Business-User hinzu' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Das Business wurde erfolgreich dem User zugeordnet'
+  @ApiResponse({
+    status: 200,
+    description: 'Das Business wurde erfolgreich dem User zugeordnet',
   })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Business-User oder Business wurde nicht gefunden'
+  @ApiResponse({
+    status: 404,
+    description: 'Business-User oder Business wurde nicht gefunden',
   })
-  @ApiResponse({ 
-    status: 400, 
-    description: 'Business ist bereits dem User zugeordnet'
+  @ApiResponse({
+    status: 400,
+    description: 'Business ist bereits dem User zugeordnet',
   })
   @ApiParam({
     name: 'userId',
-    description: 'ID des Business-Users'
+    description: 'ID des Business-Users',
   })
   @ApiParam({
     name: 'businessId',
-    description: 'ID des Businesses, das hinzugefügt werden soll'
+    description: 'ID des Businesses, das hinzugefügt werden soll',
   })
   public async addBusinessToUser(
     @Param('userId') userId: string,
-    @Param('businessId') businessId: string
+    @Param('businessId') businessId: string,
   ): Promise<BusinessUser> {
     this.logger.log(`POST /users/${userId}/business-user/businesses/${businessId}`);
     return this.usersService.addBusinessIdToUser(userId, businessId);
   }
-} 
+}

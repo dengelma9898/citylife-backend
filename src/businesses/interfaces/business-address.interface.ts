@@ -5,4 +5,4 @@ export interface BusinessAddress {
   city: string;
   latitude: number;
   longitude: number;
-} 
+}

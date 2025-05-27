@@ -10,4 +10,4 @@ export class VoteSurveyDto {
   @IsString()
   @IsNotEmpty()
   public readonly userId: string;
-} 
+}

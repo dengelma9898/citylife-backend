@@ -5,4 +5,4 @@ export class UpdateImagesDto {
   @IsString({ each: true })
   @IsNotEmpty()
   public readonly imageUrls: string[];
-} 
+}

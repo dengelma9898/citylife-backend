@@ -6,10 +6,10 @@ import { SpecialPollResponseDto } from './special-poll-response.dto';
 export class UpdateSpecialPollResponsesDto {
   @ApiProperty({
     description: 'Die aktualisierte Liste der Antworten',
-    type: [SpecialPollResponseDto]
+    type: [SpecialPollResponseDto],
   })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => SpecialPollResponseDto)
   readonly responses: SpecialPollResponseDto[];
-} 
+}

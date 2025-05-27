@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsDateString, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
 
 export class BusinessCustomerDto {
   @IsString()
@@ -20,5 +20,4 @@ export class BusinessCustomerDto {
   @IsOptional()
   @IsString()
   public readonly additionalInfo?: string | null;
-
-} 
+}

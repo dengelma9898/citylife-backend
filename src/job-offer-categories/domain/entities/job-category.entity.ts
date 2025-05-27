@@ -30,13 +30,16 @@ export class JobCategory {
     this.updatedAt = props.updatedAt;
   }
 
-  public static create(props: Omit<JobCategoryProps, 'id' | 'createdAt' | 'updatedAt'>, id?: string): JobCategory {
+  public static create(
+    props: Omit<JobCategoryProps, 'id' | 'createdAt' | 'updatedAt'>,
+    id?: string,
+  ): JobCategory {
     const now = new Date();
     return new JobCategory({
       id: id || '',
       ...props,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     });
   }
 
@@ -44,11 +47,13 @@ export class JobCategory {
     return new JobCategory(props);
   }
 
-  public update(props: Partial<Omit<JobCategoryProps, 'id' | 'createdAt' | 'updatedAt'>>): JobCategory {
+  public update(
+    props: Partial<Omit<JobCategoryProps, 'id' | 'createdAt' | 'updatedAt'>>,
+  ): JobCategory {
     return new JobCategory({
       ...this,
       ...props,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
   }
 
@@ -61,7 +66,7 @@ export class JobCategory {
       iconName: this.iconName,
       fallbackImages: this.fallbackImages,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
     };
   }
-} 
+}

@@ -4,4 +4,4 @@ export enum UserType {
   SUPER_ADMIN = 'super_admin',
   BUSINESS = 'business',
   PREMIUM_BUSINESS = 'premium_business',
-} 
+}

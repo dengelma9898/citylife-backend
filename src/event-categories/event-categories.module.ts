@@ -8,6 +8,6 @@ import { FirebaseStorageService } from '../firebase/firebase-storage.service';
   imports: [FirebaseModule],
   controllers: [EventCategoriesController],
   providers: [EventCategoriesService, FirebaseStorageService],
-  exports: [EventCategoriesService]
+  exports: [EventCategoriesService],
 })
-export class EventCategoriesModule {} 
+export class EventCategoriesModule {}

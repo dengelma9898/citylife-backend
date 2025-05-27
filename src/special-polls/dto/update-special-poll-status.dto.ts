@@ -6,9 +6,9 @@ export class UpdateSpecialPollStatusDto {
   @ApiProperty({
     description: 'Der neue Status der Umfrage',
     enum: SpecialPollStatus,
-    example: SpecialPollStatus.ACTIVE
+    example: SpecialPollStatus.ACTIVE,
   })
   @IsEnum(SpecialPollStatus)
   @IsNotEmpty()
   readonly status: SpecialPollStatus;
-} 
+}

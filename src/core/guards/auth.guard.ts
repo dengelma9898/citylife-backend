@@ -1,4 +1,10 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+  Logger,
+} from '@nestjs/common';
 import { FirebaseService } from '../../firebase/firebase.service';
 
 @Injectable()
@@ -31,4 +37,4 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid token');
     }
   }
-} 
+}

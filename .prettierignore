@@ -1,0 +1,21 @@
+# Test files
+**/*.spec.ts
+**/*.test.ts
+test/**/*.ts
+
+# Build output
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Coverage
+coverage/
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log 

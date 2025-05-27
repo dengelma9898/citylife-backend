@@ -18,4 +18,4 @@ export class BusinessCategoryDto {
 
   @IsDateString()
   public readonly updatedAt: string;
-} 
+}

@@ -12,7 +12,7 @@ export class FirebaseStorageService {
 
     await uploadBytes(storageRef, file.buffer);
     const downloadUrl = await getDownloadURL(storageRef);
-    
+
     this.logger.debug(`File uploaded successfully, URL: ${downloadUrl}`);
     return downloadUrl;
   }
@@ -30,4 +30,4 @@ export class FirebaseStorageService {
       this.logger.error(`Failed to delete file: ${error.message}`);
     }
   }
-} 
+}

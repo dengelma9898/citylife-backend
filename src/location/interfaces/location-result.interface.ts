@@ -17,4 +17,4 @@ export interface LocationResult {
     lat: number;
     lng: number;
   };
-} 
+}

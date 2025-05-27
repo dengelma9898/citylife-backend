@@ -17,4 +17,4 @@ export interface UserProfile {
   favoriteEventIds?: string[];
   favoriteBusinessIds?: string[];
   contactRequestIds?: string[];
-} 
+}
