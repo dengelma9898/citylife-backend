@@ -41,10 +41,11 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
 
   async findAll(chatroomId: string, limit?: number): Promise<ChatMessage[]> {
     try {
-      let query = this.firebaseService
-        .getFirestore()
+      const db = this.firebaseService.getFirestore();
+      let query = db
         .collection(this.collection)
-        .where('chatroomId', '==', chatroomId)
+        .doc(chatroomId)
+        .collection(this.messagesCollection)
         .orderBy('createdAt', 'desc');
 
       if (limit) {
@@ -63,8 +64,8 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
 
   async findById(chatroomId: string, id: string): Promise<ChatMessage | null> {
     try {
-      const doc = await this.firebaseService
-        .getFirestore()
+      const db = this.firebaseService.getFirestore();
+      const doc = await db
         .collection(this.collection)
         .doc(chatroomId)
         .collection(this.messagesCollection)
@@ -85,11 +86,11 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     data: Omit<ChatMessage, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<ChatMessage> {
     try {
+      const db = this.firebaseService.getFirestore();
       const message = ChatMessage.create(data);
       const plainData = this.toPlainObject(message);
 
-      await this.firebaseService
-        .getFirestore()
+      await db
         .collection(this.collection)
         .doc(chatroomId)
         .collection(this.messagesCollection)
@@ -109,14 +110,14 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     data: Partial<Omit<ChatMessage, 'id' | 'createdAt'>>,
   ): Promise<ChatMessage | null> {
     try {
+      const db = this.firebaseService.getFirestore();
       const existing = await this.findById(chatroomId, id);
       if (!existing) return null;
 
       const updated = existing.update(data);
       const plainData = this.toPlainObject(updated);
 
-      await this.firebaseService
-        .getFirestore()
+      await db
         .collection(this.collection)
         .doc(chatroomId)
         .collection(this.messagesCollection)
@@ -132,8 +133,8 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
 
   async delete(chatroomId: string, id: string): Promise<void> {
     try {
-      await this.firebaseService
-        .getFirestore()
+      const db = this.firebaseService.getFirestore();
+      await db
         .collection(this.collection)
         .doc(chatroomId)
         .collection(this.messagesCollection)

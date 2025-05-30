@@ -1,5 +1,4 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { JobOffer } from '../../domain/entities/job-offer.entity';
 import { JobOfferRepository } from '../../domain/repositories/job-offer.repository.interface';
@@ -15,6 +14,8 @@ export class FirebaseJobOfferRepository implements JobOfferRepository {
     return {
       id,
       ...data,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt,
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
     };
   }
 
@@ -47,61 +48,82 @@ export class FirebaseJobOfferRepository implements JobOfferRepository {
   }
 
   async findById(id: string): Promise<JobOffer> {
-    this.logger.debug(`Getting job offer ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, this.collectionName, id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Getting job offer ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collectionName).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Job offer not found');
+      if (!doc.exists) {
+        throw new NotFoundException('Job offer not found');
+      }
+
+      return new JobOffer(this.toJobOfferProps(doc.data(), doc.id));
+    } catch (error) {
+      this.logger.error(`Error finding job offer ${id}: ${error.message}`);
+      throw error;
     }
-
-    return new JobOffer(this.toJobOfferProps(docSnap.data(), docSnap.id));
   }
 
   async findAll(): Promise<JobOffer[]> {
-    this.logger.debug('Getting all job offers');
-    const db = this.firebaseService.getClientFirestore();
-    const offersCol = collection(db, this.collectionName);
-    const snapshot = await getDocs(offersCol);
+    try {
+      this.logger.debug('Getting all job offers');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.collectionName).get();
 
-    return snapshot.docs.map(doc => new JobOffer(this.toJobOfferProps(doc.data(), doc.id)));
+      return snapshot.docs.map(doc => new JobOffer(this.toJobOfferProps(doc.data(), doc.id)));
+    } catch (error) {
+      this.logger.error(`Error finding all job offers: ${error.message}`);
+      throw error;
+    }
   }
 
   async save(jobOffer: JobOffer): Promise<JobOffer> {
-    this.logger.debug('Creating new job offer');
-    const db = this.firebaseService.getClientFirestore();
-    const plainObject = this.toPlainObject(jobOffer);
-    const docRef = await addDoc(collection(db, this.collectionName), plainObject);
+    try {
+      this.logger.debug('Creating new job offer');
+      const db = this.firebaseService.getFirestore();
+      const plainObject = this.toPlainObject(jobOffer);
+      const docRef = await db.collection(this.collectionName).add(plainObject);
 
-    return new JobOffer(this.toJobOfferProps(plainObject, docRef.id));
+      return new JobOffer(this.toJobOfferProps(plainObject, docRef.id));
+    } catch (error) {
+      this.logger.error(`Error saving job offer: ${error.message}`);
+      throw error;
+    }
   }
 
   async update(id: string, jobOffer: JobOffer): Promise<JobOffer> {
-    this.logger.debug(`Updating job offer ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, this.collectionName, id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Updating job offer ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collectionName).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Job offer not found');
+      if (!doc.exists) {
+        throw new NotFoundException('Job offer not found');
+      }
+
+      const plainObject = this.toPlainObject(jobOffer);
+      await db.collection(this.collectionName).doc(id).update(plainObject);
+      return this.findById(id);
+    } catch (error) {
+      this.logger.error(`Error updating job offer ${id}: ${error.message}`);
+      throw error;
     }
-
-    const plainObject = this.toPlainObject(jobOffer);
-    await updateDoc(docRef, plainObject);
-    return this.findById(id);
   }
 
   async delete(id: string): Promise<void> {
-    this.logger.debug(`Removing job offer ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, this.collectionName, id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Removing job offer ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collectionName).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Job offer not found');
+      if (!doc.exists) {
+        throw new NotFoundException('Job offer not found');
+      }
+
+      await db.collection(this.collectionName).doc(id).delete();
+    } catch (error) {
+      this.logger.error(`Error deleting job offer ${id}: ${error.message}`);
+      throw error;
     }
-
-    await deleteDoc(docRef);
   }
 }

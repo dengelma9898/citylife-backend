@@ -1,15 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  runTransaction,
-} from 'firebase/firestore';
-import {
   NewsItem,
   TextNewsItem,
   ImageNewsItem,
@@ -36,77 +26,97 @@ export class NewsService {
     private readonly firebaseService: FirebaseService,
   ) {}
 
+  private removeUndefined(obj: any): any {
+    if (obj === null || obj === undefined) return null;
+    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
+    if (typeof obj === 'object') {
+      const result: any = {};
+      for (const key in obj) {
+        result[key] = this.removeUndefined(obj[key]);
+      }
+      return result;
+    }
+    return obj;
+  }
+
   public async getAll(): Promise<NewsItem[]> {
-    this.logger.debug('Getting all news items');
-    const db = this.firebaseService.getClientFirestore();
-    const newsCol = collection(db, this.collectionName);
-    const snapshot = await getDocs(newsCol);
+    try {
+      this.logger.debug('Getting all news items');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.collectionName).get();
 
-    const newsItems = snapshot.docs.map(
-      doc =>
-        ({
-          id: doc.id,
-          ...doc.data(),
-        }) as NewsItem,
-    );
+      const newsItems = snapshot.docs.map(
+        doc =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          }) as NewsItem,
+      );
 
-    return this.populateAuthorInfo(newsItems);
+      return this.populateAuthorInfo(newsItems);
+    } catch (error) {
+      this.logger.error(`Error getting all news items: ${error.message}`);
+      throw error;
+    }
   }
 
   public async getById(id: string): Promise<NewsItem | null> {
-    this.logger.debug(`Getting news item ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, this.collectionName, id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Getting news item ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collectionName).doc(id).get();
 
-    if (!docSnap.exists()) {
-      return null;
+      if (!doc.exists) {
+        return null;
+      }
+
+      const newsItem = {
+        id: doc.id,
+        ...doc.data(),
+      } as NewsItem;
+
+      const enrichedItems = await this.populateAuthorInfo([newsItem]);
+      return enrichedItems[0];
+    } catch (error) {
+      this.logger.error(`Error getting news item ${id}: ${error.message}`);
+      throw error;
     }
-
-    const newsItem = {
-      id: docSnap.id,
-      ...docSnap.data(),
-    } as NewsItem;
-
-    const enrichedItems = await this.populateAuthorInfo([newsItem]);
-    return enrichedItems[0];
   }
 
   private async populateAuthorInfo(newsItems: NewsItem[]): Promise<NewsItem[]> {
-    const enrichedItems: NewsItem[] = [];
+    try {
+      const authorIds = newsItems
+        .map(item => item.createdBy)
+        .filter((id): id is string => id !== undefined && id !== null);
 
-    for (const item of newsItems) {
-      if (item.createdBy) {
-        try {
-          const userProfile = await this.usersService.getUserProfile(item.createdBy);
+      if (authorIds.length === 0) {
+        return newsItems;
+      }
+
+      const userProfiles = await this.usersService.getUserProfilesByIds(authorIds);
+
+      return newsItems.map(item => {
+        if (item.createdBy) {
+          const userProfile = userProfiles.get(item.createdBy);
           if (userProfile) {
             item.authorName = userProfile.name || 'Unbekannter Benutzer';
             item.authorImageUrl = userProfile.profilePictureUrl;
           }
-        } catch (error) {
-          this.logger.warn(
-            `Failed to get author info for user ${item.createdBy}: ${error.message}`,
-          );
         }
-      }
 
-      // Transform poll items for client format
-      if (item.type === 'poll') {
-        this.transformPollForClient(item as PollNewsItem);
-      }
+        if (item.type === 'poll') {
+          this.transformPollForClient(item as PollNewsItem);
+        }
 
-      enrichedItems.push(item);
+        return item;
+      });
+    } catch (error) {
+      this.logger.error(`Error populating author info: ${error.message}`);
+      return newsItems;
     }
-
-    return enrichedItems;
   }
 
-  /**
-   * Transformiert ein PollNewsItem in ein Format, das mit CreatePollNewsDto kompatibel ist.
-   * Fügt ein pollInfo-Feld hinzu und passt die Feldnamen entsprechend an.
-   */
   private transformPollForClient(pollItem: PollNewsItem): void {
-    // Erstelle ein pollInfo-Objekt im erwarteten Format
     const pollInfo = {
       options: pollItem.options.map(option => ({
         id: option.id,
@@ -120,158 +130,178 @@ export class NewsService {
       createdAt: pollItem.createdAt,
     };
 
-    // Rename the question field to content for client format
     (pollItem as any).content = pollItem.question;
-
-    // Add the pollInfo object
     (pollItem as any).pollInfo = pollInfo;
   }
 
-  /**
-   * Erstellt eine Map der Votes für jede Option.
-   * Format: { optionId: anzahlVotes }
-   */
   private createVotesMap(options: PollOption[]): number {
     let totalVotes = 0;
-
     for (const option of options) {
-      // Wir verwenden die Länge des voters-Arrays als Anzahl der Votes
       totalVotes += option.voters.length;
     }
-
     return totalVotes;
   }
 
   public async createTextNews(data: CreateTextNewsDto): Promise<TextNewsItem> {
-    this.logger.debug('Creating text news item');
+    try {
+      this.logger.debug('Creating text news item');
+      const db = this.firebaseService.getFirestore();
 
-    const newsItem: Omit<TextNewsItem, 'id'> = {
-      type: 'text',
-      content: data.content,
-      createdAt: DateTimeUtils.getBerlinTime(),
-      updatedAt: DateTimeUtils.getBerlinTime(),
-      createdBy: data.authorId,
-      reactions: [],
-      views: 0,
-    };
+      const newsItem: Omit<TextNewsItem, 'id'> = {
+        type: 'text',
+        content: data.content,
+        createdAt: DateTimeUtils.getBerlinTime(),
+        updatedAt: DateTimeUtils.getBerlinTime(),
+        createdBy: data.authorId,
+        reactions: [],
+        views: 0,
+      };
 
-    return this.saveNewsItem(newsItem) as Promise<TextNewsItem>;
+      return this.saveNewsItem(newsItem) as Promise<TextNewsItem>;
+    } catch (error) {
+      this.logger.error(`Error creating text news: ${error.message}`);
+      throw error;
+    }
   }
 
   public async createImageNews(data: CreateImageNewsDto): Promise<ImageNewsItem> {
-    this.logger.debug('Creating image news item');
+    try {
+      this.logger.debug('Creating image news item');
+      const db = this.firebaseService.getFirestore();
 
-    const newsItem: Omit<ImageNewsItem, 'id'> = {
-      type: 'image',
-      imageUrls: data.imageUrls,
-      content: data.content,
-      createdAt: DateTimeUtils.getBerlinTime(),
-      updatedAt: DateTimeUtils.getBerlinTime(),
-      createdBy: data.authorId,
-      reactions: [],
-      views: 0,
-    };
+      const newsItem: Omit<ImageNewsItem, 'id'> = {
+        type: 'image',
+        imageUrls: data.imageUrls,
+        content: data.content,
+        createdAt: DateTimeUtils.getBerlinTime(),
+        updatedAt: DateTimeUtils.getBerlinTime(),
+        createdBy: data.authorId,
+        reactions: [],
+        views: 0,
+      };
 
-    return this.saveNewsItem(newsItem) as Promise<ImageNewsItem>;
+      return this.saveNewsItem(newsItem) as Promise<ImageNewsItem>;
+    } catch (error) {
+      this.logger.error(`Error creating image news: ${error.message}`);
+      throw error;
+    }
   }
 
   public async createPollNews(data: CreatePollNewsDto): Promise<PollNewsItem> {
-    this.logger.debug('Creating poll news item');
+    try {
+      this.logger.debug('Creating poll news item');
+      const db = this.firebaseService.getFirestore();
 
-    const options: PollOption[] = data.pollInfo.options.map(option => ({
-      id: option.id,
-      text: option.text,
-      voters: [],
-    }));
+      const options: PollOption[] = data.pollInfo.options.map(option => ({
+        id: option.id,
+        text: option.text,
+        voters: [],
+      }));
 
-    const newsItem: Omit<PollNewsItem, 'id'> = {
-      type: 'poll',
-      question: data.content,
-      options,
-      expiresAt: data.pollInfo.endDate,
-      allowMultipleAnswers: data.pollInfo.allowMultipleChoices,
-      createdAt: DateTimeUtils.getBerlinTime(),
-      updatedAt: DateTimeUtils.getBerlinTime(),
-      createdBy: data.authorId,
-      reactions: [],
-      views: 0,
-      votes: 0, // Gesamtzahl der Votes für diese Umfrage
-    };
+      const newsItem: Omit<PollNewsItem, 'id'> = {
+        type: 'poll',
+        question: data.content,
+        options,
+        expiresAt: data.pollInfo.endDate,
+        allowMultipleAnswers: data.pollInfo.allowMultipleChoices,
+        createdAt: DateTimeUtils.getBerlinTime(),
+        updatedAt: DateTimeUtils.getBerlinTime(),
+        createdBy: data.authorId,
+        reactions: [],
+        views: 0,
+        votes: 0,
+      };
 
-    return this.saveNewsItem(newsItem) as Promise<PollNewsItem>;
+      return this.saveNewsItem(newsItem) as Promise<PollNewsItem>;
+    } catch (error) {
+      this.logger.error(`Error creating poll news: ${error.message}`);
+      throw error;
+    }
   }
 
   private async saveNewsItem(newsItem: Omit<NewsItem, 'id'>): Promise<NewsItem> {
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = await addDoc(collection(db, this.collectionName), newsItem);
+    try {
+      const db = this.firebaseService.getFirestore();
+      const docRef = await db.collection(this.collectionName).add(this.removeUndefined(newsItem));
 
-    return {
-      id: docRef.id,
-      ...newsItem,
-    } as NewsItem;
+      return {
+        id: docRef.id,
+        ...newsItem,
+      } as NewsItem;
+    } catch (error) {
+      this.logger.error(`Error saving news item: ${error.message}`);
+      throw error;
+    }
   }
 
   public async update(id: string, data: Partial<NewsItem>): Promise<NewsItem> {
-    this.logger.debug(`Updating news item ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, this.collectionName, id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Updating news item ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collectionName).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('News item not found');
+      if (!doc.exists) {
+        throw new NotFoundException('News item not found');
+      }
+
+      const updateData = {
+        ...data,
+        updatedAt: DateTimeUtils.getBerlinTime(),
+      };
+
+      await db.collection(this.collectionName).doc(id).update(this.removeUndefined(updateData));
+
+      const updatedDoc = await db.collection(this.collectionName).doc(id).get();
+      return {
+        id: updatedDoc.id,
+        ...updatedDoc.data(),
+      } as NewsItem;
+    } catch (error) {
+      this.logger.error(`Error updating news item ${id}: ${error.message}`);
+      throw error;
     }
-
-    const updateData = {
-      ...data,
-      updatedAt: DateTimeUtils.getBerlinTime(),
-    };
-
-    await updateDoc(docRef, updateData);
-
-    const updatedDoc = await getDoc(docRef);
-    return {
-      id: updatedDoc.id,
-      ...updatedDoc.data(),
-    } as NewsItem;
   }
 
   public async delete(id: string): Promise<void> {
-    this.logger.debug(`Deleting news item ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, this.collectionName, id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Deleting news item ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collectionName).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('News item not found');
+      if (!doc.exists) {
+        throw new NotFoundException('News item not found');
+      }
+
+      await db.collection(this.collectionName).doc(id).delete();
+    } catch (error) {
+      this.logger.error(`Error deleting news item ${id}: ${error.message}`);
+      throw error;
     }
-
-    await deleteDoc(docRef);
   }
 
   public async postReaction(
     newsId: string,
     createReactionDto: CreateReactionDto,
   ): Promise<NewsItem> {
-    this.logger.debug(
-      `Adding reaction ${createReactionDto.reactionType} for news item ${newsId} by user ${createReactionDto.userId}`,
-    );
-    const db = this.firebaseService.getClientFirestore();
-    const newsRef = doc(db, this.collectionName, newsId);
-
     try {
+      this.logger.debug(
+        `Adding reaction ${createReactionDto.reactionType} for news item ${newsId} by user ${createReactionDto.userId}`,
+      );
+      const db = this.firebaseService.getFirestore();
+      const newsRef = db.collection(this.collectionName).doc(newsId);
+
       let updatedNews: NewsItem;
 
-      await runTransaction(db, async transaction => {
+      await db.runTransaction(async transaction => {
         const newsDoc = await transaction.get(newsRef);
 
-        if (!newsDoc.exists()) {
+        if (!newsDoc.exists) {
           throw new NotFoundException(`News item ${newsId} not found`);
         }
 
         const newsData = newsDoc.data() as NewsItem;
         const reactions = newsData.reactions || [];
 
-        // Check if user already reacted
         const existingReactionIndex = reactions.findIndex(
           reaction => reaction.userId === createReactionDto.userId,
         );
@@ -279,14 +309,12 @@ export class NewsService {
         let updatedReactions: Reaction[];
 
         if (existingReactionIndex >= 0) {
-          // If the same reaction type, remove it (toggle off)
           if (reactions[existingReactionIndex].type === createReactionDto.reactionType) {
             updatedReactions = [
               ...reactions.slice(0, existingReactionIndex),
               ...reactions.slice(existingReactionIndex + 1),
             ];
           } else {
-            // If different reaction type, update it
             const updatedReaction: Reaction = {
               userId: createReactionDto.userId,
               type: createReactionDto.reactionType,
@@ -299,7 +327,6 @@ export class NewsService {
             ];
           }
         } else {
-          // Add new reaction
           updatedReactions = [
             ...reactions,
             {
@@ -315,13 +342,12 @@ export class NewsService {
         });
       });
 
-      const updatedNewsDoc = await getDoc(newsRef);
+      const updatedNewsDoc = await newsRef.get();
       updatedNews = {
         id: updatedNewsDoc.id,
         ...updatedNewsDoc.data(),
       } as NewsItem;
 
-      // Add author info
       const enrichedNews = await this.populateAuthorInfo([updatedNews]);
       return enrichedNews[0];
     } catch (error) {
@@ -331,19 +357,19 @@ export class NewsService {
   }
 
   public async votePoll(newsId: string, voteData: VotePollDto): Promise<PollNewsItem> {
-    this.logger.debug(
-      `User ${voteData.userId} voting on poll ${newsId} for option: ${voteData.optionId}`,
-    );
-    const db = this.firebaseService.getClientFirestore();
-    const newsRef = doc(db, this.collectionName, newsId);
-
     try {
+      this.logger.debug(
+        `User ${voteData.userId} voting on poll ${newsId} for option: ${voteData.optionId}`,
+      );
+      const db = this.firebaseService.getFirestore();
+      const newsRef = db.collection(this.collectionName).doc(newsId);
+
       let updatedPoll: PollNewsItem;
 
-      await runTransaction(db, async transaction => {
+      await db.runTransaction(async transaction => {
         const newsDoc = await transaction.get(newsRef);
 
-        if (!newsDoc.exists()) {
+        if (!newsDoc.exists) {
           throw new NotFoundException(`News item ${newsId} not found`);
         }
 
@@ -353,18 +379,15 @@ export class NewsService {
           throw new BadRequestException('News item is not a poll');
         }
 
-        // Check if poll has expired
         if (newsData.expiresAt && new Date(newsData.expiresAt) < new Date()) {
           throw new BadRequestException('Poll has expired');
         }
 
-        // Validate that all optionIds exist
         const option = newsData.options.find(opt => opt.id === voteData.optionId);
         if (!option) {
           throw new BadRequestException(`Option with ID ${voteData.optionId} not found`);
         }
 
-        // First, remove user from all options
         let updatedOptions = newsData.options.map(option => {
           if (option.voters.includes(voteData.userId)) {
             return {
@@ -375,7 +398,6 @@ export class NewsService {
           return option;
         });
 
-        // Then add the user's votes to the selected options
         updatedOptions = updatedOptions.map(option => {
           if (option.id === voteData.optionId) {
             return {
@@ -386,7 +408,6 @@ export class NewsService {
           return option;
         });
 
-        // Berechne die Gesamtzahl der Stimmen neu
         const totalVotes = updatedOptions.reduce((sum, option) => sum + option.voters.length, 0);
 
         transaction.update(newsRef, {
@@ -396,7 +417,7 @@ export class NewsService {
         });
       });
 
-      const updatedNewsDoc = await getDoc(newsRef);
+      const updatedNewsDoc = await newsRef.get();
       updatedPoll = {
         id: updatedNewsDoc.id,
         ...updatedNewsDoc.data(),
@@ -410,15 +431,15 @@ export class NewsService {
   }
 
   public async incrementViewCount(newsId: string): Promise<void> {
-    this.logger.debug(`Incrementing view count for news ${newsId}`);
-    const db = this.firebaseService.getClientFirestore();
-    const newsRef = doc(db, this.collectionName, newsId);
-
     try {
-      await runTransaction(db, async transaction => {
+      this.logger.debug(`Incrementing view count for news ${newsId}`);
+      const db = this.firebaseService.getFirestore();
+      const newsRef = db.collection(this.collectionName).doc(newsId);
+
+      await db.runTransaction(async transaction => {
         const newsDoc = await transaction.get(newsRef);
 
-        if (!newsDoc.exists()) {
+        if (!newsDoc.exists) {
           throw new NotFoundException(`News item ${newsId} not found`);
         }
 

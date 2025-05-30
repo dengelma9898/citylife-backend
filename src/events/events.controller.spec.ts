@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
+import { EventScraperService } from './event-scraper.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
@@ -11,6 +12,7 @@ import { Event } from './interfaces/event.interface';
 describe('EventsController', () => {
   let controller: EventsController;
   let eventsService: EventsService;
+  let eventScraperService: EventScraperService;
   let firebaseStorageService: FirebaseStorageService;
   let usersService: UsersService;
   let businessesService: BusinessesService;
@@ -22,6 +24,11 @@ describe('EventsController', () => {
     update: jest.fn(),
     delete: jest.fn(),
     getByIds: jest.fn(),
+    importEventsFromEventFinder: jest.fn().mockResolvedValue([]),
+  };
+
+  const mockEventScraperService = {
+    scrapeEventFinder: jest.fn().mockResolvedValue([]),
   };
 
   const mockFirebaseStorageService = {
@@ -40,37 +47,19 @@ describe('EventsController', () => {
   };
 
   const mockEvent: Event = {
-    id: 'event1',
+    id: '1',
     title: 'Test Event',
     description: 'Test Description',
     location: {
       address: 'Test Address',
-      latitude: 52.520008,
-      longitude: 13.404954,
+      latitude: 0,
+      longitude: 0,
     },
-    imageUrls: [],
-    titleImageUrl: '',
-    ticketsNeeded: false,
-    price: 0,
-    categoryId: 'category1',
-    contactEmail: 'test@example.com',
-    contactPhone: '',
-    website: '',
-    socialMedia: {
-      instagram: '',
-      facebook: '',
-      tiktok: '',
-    },
-    isPromoted: false,
-    dailyTimeSlots: [
-      {
-        date: '2024-03-20',
-        from: '10:00',
-        to: '18:00',
-      },
-    ],
-    createdAt: '2024-03-20T10:00:00.000Z',
-    updatedAt: '2024-03-20T10:00:00.000Z',
+    startDate: '2024-03-20',
+    endDate: '2024-03-20',
+    categoryId: 'default',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 
   beforeEach(async () => {
@@ -80,6 +69,10 @@ describe('EventsController', () => {
         {
           provide: EventsService,
           useValue: mockEventsService,
+        },
+        {
+          provide: EventScraperService,
+          useValue: mockEventScraperService,
         },
         {
           provide: FirebaseStorageService,
@@ -98,6 +91,7 @@ describe('EventsController', () => {
 
     controller = module.get<EventsController>(EventsController);
     eventsService = module.get<EventsService>(EventsService);
+    eventScraperService = module.get<EventScraperService>(EventScraperService);
     firebaseStorageService = module.get<FirebaseStorageService>(FirebaseStorageService);
     usersService = module.get<UsersService>(UsersService);
     businessesService = module.get<BusinessesService>(BusinessesService);
@@ -447,6 +441,21 @@ describe('EventsController', () => {
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
       expect(mockEventsService.getByIds).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getEventsFromEventFinder', () => {
+    it('should return events from EventFinder', async () => {
+      const result = await controller.getEventsFromEventFinder('naechste-woche', null);
+      expect(result).toEqual([mockEvent]);
+      expect(eventsService.importEventsFromEventFinder).toHaveBeenCalledWith('naechste-woche', null);
+    });
+
+    it('should use custom timeFrame when provided', async () => {
+      const customTimeFrame = 'dieses-wochenende';
+      const result = await controller.getEventsFromEventFinder(customTimeFrame, null);
+      expect(result).toEqual([mockEvent]);
+      expect(eventsService.importEventsFromEventFinder).toHaveBeenCalledWith(customTimeFrame);
     });
   });
 });

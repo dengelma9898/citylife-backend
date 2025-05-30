@@ -39,8 +39,8 @@ export class FirebaseChatroomRepository implements ChatroomRepository {
 
   async findAll(): Promise<Chatroom[]> {
     try {
-      const snapshot = await this.firebaseService.getFirestore().collection(this.collection).get();
-
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.collection).get();
       return snapshot.docs.map(doc => Chatroom.fromProps(this.toEntityProps(doc.data(), doc.id)));
     } catch (error) {
       this.logger.error(`Error finding all chatrooms: ${error.message}`);
@@ -50,11 +50,8 @@ export class FirebaseChatroomRepository implements ChatroomRepository {
 
   async findById(id: string): Promise<Chatroom | null> {
     try {
-      const doc = await this.firebaseService
-        .getFirestore()
-        .collection(this.collection)
-        .doc(id)
-        .get();
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collection).doc(id).get();
 
       if (!doc.exists) return null;
 
@@ -67,14 +64,11 @@ export class FirebaseChatroomRepository implements ChatroomRepository {
 
   async create(data: Omit<Chatroom, 'id' | 'createdAt' | 'updatedAt'>): Promise<Chatroom> {
     try {
+      const db = this.firebaseService.getFirestore();
       const chatroom = Chatroom.create(data);
       const plainData = this.toPlainObject(chatroom);
 
-      await this.firebaseService
-        .getFirestore()
-        .collection(this.collection)
-        .doc(chatroom.id)
-        .set(plainData);
+      await db.collection(this.collection).doc(chatroom.id).set(plainData);
 
       return chatroom;
     } catch (error) {
@@ -88,17 +82,14 @@ export class FirebaseChatroomRepository implements ChatroomRepository {
     data: Partial<Omit<Chatroom, 'id' | 'createdAt'>>,
   ): Promise<Chatroom | null> {
     try {
+      const db = this.firebaseService.getFirestore();
       const existing = await this.findById(id);
       if (!existing) return null;
 
       const updated = existing.update(data);
       const plainData = this.toPlainObject(updated);
 
-      await this.firebaseService
-        .getFirestore()
-        .collection(this.collection)
-        .doc(id)
-        .update(plainData);
+      await db.collection(this.collection).doc(id).update(plainData);
 
       return updated;
     } catch (error) {
@@ -109,7 +100,8 @@ export class FirebaseChatroomRepository implements ChatroomRepository {
 
   async delete(id: string): Promise<void> {
     try {
-      await this.firebaseService.getFirestore().collection(this.collection).doc(id).delete();
+      const db = this.firebaseService.getFirestore();
+      await db.collection(this.collection).doc(id).delete();
     } catch (error) {
       this.logger.error(`Error deleting chatroom ${id}: ${error.message}`);
       throw error;
@@ -118,8 +110,8 @@ export class FirebaseChatroomRepository implements ChatroomRepository {
 
   async findByParticipant(userId: string): Promise<Chatroom[]> {
     try {
-      const snapshot = await this.firebaseService
-        .getFirestore()
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db
         .collection(this.collection)
         .where('participants', 'array-contains', userId)
         .get();

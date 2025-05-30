@@ -33,6 +33,8 @@ import { BusinessStatus } from '../businesses/interfaces/business.interface';
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
+  private readonly usersCollection = 'users';
+  private readonly businessUsersCollection = 'business_users';
 
   constructor(
     @Inject(forwardRef(() => EventsService))
@@ -42,218 +44,275 @@ export class UsersService {
     private readonly firebaseService: FirebaseService,
   ) {}
 
+  private removeUndefined(obj: any): any {
+    if (obj === null || obj === undefined) return null;
+    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
+    if (typeof obj === 'object') {
+      const result: any = {};
+      for (const key in obj) {
+        result[key] = this.removeUndefined(obj[key]);
+      }
+      return result;
+    }
+    return obj;
+  }
+
   public async getAll(): Promise<UserProfile[]> {
-    const db = this.firebaseService.getClientFirestore();
-    const usersCol = collection(db, 'users');
-    const snapshot = await getDocs(usersCol);
-    return snapshot.docs.map(doc => doc.data() as UserProfile);
+    try {
+      this.logger.debug('Getting all users');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.usersCollection).get();
+      return snapshot.docs.map(doc => doc.data() as UserProfile);
+    } catch (error) {
+      this.logger.error(`Error getting all users: ${error.message}`);
+      throw error;
+    }
   }
 
   public async getBusinessUsersNeedsReview(): Promise<
     (BusinessUser & { businessNames: string[] })[]
   > {
-    this.logger.debug('Getting business users that need review');
-    const db = this.firebaseService.getClientFirestore();
-    const businessUsersCol = collection(db, 'business_users');
-    const q = query(
-      businessUsersCol,
-      where('needsReview', '==', true),
-      where('isDeleted', '==', false),
-    );
-    const snapshot = await getDocs(q);
+    try {
+      this.logger.debug('Getting business users that need review');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.businessUsersCollection)
+        .where('needsReview', '==', true)
+        .where('isDeleted', '==', false)
+        .get();
 
-    const businessUsers = snapshot.docs.map(
-      doc =>
-        ({
-          id: doc.id,
-          ...doc.data(),
-        }) as BusinessUser,
-    );
+      const businessUsers = snapshot.docs.map(
+        doc =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          }) as BusinessUser,
+      );
 
-    // Für jeden BusinessUser die Business-Namen laden
-    const businessUsersWithNames = await Promise.all(
-      businessUsers.map(async user => {
-        const businessNames = await Promise.all(
-          user.businessIds.map(async businessId => {
-            const business = await this.businessesService.getById(businessId);
-            return business?.name || 'Unbekanntes Business';
-          }),
-        );
+      const businessUsersWithNames = await Promise.all(
+        businessUsers.map(async user => {
+          const businessNames = await Promise.all(
+            user.businessIds.map(async businessId => {
+              const business = await this.businessesService.getById(businessId);
+              return business?.name || 'Unbekanntes Business';
+            }),
+          );
 
-        return {
-          ...user,
-          businessNames,
-        };
-      }),
-    );
+          return {
+            ...user,
+            businessNames,
+          };
+        }),
+      );
 
-    return businessUsersWithNames;
+      return businessUsersWithNames;
+    } catch (error) {
+      this.logger.error(`Error getting business users that need review: ${error.message}`);
+      throw error;
+    }
   }
 
   public async getBusinessUsersNeedsReviewCount(): Promise<number> {
-    this.logger.debug('Getting count of business users that need review');
-    const db = this.firebaseService.getClientFirestore();
-    const businessUsersCol = collection(db, 'business_users');
-    const snapshot = await getDocs(businessUsersCol);
+    try {
+      this.logger.debug('Getting count of business users that need review');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.businessUsersCollection)
+        .where('needsReview', '==', true)
+        .where('isDeleted', '==', false)
+        .get();
 
-    return snapshot.docs.filter(doc => {
-      const data = doc.data();
-      return data.needsReview === true && !data.isDeleted;
-    }).length;
+      return snapshot.docs.length;
+    } catch (error) {
+      this.logger.error(`Error getting count of business users that need review: ${error.message}`);
+      throw error;
+    }
   }
 
   public async getById(id: string): Promise<UserProfile | BusinessUser | null> {
-    const userProfile = await this.getUserProfile(id);
-    if (userProfile) return userProfile;
+    try {
+      const userProfile = await this.getUserProfile(id);
+      if (userProfile) return userProfile;
 
-    const businessUser = await this.getBusinessUser(id);
-    if (businessUser) return businessUser;
+      const businessUser = await this.getBusinessUser(id);
+      if (businessUser) return businessUser;
 
-    this.logger.warn(`User ${id} not found in any collection`);
-    return null;
+      this.logger.warn(`User ${id} not found in any collection`);
+      return null;
+    } catch (error) {
+      this.logger.error(`Error getting user by id ${id}: ${error.message}`);
+      throw error;
+    }
   }
 
   public async getUserProfile(id: string): Promise<UserProfile | null> {
-    this.logger.debug(`Getting user profile for id: ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const userDocRef = doc(db, 'users', id);
-    const userDocSnap = await getDoc(userDocRef);
+    try {
+      this.logger.debug(`Getting user profile for id: ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.usersCollection).doc(id).get();
 
-    if (userDocSnap.exists()) {
-      this.logger.debug('Found user in users collection');
-      return userDocSnap.data() as UserProfile;
+      if (doc.exists) {
+        this.logger.debug('Found user in users collection');
+        return doc.data() as UserProfile;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(`Error getting user profile for id ${id}: ${error.message}`);
+      throw error;
     }
-
-    return null;
   }
 
   public async getBusinessUser(id: string): Promise<BusinessUser | null> {
-    this.logger.debug(`Getting business user for id: ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const businessUserDocRef = doc(db, 'business_users', id);
-    const businessUserDocSnap = await getDoc(businessUserDocRef);
+    try {
+      this.logger.debug(`Getting business user for id: ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.businessUsersCollection).doc(id).get();
 
-    if (businessUserDocSnap.exists()) {
-      this.logger.debug('Found user in business_users collection');
-      return {
-        id: businessUserDocSnap.id,
-        ...businessUserDocSnap.data(),
-      } as BusinessUser;
+      if (doc.exists) {
+        this.logger.debug('Found user in business_users collection');
+        return {
+          id: doc.id,
+          ...doc.data(),
+        } as BusinessUser;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(`Error getting business user for id ${id}: ${error.message}`);
+      throw error;
     }
-
-    return null;
   }
 
   public async createUserProfile(id: string, profile: CreateUserProfileDto): Promise<UserProfile> {
-    this.logger.debug(`Creating user profile for id: ${id}`);
-    const userProfile: UserProfile = {
-      ...profile,
-      userType: UserType.USER,
-      managementId: uuidv4(),
-      customerId: `NSP-${id}`,
-      memberSince: `${new Date().getFullYear()}-${new Date().getMonth() + 1}`,
-      businessHistory: [],
-    };
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'users', id);
-    await setDoc(docRef, userProfile);
+    try {
+      this.logger.debug(`Creating user profile for id: ${id}`);
+      const userProfile: UserProfile = {
+        ...profile,
+        userType: UserType.USER,
+        managementId: uuidv4(),
+        customerId: `NSP-${id}`,
+        memberSince: `${new Date().getFullYear()}-${new Date().getMonth() + 1}`,
+        businessHistory: [],
+      };
 
-    return userProfile;
+      const db = this.firebaseService.getFirestore();
+      await db.collection(this.usersCollection).doc(id).set(this.removeUndefined(userProfile));
+
+      return userProfile;
+    } catch (error) {
+      this.logger.error(`Error creating user profile for id ${id}: ${error.message}`);
+      throw error;
+    }
   }
 
   public async update(id: string, profile: Partial<UserProfile>): Promise<UserProfile> {
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'users', id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Updating user profile for id: ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.usersCollection).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('User not found');
+      if (!doc.exists) {
+        throw new NotFoundException('User not found');
+      }
+
+      await db.collection(this.usersCollection).doc(id).update(this.removeUndefined(profile));
+
+      const updatedDoc = await db.collection(this.usersCollection).doc(id).get();
+      return updatedDoc.data() as UserProfile;
+    } catch (error) {
+      this.logger.error(`Error updating user profile for id ${id}: ${error.message}`);
+      throw error;
     }
-
-    await updateDoc(docRef, profile);
-
-    const updatedDoc = await getDoc(docRef);
-    return updatedDoc.data() as UserProfile;
   }
 
   public async delete(id: string): Promise<void> {
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'users', id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Deleting user profile for id: ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.usersCollection).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('User not found');
+      if (!doc.exists) {
+        throw new NotFoundException('User not found');
+      }
+
+      await db.collection(this.usersCollection).doc(id).delete();
+    } catch (error) {
+      this.logger.error(`Error deleting user profile for id ${id}: ${error.message}`);
+      throw error;
     }
-
-    await deleteDoc(docRef);
   }
 
   public async createBusinessUser(data: CreateBusinessUserDto): Promise<BusinessUser> {
-    this.logger.debug('Creating business user');
-    const db = this.firebaseService.getClientFirestore();
+    try {
+      this.logger.debug('Creating business user');
+      const db = this.firebaseService.getFirestore();
 
-    const userData: Omit<BusinessUser, 'id'> = {
-      email: data.email,
-      businessIds: [data.businessId],
-      createdAt: DateTimeUtils.getBerlinTime(),
-      updatedAt: DateTimeUtils.getBerlinTime(),
-      isDeleted: false,
-      needsReview: data.needsReview,
-    };
+      const userData: Omit<BusinessUser, 'id'> = {
+        email: data.email,
+        businessIds: [data.businessId],
+        createdAt: DateTimeUtils.getBerlinTime(),
+        updatedAt: DateTimeUtils.getBerlinTime(),
+        isDeleted: false,
+        needsReview: data.needsReview,
+      };
 
-    const docRef = doc(db, 'business_users', data.userId);
-    await setDoc(docRef, userData);
+      await db.collection(this.businessUsersCollection).doc(data.userId).set(this.removeUndefined(userData));
 
-    return {
-      id: data.userId,
-      ...userData,
-    };
+      return {
+        id: data.userId,
+        ...userData,
+      };
+    } catch (error) {
+      this.logger.error(`Error creating business user: ${error.message}`);
+      throw error;
+    }
   }
 
   public async updateBusinessUser(id: string, data: Partial<BusinessUser>): Promise<BusinessUser> {
-    this.logger.debug(`Updating business user ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'business_users', id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Updating business user ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.businessUsersCollection).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Business user not found');
+      if (!doc.exists) {
+        throw new NotFoundException('Business user not found');
+      }
+
+      const updateData = {
+        ...data,
+        updatedAt: DateTimeUtils.getBerlinTime(),
+      };
+
+      await db.collection(this.businessUsersCollection).doc(id).update(this.removeUndefined(updateData));
+
+      const businessUser = await this.getBusinessUser(id);
+      if (!businessUser) {
+        throw new NotFoundException('Business user not found');
+      }
+      return businessUser;
+    } catch (error) {
+      this.logger.error(`Error updating business user ${id}: ${error.message}`);
+      throw error;
     }
-
-    const updateData = {
-      ...data,
-      updatedAt: DateTimeUtils.getBerlinTime(),
-    };
-
-    await updateDoc(docRef, updateData);
-    const businessUser = await this.getBusinessUser(id);
-    if (!businessUser) {
-      throw new NotFoundException('Business user not found');
-    }
-    return businessUser;
   }
 
   public async deleteBusinessUser(id: string): Promise<void> {
-    this.logger.debug(`Deleting business user ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'business_users', id);
-    const docSnap = await getDoc(docRef);
-
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Business user not found');
-    }
-
-    const businessUser = docSnap.data() as BusinessUser;
-
     try {
-      // Führe die Aktualisierungen in einer Transaktion durch
-      await runTransaction(db, async transaction => {
-        // Setze alle zugehörigen Businesses auf INACTIVE
+      this.logger.debug(`Deleting business user ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.businessUsersCollection).doc(id).get();
+
+      if (!doc.exists) {
+        throw new NotFoundException('Business user not found');
+      }
+
+      const businessUser = doc.data() as BusinessUser;
+
+      await db.runTransaction(async transaction => {
         for (const businessId of businessUser.businessIds) {
-          const businessRef = doc(db, 'businesses', businessId);
+          const businessRef = db.collection('businesses').doc(businessId);
           const businessDoc = await transaction.get(businessRef);
 
-          if (businessDoc.exists()) {
+          if (businessDoc.exists) {
             transaction.update(businessRef, {
               status: BusinessStatus.INACTIVE,
               updatedAt: DateTimeUtils.getBerlinTime(),
@@ -261,8 +320,7 @@ export class UsersService {
           }
         }
 
-        // Lösche den Business-User
-        transaction.delete(docRef);
+        transaction.delete(db.collection(this.businessUsersCollection).doc(id));
       });
 
       this.logger.debug(
@@ -275,187 +333,167 @@ export class UsersService {
   }
 
   public async toggleFavoriteEvent(userId: string, eventId: string): Promise<boolean> {
-    this.logger.debug(`Toggling favorite event ${eventId} for user ${userId}`);
-    const userProfile = await this.getUserProfile(userId);
-
-    if (!userProfile) {
-      throw new NotFoundException('User profile not found');
-    }
-
-    const favoriteEventIds = userProfile.favoriteEventIds || [];
-    let updatedFavorites: string[];
-    let isAdded: boolean;
-
-    if (favoriteEventIds.includes(eventId)) {
-      // Remove from favorites
-      updatedFavorites = favoriteEventIds.filter(id => id !== eventId);
-      isAdded = false;
-    } else {
-      // Add to favorites
-      updatedFavorites = [...favoriteEventIds, eventId];
-      isAdded = true;
-    }
-
-    // Update the user profile
-    await this.update(userId, { favoriteEventIds: updatedFavorites });
-
-    // Update the event's favorite count
     try {
-      await this.eventsService.updateFavoriteCount(eventId, isAdded);
-    } catch (error) {
-      this.logger.error(`Error updating favorite count: ${error.message}`);
-      // We don't throw here to prevent affecting the user experience
-      // The user's favorite list was already updated
-    }
+      this.logger.debug(`Toggling favorite event ${eventId} for user ${userId}`);
+      const userProfile = await this.getUserProfile(userId);
 
-    return isAdded;
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found');
+      }
+
+      const favoriteEventIds = userProfile.favoriteEventIds || [];
+      let updatedFavorites: string[];
+      let isAdded: boolean;
+
+      if (favoriteEventIds.includes(eventId)) {
+        updatedFavorites = favoriteEventIds.filter(id => id !== eventId);
+        isAdded = false;
+      } else {
+        updatedFavorites = [...favoriteEventIds, eventId];
+        isAdded = true;
+      }
+
+      await this.update(userId, { favoriteEventIds: updatedFavorites });
+
+      try {
+        await this.eventsService.updateFavoriteCount(eventId, isAdded);
+      } catch (error) {
+        this.logger.error(`Error updating favorite count: ${error.message}`);
+      }
+
+      return isAdded;
+    } catch (error) {
+      this.logger.error(`Error toggling favorite event for user ${userId}: ${error.message}`);
+      throw error;
+    }
   }
 
   public async toggleFavoriteBusiness(userId: string, businessId: string): Promise<boolean> {
-    this.logger.debug(`Toggling favorite business ${businessId} for user ${userId}`);
-    const userProfile = await this.getUserProfile(userId);
+    try {
+      this.logger.debug(`Toggling favorite business ${businessId} for user ${userId}`);
+      const userProfile = await this.getUserProfile(userId);
 
-    if (!userProfile) {
-      throw new NotFoundException('User profile not found');
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found');
+      }
+
+      const favoriteBusinessIds = userProfile.favoriteBusinessIds || [];
+      let updatedFavorites: string[];
+      let isAdded: boolean;
+
+      if (favoriteBusinessIds.includes(businessId)) {
+        updatedFavorites = favoriteBusinessIds.filter(id => id !== businessId);
+        isAdded = false;
+      } else {
+        updatedFavorites = [...favoriteBusinessIds, businessId];
+        isAdded = true;
+      }
+
+      await this.update(userId, { favoriteBusinessIds: updatedFavorites });
+      return isAdded;
+    } catch (error) {
+      this.logger.error(`Error toggling favorite business for user ${userId}: ${error.message}`);
+      throw error;
     }
-
-    const favoriteBusinessIds = userProfile.favoriteBusinessIds || [];
-    let updatedFavorites: string[];
-    let isAdded: boolean;
-
-    if (favoriteBusinessIds.includes(businessId)) {
-      // Remove from favorites
-      updatedFavorites = favoriteBusinessIds.filter(id => id !== businessId);
-      isAdded = false;
-    } else {
-      // Add to favorites
-      updatedFavorites = [...favoriteBusinessIds, businessId];
-      isAdded = true;
-    }
-
-    await this.update(userId, { favoriteBusinessIds: updatedFavorites });
-    return isAdded;
   }
 
-  /**
-   * Fügt eine Business-ID zur Liste der businessIds eines BusinessUsers hinzu
-   *
-   * @param userId - Die ID des BusinessUsers
-   * @param businessId - Die ID des Businesses, das hinzugefügt werden soll
-   * @returns Der aktualisierte BusinessUser
-   */
   public async addBusinessToUser(userId: string, businessId: string): Promise<BusinessUser> {
-    this.logger.debug(`Adding business ${businessId} to user ${userId}`);
-    const businessUser = await this.getBusinessUser(userId);
+    try {
+      this.logger.debug(`Adding business ${businessId} to user ${userId}`);
+      const businessUser = await this.getBusinessUser(userId);
 
-    if (!businessUser) {
-      throw new NotFoundException('Business user not found');
+      if (!businessUser) {
+        throw new NotFoundException('Business user not found');
+      }
+
+      if (businessUser.businessIds.includes(businessId)) {
+        this.logger.debug(`Business ${businessId} already in user's list`);
+        return businessUser;
+      }
+
+      const updatedBusinessIds = [...businessUser.businessIds, businessId];
+      return this.updateBusinessUser(userId, { businessIds: updatedBusinessIds });
+    } catch (error) {
+      this.logger.error(`Error adding business to user ${userId}: ${error.message}`);
+      throw error;
     }
-
-    // Überprüfen, ob die Business-ID bereits vorhanden ist
-    if (businessUser.businessIds.includes(businessId)) {
-      this.logger.debug(`Business ${businessId} already in user's list`);
-      return businessUser;
-    }
-
-    // Business-ID hinzufügen
-    const updatedBusinessIds = [...businessUser.businessIds, businessId];
-
-    // BusinessUser aktualisieren
-    return this.updateBusinessUser(userId, { businessIds: updatedBusinessIds });
   }
 
-  /**
-   * Fügt eine Event-ID zur Liste der eventIds eines BusinessUsers hinzu
-   *
-   * @param userId - Die ID des BusinessUsers
-   * @param eventId - Die ID des Events, das hinzugefügt werden soll
-   * @returns Der aktualisierte BusinessUser
-   */
   public async addEventToUser(userId: string, eventId: string): Promise<BusinessUser> {
-    this.logger.debug(`Adding event ${eventId} to user ${userId}`);
-    const businessUser = await this.getBusinessUser(userId);
+    try {
+      this.logger.debug(`Adding event ${eventId} to user ${userId}`);
+      const businessUser = await this.getBusinessUser(userId);
 
-    if (!businessUser) {
-      throw new NotFoundException('Business user not found');
+      if (!businessUser) {
+        throw new NotFoundException('Business user not found');
+      }
+
+      const currentEventIds = businessUser.eventIds || [];
+      if (currentEventIds.includes(eventId)) {
+        this.logger.debug(`Event ${eventId} already in user's list`);
+        return businessUser;
+      }
+
+      const updatedEventIds = [...currentEventIds, eventId];
+      return this.updateBusinessUser(userId, { eventIds: updatedEventIds });
+    } catch (error) {
+      this.logger.error(`Error adding event to user ${userId}: ${error.message}`);
+      throw error;
     }
-
-    // Überprüfen, ob die Event-ID bereits vorhanden ist
-    const currentEventIds = businessUser.eventIds || [];
-    if (currentEventIds.includes(eventId)) {
-      this.logger.debug(`Event ${eventId} already in user's list`);
-      return businessUser;
-    }
-
-    // Event-ID hinzufügen
-    const updatedEventIds = [...currentEventIds, eventId];
-
-    // BusinessUser aktualisieren
-    return this.updateBusinessUser(userId, { eventIds: updatedEventIds });
   }
 
   public async getAllBusinessUsers(): Promise<BusinessUser[]> {
-    this.logger.debug('Getting all business users');
-    const db = this.firebaseService.getClientFirestore();
-    const businessUsersCol = collection(db, 'business_users');
-    const snapshot = await getDocs(businessUsersCol);
+    try {
+      this.logger.debug('Getting all business users');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.businessUsersCollection).get();
 
-    return snapshot.docs.map(
-      doc =>
-        ({
-          id: doc.id,
-          ...doc.data(),
-        }) as BusinessUser,
-    );
+      return snapshot.docs.map(
+        doc =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          }) as BusinessUser,
+      );
+    } catch (error) {
+      this.logger.error(`Error getting all business users: ${error.message}`);
+      throw error;
+    }
   }
 
-  /**
-   * Fügt eine Business-ID zu einem Business-User hinzu und aktualisiert den hasAccount-Status des Businesses
-   *
-   * @param userId - Die ID des Business-Users
-   * @param businessId - Die ID des Businesses
-   * @returns Der aktualisierte Business-User
-   */
   public async addBusinessIdToUser(userId: string, businessId: string): Promise<BusinessUser> {
-    this.logger.debug(`Adding business ${businessId} to user ${userId}`);
-
-    // Prüfe, ob das Business existiert
-    const business = await this.businessesService.getById(businessId);
-    if (!business) {
-      throw new NotFoundException(`Business mit ID ${businessId} wurde nicht gefunden`);
-    }
-
-    // Prüfe, ob der Business-User existiert
-    const businessUser = await this.getBusinessUser(userId);
-    if (!businessUser) {
-      throw new NotFoundException(`Business-User mit ID ${userId} wurde nicht gefunden`);
-    }
-
-    // Prüfe, ob das Business bereits dem User zugeordnet ist
-    if (businessUser.businessIds.includes(businessId)) {
-      throw new BadRequestException(
-        `Business ${businessId} ist bereits dem User ${userId} zugeordnet`,
-      );
-    }
-
-    const db = this.firebaseService.getClientFirestore();
-
     try {
-      // Führe die Aktualisierungen in einer Transaktion durch
-      await runTransaction(db, async transaction => {
-        // Update Business-User
-        const businessUserRef = doc(db, 'business_users', userId);
+      this.logger.debug(`Adding business ${businessId} to user ${userId}`);
+
+      const business = await this.businessesService.getById(businessId);
+      if (!business) {
+        throw new NotFoundException(`Business mit ID ${businessId} wurde nicht gefunden`);
+      }
+
+      const businessUser = await this.getBusinessUser(userId);
+      if (!businessUser) {
+        throw new NotFoundException(`Business-User mit ID ${userId} wurde nicht gefunden`);
+      }
+
+      if (businessUser.businessIds.includes(businessId)) {
+        throw new BadRequestException(
+          `Business ${businessId} ist bereits dem User ${userId} zugeordnet`,
+        );
+      }
+
+      const db = this.firebaseService.getFirestore();
+
+      await db.runTransaction(async transaction => {
+        const businessUserRef = db.collection(this.businessUsersCollection).doc(userId);
         const updatedBusinessIds = [...businessUser.businessIds, businessId];
         transaction.update(businessUserRef, {
           businessIds: updatedBusinessIds,
           updatedAt: DateTimeUtils.getBerlinTime(),
         });
 
-        // Update Business hasAccount Status
         await this.businessesService.updateHasAccount(businessId, true);
       });
 
-      // Hole den aktualisierten Business-User
       const updatedBusinessUser = await this.getBusinessUser(userId);
       if (!updatedBusinessUser) {
         throw new Error('Business-User konnte nach dem Update nicht gefunden werden');
@@ -466,5 +504,42 @@ export class UsersService {
       this.logger.error(`Fehler beim Hinzufügen des Businesses: ${error.message}`);
       throw new Error('Fehler beim Hinzufügen des Businesses zum User');
     }
+  }
+
+  public async getUserProfilesByIds(ids: string[]): Promise<Map<string, UserProfile>> {
+    try {
+      this.logger.debug(`Getting user profiles for ids: ${ids.join(', ')}`);
+      if (ids.length === 0) {
+        return new Map();
+      }
+
+      const db = this.firebaseService.getFirestore();
+      const uniqueIds = [...new Set(ids)];
+      const chunks = this.chunkArray(uniqueIds, 10); // Firestore erlaubt maximal 10 Dokumente pro Abfrage
+      const userProfiles = new Map<string, UserProfile>();
+
+      for (const chunk of chunks) {
+        const snapshot = await db.collection(this.usersCollection)
+          .where('__name__', 'in', chunk)
+          .get();
+
+        snapshot.docs.forEach(doc => {
+          userProfiles.set(doc.id, doc.data() as UserProfile);
+        });
+      }
+
+      return userProfiles;
+    } catch (error) {
+      this.logger.error(`Error getting user profiles for ids: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private chunkArray<T>(array: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
   }
 }

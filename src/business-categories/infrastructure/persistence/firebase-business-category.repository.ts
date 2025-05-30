@@ -1,14 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-} from 'firebase/firestore';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import {
   BusinessCategory,
@@ -18,6 +8,9 @@ import { BusinessCategoryRepository } from '../../domain/repositories/business-c
 
 @Injectable()
 export class FirebaseBusinessCategoryRepository implements BusinessCategoryRepository {
+  private readonly logger = new Logger(FirebaseBusinessCategoryRepository.name);
+  private readonly collection = 'business_categories';
+
   constructor(private readonly firebaseService: FirebaseService) {}
 
   private removeUndefined(obj: any): any {
@@ -51,66 +44,89 @@ export class FirebaseBusinessCategoryRepository implements BusinessCategoryRepos
   }
 
   async findAll(): Promise<BusinessCategory[]> {
-    const db = this.firebaseService.getClientFirestore();
-    const categoriesCol = collection(db, 'business_categories');
-    const snapshot = await getDocs(categoriesCol);
+    try {
+      this.logger.debug('Getting all business categories');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.collection).get();
 
-    return snapshot.docs.map(doc =>
-      BusinessCategory.fromProps(this.toBusinessCategoryProps(doc.data(), doc.id)),
-    );
+      return snapshot.docs.map(doc =>
+        BusinessCategory.fromProps(this.toBusinessCategoryProps(doc.data(), doc.id)),
+      );
+    } catch (error) {
+      this.logger.error(`Error finding all business categories: ${error.message}`);
+      throw error;
+    }
   }
 
   async findById(id: string): Promise<BusinessCategory | null> {
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'business_categories', id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Getting business category ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collection).doc(id).get();
 
-    if (!docSnap.exists()) {
-      return null;
+      if (!doc.exists) {
+        return null;
+      }
+
+      return BusinessCategory.fromProps(this.toBusinessCategoryProps(doc.data(), doc.id));
+    } catch (error) {
+      this.logger.error(`Error finding business category ${id}: ${error.message}`);
+      throw error;
     }
-
-    return BusinessCategory.fromProps(this.toBusinessCategoryProps(docSnap.data(), docSnap.id));
   }
 
   async create(category: BusinessCategory): Promise<BusinessCategory> {
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = await addDoc(
-      collection(db, 'business_categories'),
-      this.toPlainObject(category),
-    );
+    try {
+      this.logger.debug('Creating new business category');
+      const db = this.firebaseService.getFirestore();
+      const docRef = await db.collection(this.collection).add(this.toPlainObject(category));
 
-    return BusinessCategory.fromProps({
-      ...category.toJSON(),
-      id: docRef.id,
-    });
+      return BusinessCategory.fromProps({
+        ...category.toJSON(),
+        id: docRef.id,
+      });
+    } catch (error) {
+      this.logger.error(`Error creating business category: ${error.message}`);
+      throw error;
+    }
   }
 
   async update(id: string, category: BusinessCategory): Promise<BusinessCategory> {
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'business_categories', id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Updating business category ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collection).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Business category not found');
+      if (!doc.exists) {
+        throw new NotFoundException('Business category not found');
+      }
+
+      await db.collection(this.collection).doc(id).update(this.toPlainObject(category));
+
+      return BusinessCategory.fromProps({
+        ...category.toJSON(),
+        id,
+      });
+    } catch (error) {
+      this.logger.error(`Error updating business category ${id}: ${error.message}`);
+      throw error;
     }
-
-    await updateDoc(docRef, this.toPlainObject(category));
-
-    return BusinessCategory.fromProps({
-      ...category.toJSON(),
-      id,
-    });
   }
 
   async delete(id: string): Promise<void> {
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'business_categories', id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Deleting business category ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collection).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Business category not found');
+      if (!doc.exists) {
+        throw new NotFoundException('Business category not found');
+      }
+
+      await db.collection(this.collection).doc(id).delete();
+    } catch (error) {
+      this.logger.error(`Error deleting business category ${id}: ${error.message}`);
+      throw error;
     }
-
-    await deleteDoc(docRef);
   }
 }

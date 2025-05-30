@@ -216,7 +216,6 @@ describe('UsersController', () => {
     });
 
     it('should throw BadRequestException if needsReview is not a boolean', async () => {
-      // @ts-expect-error - Testing invalid input
       await expect(controller.updateNeedsReview('business1', undefined)).rejects.toThrow(
         BadRequestException,
       );

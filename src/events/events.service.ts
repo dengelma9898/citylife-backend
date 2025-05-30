@@ -1,23 +1,33 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  runTransaction,
-} from 'firebase/firestore';
 import { Event, DailyTimeSlot } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 import { FirebaseService } from '../firebase/firebase.service';
 import { DateTimeUtils } from '../utils/date-time.utils';
+import { EventScraperService } from './event-scraper.service';
+import { EventCategory } from './enums/event-category.enum';
 
 @Injectable()
 export class EventsService {
   private readonly logger = new Logger(EventsService.name);
-  constructor(private readonly firebaseService: FirebaseService) {}
+  private readonly collection = 'events';
+
+  constructor(
+    private readonly firebaseService: FirebaseService,
+    private readonly eventScraperService: EventScraperService,
+  ) {}
+
+  private removeUndefined(obj: any): any {
+    if (obj === null || obj === undefined) return null;
+    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
+    if (typeof obj === 'object') {
+      const result: any = {};
+      for (const key in obj) {
+        result[key] = this.removeUndefined(obj[key]);
+      }
+      return result;
+    }
+    return obj;
+  }
 
   private convertDateRangeToDailyTimeSlots(
     startDate: string,
@@ -30,11 +40,9 @@ export class EventsService {
     const end = new Date(endDate);
     const timeSlots: DailyTimeSlot[] = [];
 
-    // Extrahiere die Uhrzeit aus dem Start- und Enddatum
     const startTime = startDate.split('T')[1]?.substring(0, 5) || '00:00';
     const endTime = endDate.split('T')[1]?.substring(0, 5) || '23:59';
 
-    // Erstelle einen Eintrag für jeden Tag im Zeitraum
     for (
       let currentDate = new Date(start);
       currentDate <= end;
@@ -53,11 +61,42 @@ export class EventsService {
   }
 
   public async getAll(): Promise<Event[]> {
-    this.logger.debug('Getting all events');
-    const db = this.firebaseService.getClientFirestore();
-    const eventsCol = collection(db, 'events');
-    const snapshot = await getDocs(eventsCol);
-    return snapshot.docs.map(doc => {
+    try {
+      this.logger.debug('Getting all events');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.collection).get();
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        const { startDate, endDate, ...rest } = data;
+
+        const dailyTimeSlots = this.convertDateRangeToDailyTimeSlots(
+          startDate,
+          endDate,
+          data.dailyTimeSlots,
+        );
+
+        return {
+          id: doc.id,
+          ...rest,
+          dailyTimeSlots,
+        } as Event;
+      });
+    } catch (error) {
+      this.logger.error(`Error getting all events: ${error.message}`);
+      throw error;
+    }
+  }
+
+  public async getById(id: string): Promise<Event | null> {
+    try {
+      this.logger.debug(`Getting event ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collection).doc(id).get();
+
+      if (!doc.exists) {
+        return null;
+      }
+
       const data = doc.data();
       const { startDate, endDate, ...rest } = data;
 
@@ -72,123 +111,113 @@ export class EventsService {
         ...rest,
         dailyTimeSlots,
       } as Event;
-    });
-  }
-
-  public async getById(id: string): Promise<Event | null> {
-    this.logger.debug(`Getting event ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'events', id);
-    const docSnap = await getDoc(docRef);
-
-    if (!docSnap.exists()) {
-      return null;
+    } catch (error) {
+      this.logger.error(`Error getting event ${id}: ${error.message}`);
+      throw error;
     }
-
-    const data = docSnap.data();
-    const { startDate, endDate, ...rest } = data;
-
-    const dailyTimeSlots = this.convertDateRangeToDailyTimeSlots(
-      startDate,
-      endDate,
-      data.dailyTimeSlots,
-    );
-
-    return {
-      id: docSnap.id,
-      ...rest,
-      dailyTimeSlots,
-    } as Event;
   }
 
   public async create(data: CreateEventDto): Promise<Event> {
-    this.logger.debug('Creating event');
-    const db = this.firebaseService.getClientFirestore();
+    try {
+      this.logger.debug('Creating event');
+      const db = this.firebaseService.getFirestore();
 
-    const eventData: Omit<Event, 'id'> = {
-      title: data.title,
-      description: data.description,
-      location: {
-        address: data.address,
-        latitude: data.latitude,
-        longitude: data.longitude,
-      },
-      imageUrls: [],
-      titleImageUrl: '',
-      ticketsNeeded: data.ticketsNeeded || false,
-      price: data.price || 0,
-      categoryId: data.categoryId,
-      contactEmail: data.contactEmail || '',
-      contactPhone: data.contactPhone || '',
-      website: data.website || '',
-      socialMedia: {
-        instagram: data.instagram || '',
-        facebook: data.facebook || '',
-        tiktok: data.tiktok || '',
-      },
-      isPromoted: data.isPromoted,
-      dailyTimeSlots: data.dailyTimeSlots,
-      createdAt: DateTimeUtils.getBerlinTime(),
-      updatedAt: DateTimeUtils.getBerlinTime(),
-    };
+      const eventData: Omit<Event, 'id'> = {
+        title: data.title,
+        description: data.description,
+        location: {
+          address: data.address,
+          latitude: data.latitude,
+          longitude: data.longitude,
+        },
+        imageUrls: [],
+        titleImageUrl: '',
+        ticketsNeeded: data.ticketsNeeded || false,
+        price: data.price || 0,
+        categoryId: data.categoryId,
+        contactEmail: data.contactEmail || '',
+        contactPhone: data.contactPhone || '',
+        website: data.website || '',
+        socialMedia: {
+          instagram: data.instagram || '',
+          facebook: data.facebook || '',
+          tiktok: data.tiktok || '',
+        },
+        isPromoted: data.isPromoted,
+        dailyTimeSlots: data.dailyTimeSlots,
+        createdAt: DateTimeUtils.getBerlinTime(),
+        updatedAt: DateTimeUtils.getBerlinTime(),
+      };
 
-    const docRef = await addDoc(collection(db, 'events'), eventData);
+      const docRef = await db.collection(this.collection).add(this.removeUndefined(eventData));
 
-    return {
-      id: docRef.id,
-      ...eventData,
-    };
+      return {
+        id: docRef.id,
+        ...eventData,
+      };
+    } catch (error) {
+      this.logger.error(`Error creating event: ${error.message}`);
+      throw error;
+    }
   }
 
   public async update(id: string, data: Partial<Event>): Promise<Event> {
-    this.logger.debug(`Updating event ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'events', id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Updating event ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collection).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Event not found');
+      if (!doc.exists) {
+        throw new NotFoundException('Event not found');
+      }
+
+      const updateData = {
+        ...data,
+        updatedAt: DateTimeUtils.getBerlinTime(),
+      };
+
+      await db.collection(this.collection).doc(id).update(this.removeUndefined(updateData));
+
+      const updatedDoc = await db.collection(this.collection).doc(id).get();
+      return {
+        id: updatedDoc.id,
+        ...updatedDoc.data(),
+      } as Event;
+    } catch (error) {
+      this.logger.error(`Error updating event ${id}: ${error.message}`);
+      throw error;
     }
-
-    const updateData = {
-      ...data,
-      updatedAt: DateTimeUtils.getBerlinTime(),
-    };
-
-    await updateDoc(docRef, updateData);
-
-    const updatedDoc = await getDoc(docRef);
-    return {
-      id: updatedDoc.id,
-      ...updatedDoc.data(),
-    } as Event;
   }
 
   public async delete(id: string): Promise<void> {
-    this.logger.debug(`Deleting event ${id}`);
-    const db = this.firebaseService.getClientFirestore();
-    const docRef = doc(db, 'events', id);
-    const docSnap = await getDoc(docRef);
+    try {
+      this.logger.debug(`Deleting event ${id}`);
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collection).doc(id).get();
 
-    if (!docSnap.exists()) {
-      throw new NotFoundException('Event not found');
+      if (!doc.exists) {
+        throw new NotFoundException('Event not found');
+      }
+
+      await db.collection(this.collection).doc(id).delete();
+    } catch (error) {
+      this.logger.error(`Error deleting event ${id}: ${error.message}`);
+      throw error;
     }
-
-    await deleteDoc(docRef);
   }
 
   public async updateFavoriteCount(eventId: string, increment: boolean): Promise<void> {
-    this.logger.debug(
-      `${increment ? 'Incrementing' : 'Decrementing'} favorite count for event ${eventId}`,
-    );
-    const db = this.firebaseService.getClientFirestore();
-    const eventRef = doc(db, 'events', eventId);
-
     try {
-      await runTransaction(db, async transaction => {
+      this.logger.debug(
+        `${increment ? 'Incrementing' : 'Decrementing'} favorite count for event ${eventId}`,
+      );
+      const db = this.firebaseService.getFirestore();
+      const eventRef = db.collection(this.collection).doc(eventId);
+
+      await db.runTransaction(async transaction => {
         const eventDoc = await transaction.get(eventRef);
 
-        if (!eventDoc.exists()) {
+        if (!eventDoc.exists) {
           throw new NotFoundException(`Event with ID ${eventId} not found`);
         }
 
@@ -209,25 +238,40 @@ export class EventsService {
     }
   }
 
-  /**
-   * Holt Events basierend auf einer Liste von IDs
-   *
-   * @param ids - Array von Event-IDs
-   * @returns Liste der gefundenen Events
-   */
   public async getByIds(ids: string[]): Promise<Event[]> {
-    this.logger.debug(`Getting events by IDs: ${ids.join(', ')}`);
+    try {
+      this.logger.debug(`Getting events by IDs: ${ids.join(', ')}`);
 
-    // Wenn keine IDs übergeben wurden, geben wir ein leeres Array zurück
-    if (!ids || ids.length === 0) {
-      return [];
+      if (!ids || ids.length === 0) {
+        return [];
+      }
+
+      const eventPromises = ids.map(id => this.getById(id));
+      const events = await Promise.all(eventPromises);
+
+      return events.filter((event): event is Event => event !== null);
+    } catch (error) {
+      this.logger.error(`Error getting events by IDs: ${error.message}`);
+      throw error;
     }
+  }
 
-    // Jedes Event einzeln abrufen (Firestore unterstützt kein "IN"-Query für Dokument-IDs)
-    const eventPromises = ids.map(id => this.getById(id));
-    const events = await Promise.all(eventPromises);
-
-    // Null-Werte entfernen (für den Fall, dass einige Events nicht gefunden wurden)
-    return events.filter((event): event is Event => event !== null);
+  async importEventsFromEventFinder(
+    timeFrame: string = 'naechste-woche',
+    category: EventCategory | null,
+    maxResults?: number,
+  ): Promise<Event[]> {
+    try {
+      const scrapedEvents = await this.eventScraperService.scrapeEventFinder(
+        timeFrame,
+        category,
+        maxResults,
+      );
+      this.logger.log(`${scrapedEvents.length} Events wurden erfolgreich importiert`);
+      return scrapedEvents;
+    } catch (error) {
+      this.logger.error('Fehler beim Importieren der Events:', error);
+      throw error;
+    }
   }
 }

@@ -29,12 +29,21 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      const decodedToken = await this.firebaseService.getAuth().verifyIdToken(token);
+      const decodedToken = await this.firebaseService.getAuth().verifyIdToken(token, true);
       request.user = decodedToken;
       return true;
     } catch (error) {
       this.logger.error(`Token verification failed: ${error.message}`);
-      throw new UnauthorizedException('Invalid token');
+      
+      if (error.code === 'auth/id-token-expired') {
+        throw new UnauthorizedException('Token expired. Please refresh your token.');
+      } else if (error.code === 'auth/id-token-revoked') {
+        throw new UnauthorizedException('Token has been revoked.');
+      } else if (error.code === 'auth/invalid-id-token') {
+        throw new UnauthorizedException('Invalid token. Please sign in again.');
+      }
+      
+      throw new UnauthorizedException('Authentication failed');
     }
   }
 }

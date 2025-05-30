@@ -23,6 +23,7 @@ import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
+import { EventCategory } from './enums/event-category.enum';
 
 @Controller('events')
 export class EventsController {
@@ -337,4 +338,22 @@ export class EventsController {
     // Events basierend auf den IDs im Business-Dokument abrufen
     return this.eventsService.getByIds(business.eventIds);
   }
+
+  /**
+   * Holt Events von EventFinder für einen bestimmten Zeitraum
+   * 
+   * @param timeFrame - Der Zeitraum (z.B. 'naechste-woche', 'dieses-wochenende')
+   * @returns Liste der gefundenen Events
+   */
+  @Get('scrape/eventfinder')
+  public async getEventsFromEventFinder(
+    @Query('timeFrame') timeFrame: string = 'naechste-woche',
+    @Query('categoryId') categoryId: EventCategory | null,
+    @Query('maxResults') maxResults?: number,
+  ): Promise<Event[]> {
+    this.logger.log(`GET /events/scrape/eventfinder?timeFrame=${timeFrame}&categoryId=${categoryId}&maxResults=${maxResults}`);
+    return this.eventsService.importEventsFromEventFinder(timeFrame, categoryId, maxResults);
+  }
+
+
 }
