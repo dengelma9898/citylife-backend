@@ -6,4 +6,4 @@ declare global {
       firestore?: FirebaseFirestore;
     }
   }
-} 
+}

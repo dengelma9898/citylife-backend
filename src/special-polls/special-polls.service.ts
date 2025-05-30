@@ -37,9 +37,7 @@ export class SpecialPollsService {
     try {
       this.logger.debug('Getting all special polls');
       const db = this.firebaseService.getFirestore();
-      const snapshot = await db.collection(this.collection)
-        .orderBy('createdAt', 'desc')
-        .get();
+      const snapshot = await db.collection(this.collection).orderBy('createdAt', 'desc').get();
 
       return snapshot.docs.map(
         doc =>

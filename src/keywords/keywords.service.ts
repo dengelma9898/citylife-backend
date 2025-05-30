@@ -30,10 +30,13 @@ export class KeywordsService {
       this.logger.debug('Getting all keywords');
       const db = this.firebaseService.getFirestore();
       const snapshot = await db.collection(this.collection).get();
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as Keyword));
+      return snapshot.docs.map(
+        doc =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          }) as Keyword,
+      );
     } catch (error) {
       this.logger.error(`Error getting all keywords: ${error.message}`);
       throw error;

@@ -10,9 +10,10 @@ export class EventScraperService {
   private async handleCookieBanner(page: puppeteer.Page): Promise<void> {
     try {
       this.logger.debug('Warte auf Cookie-Banner...');
-      
+
       // Warte auf den Cookie-Banner-Button
-      await page.waitForSelector('button[data-testid="uc-accept-all-button"]', { timeout: 10000 })
+      await page
+        .waitForSelector('button[data-testid="uc-accept-all-button"]', { timeout: 10000 })
         .then(async () => {
           this.logger.debug('Cookie-Banner gefunden, klicke Akzeptieren...');
           await page.click('button[data-testid="uc-accept-all-button"]');
@@ -27,13 +28,19 @@ export class EventScraperService {
     }
   }
 
-  async scrapeEventFinder(timeFrame: string = 'naechste-woche', category: EventCategory | null, maxResults?: number): Promise<Event[]> {
-    this.logger.debug(`Starte EventFinder Scraping für Zeitraum: ${timeFrame} und Kategorie: ${category} und maxResults: ${maxResults}`);
+  async scrapeEventFinder(
+    timeFrame: string = 'naechste-woche',
+    category: EventCategory | null,
+    maxResults?: number,
+  ): Promise<Event[]> {
+    this.logger.debug(
+      `Starte EventFinder Scraping für Zeitraum: ${timeFrame} und Kategorie: ${category} und maxResults: ${maxResults}`,
+    );
     let browser: puppeteer.Browser | null = null;
 
     try {
       browser = await puppeteer.launch({
-        headless: false, 
+        headless: false,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -52,10 +59,12 @@ export class EventScraperService {
       });
 
       const page = await browser.newPage();
-      
+
       // Setze mobile User-Agent
-      await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1');
-      
+      await page.setUserAgent(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+      );
+
       // Aktiviere JavaScript
       await page.setJavaScriptEnabled(true);
 
@@ -68,7 +77,8 @@ export class EventScraperService {
           isMobile: true,
           hasTouch: true,
         },
-        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+        userAgent:
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
       });
 
       const categoryParam = category ?? 'veranstaltungen';
@@ -85,29 +95,32 @@ export class EventScraperService {
       await page.waitForSelector('.card.event', { timeout: 60000 }); // 60 Sekunden Timeout
 
       // Extrahiere Event-Daten
-      const events = await page.evaluate((max) => {
+      const events = await page.evaluate(max => {
         const eventElements = document.querySelectorAll('.card.event');
-        return Array.from(eventElements).slice(0, max ?? 5).map(element => {
-          const title = element.querySelector('.titel')?.textContent?.trim() || '';
-          const dateText = element.querySelector('.datetime-mobile')?.textContent?.trim() || '';
-          const locationText = element.querySelector('.card-body-footer')?.textContent?.trim() || '';
-          const description = element.querySelector('.beschreibung')?.textContent?.trim() || '';
+        return Array.from(eventElements)
+          .slice(0, max ?? 5)
+          .map(element => {
+            const title = element.querySelector('.titel')?.textContent?.trim() || '';
+            const dateText = element.querySelector('.datetime-mobile')?.textContent?.trim() || '';
+            const locationText =
+              element.querySelector('.card-body-footer')?.textContent?.trim() || '';
+            const description = element.querySelector('.beschreibung')?.textContent?.trim() || '';
 
-          return {
-            title,
-            description,
-            location: {
-              address: locationText,
-              latitude: 0,
-              longitude: 0,
-            },
-            startDate: dateText,
-            endDate: dateText,
-            categoryId: 'default',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-        });
+            return {
+              title,
+              description,
+              location: {
+                address: locationText,
+                latitude: 0,
+                longitude: 0,
+              },
+              startDate: dateText,
+              endDate: dateText,
+              categoryId: 'default',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+          });
       }, maxResults);
 
       this.logger.debug(`Erfolgreich ${events.length} Events gescraped`);
@@ -116,7 +129,6 @@ export class EventScraperService {
         ...event,
         id: crypto.randomUUID(),
       }));
-
     } catch (error) {
       this.logger.error('Fehler beim Scraping von EventFinder:', error);
       throw error;
@@ -126,4 +138,4 @@ export class EventScraperService {
       }
     }
   }
-} 
+}

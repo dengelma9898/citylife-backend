@@ -341,7 +341,7 @@ export class EventsController {
 
   /**
    * Holt Events von EventFinder für einen bestimmten Zeitraum
-   * 
+   *
    * @param timeFrame - Der Zeitraum (z.B. 'naechste-woche', 'dieses-wochenende')
    * @returns Liste der gefundenen Events
    */
@@ -351,9 +351,9 @@ export class EventsController {
     @Query('categoryId') categoryId: EventCategory | null,
     @Query('maxResults') maxResults?: number,
   ): Promise<Event[]> {
-    this.logger.log(`GET /events/scrape/eventfinder?timeFrame=${timeFrame}&categoryId=${categoryId}&maxResults=${maxResults}`);
+    this.logger.log(
+      `GET /events/scrape/eventfinder?timeFrame=${timeFrame}&categoryId=${categoryId}&maxResults=${maxResults}`,
+    );
     return this.eventsService.importEventsFromEventFinder(timeFrame, categoryId, maxResults);
   }
-
-
 }

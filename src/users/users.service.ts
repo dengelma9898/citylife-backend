@@ -75,7 +75,8 @@ export class UsersService {
     try {
       this.logger.debug('Getting business users that need review');
       const db = this.firebaseService.getFirestore();
-      const snapshot = await db.collection(this.businessUsersCollection)
+      const snapshot = await db
+        .collection(this.businessUsersCollection)
         .where('needsReview', '==', true)
         .where('isDeleted', '==', false)
         .get();
@@ -115,7 +116,8 @@ export class UsersService {
     try {
       this.logger.debug('Getting count of business users that need review');
       const db = this.firebaseService.getFirestore();
-      const snapshot = await db.collection(this.businessUsersCollection)
+      const snapshot = await db
+        .collection(this.businessUsersCollection)
         .where('needsReview', '==', true)
         .where('isDeleted', '==', false)
         .get();
@@ -255,7 +257,10 @@ export class UsersService {
         needsReview: data.needsReview,
       };
 
-      await db.collection(this.businessUsersCollection).doc(data.userId).set(this.removeUndefined(userData));
+      await db
+        .collection(this.businessUsersCollection)
+        .doc(data.userId)
+        .set(this.removeUndefined(userData));
 
       return {
         id: data.userId,
@@ -282,7 +287,10 @@ export class UsersService {
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
 
-      await db.collection(this.businessUsersCollection).doc(id).update(this.removeUndefined(updateData));
+      await db
+        .collection(this.businessUsersCollection)
+        .doc(id)
+        .update(this.removeUndefined(updateData));
 
       const businessUser = await this.getBusinessUser(id);
       if (!businessUser) {
@@ -306,22 +314,21 @@ export class UsersService {
       }
 
       const businessUser = doc.data() as BusinessUser;
+      const batch = db.batch();
 
-      await db.runTransaction(async transaction => {
-        for (const businessId of businessUser.businessIds) {
-          const businessRef = db.collection('businesses').doc(businessId);
-          const businessDoc = await transaction.get(businessRef);
+      // Aktualisiere alle zugehörigen Businesses
+      for (const businessId of businessUser.businessIds) {
+        const businessRef = db.collection('businesses').doc(businessId);
+        batch.update(businessRef, {
+          status: BusinessStatus.INACTIVE,
+          updatedAt: DateTimeUtils.getBerlinTime(),
+        });
+      }
 
-          if (businessDoc.exists) {
-            transaction.update(businessRef, {
-              status: BusinessStatus.INACTIVE,
-              updatedAt: DateTimeUtils.getBerlinTime(),
-            });
-          }
-        }
+      // Lösche den Business-User
+      batch.delete(db.collection(this.businessUsersCollection).doc(id));
 
-        transaction.delete(db.collection(this.businessUsersCollection).doc(id));
-      });
+      await batch.commit();
 
       this.logger.debug(
         `Successfully deleted business user ${id} and set associated businesses to INACTIVE`,
@@ -465,12 +472,15 @@ export class UsersService {
     try {
       this.logger.debug(`Adding business ${businessId} to user ${userId}`);
 
-      const business = await this.businessesService.getById(businessId);
+      const [business, businessUser] = await Promise.all([
+        this.businessesService.getById(businessId),
+        this.getBusinessUser(userId),
+      ]);
+
       if (!business) {
         throw new NotFoundException(`Business mit ID ${businessId} wurde nicht gefunden`);
       }
 
-      const businessUser = await this.getBusinessUser(userId);
       if (!businessUser) {
         throw new NotFoundException(`Business-User mit ID ${userId} wurde nicht gefunden`);
       }
@@ -482,17 +492,18 @@ export class UsersService {
       }
 
       const db = this.firebaseService.getFirestore();
+      const batch = db.batch();
 
-      await db.runTransaction(async transaction => {
-        const businessUserRef = db.collection(this.businessUsersCollection).doc(userId);
-        const updatedBusinessIds = [...businessUser.businessIds, businessId];
-        transaction.update(businessUserRef, {
-          businessIds: updatedBusinessIds,
-          updatedAt: DateTimeUtils.getBerlinTime(),
-        });
-
-        await this.businessesService.updateHasAccount(businessId, true);
+      const businessUserRef = db.collection(this.businessUsersCollection).doc(userId);
+      const updatedBusinessIds = [...businessUser.businessIds, businessId];
+      
+      batch.update(businessUserRef, {
+        businessIds: updatedBusinessIds,
+        updatedAt: DateTimeUtils.getBerlinTime(),
       });
+
+      await batch.commit();
+      await this.businessesService.updateHasAccount(businessId, true);
 
       const updatedBusinessUser = await this.getBusinessUser(userId);
       if (!updatedBusinessUser) {
@@ -515,19 +526,22 @@ export class UsersService {
 
       const db = this.firebaseService.getFirestore();
       const uniqueIds = [...new Set(ids)];
-      const chunks = this.chunkArray(uniqueIds, 10); // Firestore erlaubt maximal 10 Dokumente pro Abfrage
+      const chunks = this.chunkArray(uniqueIds, 10);
       const userProfiles = new Map<string, UserProfile>();
 
-      for (const chunk of chunks) {
-        const snapshot = await db.collection(this.usersCollection)
+      const chunkPromises = chunks.map(chunk =>
+        db
+          .collection(this.usersCollection)
           .where('__name__', 'in', chunk)
-          .get();
+          .get()
+          .then(snapshot => {
+            snapshot.docs.forEach(doc => {
+              userProfiles.set(doc.id, doc.data() as UserProfile);
+            });
+          }),
+      );
 
-        snapshot.docs.forEach(doc => {
-          userProfiles.set(doc.id, doc.data() as UserProfile);
-        });
-      }
-
+      await Promise.all(chunkPromises);
       return userProfiles;
     } catch (error) {
       this.logger.error(`Error getting user profiles for ids: ${error.message}`);

@@ -7,4 +7,4 @@ export enum EventCategory {
   SPORTEVENTS = 'sportevents',
   AUSSTELLUNGEN = 'ausstellungen',
   FUEHRUNGEN_RUNDFAHRTEN = 'fuehrungen-rundfahrten',
-} 
+}

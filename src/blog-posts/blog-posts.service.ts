@@ -29,10 +29,13 @@ export class BlogPostsService {
       this.logger.debug('Getting all blog posts');
       const db = this.firebaseService.getFirestore();
       const snapshot = await db.collection(this.collection).get();
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as BlogPost));
+      return snapshot.docs.map(
+        doc =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          }) as BlogPost,
+      );
     } catch (error) {
       this.logger.error(`Error getting all blog posts: ${error.message}`);
       throw error;

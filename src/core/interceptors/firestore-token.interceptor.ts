@@ -12,7 +12,7 @@ export class FirestoreTokenInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const token = request.headers.authorization?.split(' ')[1];
-    
+
     if (token) {
       try {
         const db = admin.firestore();
@@ -24,7 +24,7 @@ export class FirestoreTokenInterceptor implements NestInterceptor {
     } else {
       this.logger.warn('No auth token found in request');
     }
-    
+
     return next.handle();
   }
-} 
+}

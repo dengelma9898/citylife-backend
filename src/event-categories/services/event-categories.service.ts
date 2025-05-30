@@ -29,10 +29,13 @@ export class EventCategoriesService {
       this.logger.debug('Getting all event categories');
       const db = this.firebaseService.getFirestore();
       const snapshot = await db.collection(this.collection).get();
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as EventCategory));
+      return snapshot.docs.map(
+        doc =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          }) as EventCategory,
+      );
     } catch (error) {
       this.logger.error(`Error finding all event categories: ${error.message}`);
       throw error;

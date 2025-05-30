@@ -34,7 +34,7 @@ export class AuthGuard implements CanActivate {
       return true;
     } catch (error) {
       this.logger.error(`Token verification failed: ${error.message}`);
-      
+
       if (error.code === 'auth/id-token-expired') {
         throw new UnauthorizedException('Token expired. Please refresh your token.');
       } else if (error.code === 'auth/id-token-revoked') {
@@ -42,7 +42,7 @@ export class AuthGuard implements CanActivate {
       } else if (error.code === 'auth/invalid-id-token') {
         throw new UnauthorizedException('Invalid token. Please sign in again.');
       }
-      
+
       throw new UnauthorizedException('Authentication failed');
     }
   }
