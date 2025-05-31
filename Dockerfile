@@ -8,15 +8,17 @@ WORKDIR /app
 
 # Install dependencies for Puppeteer
 # Diese Abhängigkeiten sind notwendig, damit Chromium in einem Docker-Container korrekt funktioniert
+# - chromium: Der Hauptbrowser, den Puppeteer verwendet
+# - fonts-freefont-ttf: Allgemeine Unicode-Schriftarten für korrekte Darstellung von internationalen Zeichen
+# - libxss1: X11-Bibliothek für die Darstellung von Webseiten
+# - --no-install-recommends: Reduziert die Image-Größe durch Vermeidung von empfohlenen Paketen
+# - rm -rf /var/lib/apt/lists/*: Bereinigt apt-Cache für kleinere Image-Größe
 RUN apt-get update && apt-get install -y \
-    # Chromium Browser - der Hauptbrowser, den Puppeteer verwendet
     chromium \
-    # Verschiedene Schriftarten für korrekte Darstellung von internationalen Zeichen
-    fonts-freefont-ttf \      # Allgemeine Unicode-Schriftarten
-    # X11-Bibliothek für die Darstellung von Webseiten
+    fonts-freefont-ttf \
     libxss1 \
-    --no-install-recommends \ # Reduziert die Image-Größe durch Vermeidung von empfohlenen Paketen
-    && rm -rf /var/lib/apt/lists/* # Bereinigt apt-Cache für kleinere Image-Größe
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first (better caching)
 COPY package*.json ./
