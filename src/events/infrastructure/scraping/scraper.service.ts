@@ -107,4 +107,4 @@ export class ScraperService {
     }
     return scraper;
   }
-} 
+}

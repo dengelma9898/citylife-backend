@@ -51,7 +51,7 @@ export class EventsController {
 
   /**
    * Generischer Endpunkt zum Scrapen von Events
-   * 
+   *
    * @param type - Der Scraper-Typ (EVENTFINDER, CURT)
    * @param category - Die Event-Kategorie
    * @param startDate - Startdatum (YYYY-MM-DD)
@@ -81,7 +81,9 @@ export class EventsController {
 
     // Validiere und parse Datumsangaben
     const startDate = startDateString ? new Date(startDateString) : new Date();
-    const endDate = endDateString ? new Date(endDateString) : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 Tage
+    const endDate = endDateString
+      ? new Date(endDateString)
+      : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 Tage
 
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       throw new Error('Ungültiges Datum');
@@ -92,7 +94,7 @@ export class EventsController {
     }
 
     // Konvertiere category von 'null' zu null
-    const parsedCategory = category === 'null' ? null : category as EventCategory;
+    const parsedCategory = category === 'null' ? null : (category as EventCategory);
 
     // Erstelle Scraper-Optionen
     const options: ScraperOptions = {

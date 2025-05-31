@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BaseScraper, ScraperConfig, ScraperOptions, ScraperResult } from './base-scraper.interface';
+import {
+  BaseScraper,
+  ScraperConfig,
+  ScraperOptions,
+  ScraperResult,
+} from './base-scraper.interface';
 import { Event } from '../../interfaces/event.interface';
 import { DateTimeUtils } from '../../../utils/date-time.utils';
 import { PuppeteerManager } from './puppeteer.config';
@@ -73,10 +78,16 @@ export class EventFinderScraper implements BaseScraper {
             if (datetimeContainer) {
               const nodes = Array.from(datetimeContainer.childNodes);
               // Suche nach deutschem Datum
-              const dateNode = nodes.find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim().match(/^\d{2}\.\d{2}\.\d{4}$/));
+              const dateNode = nodes.find(
+                n =>
+                  n.nodeType === Node.TEXT_NODE &&
+                  n.textContent.trim().match(/^\d{2}\.\d{2}\.\d{4}$/),
+              );
               if (dateNode) dateText = dateNode.textContent.trim();
               // Suche nach Uhrzeit
-              const timeNode = nodes.find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim().match(/^\d{2}:\d{2}$/));
+              const timeNode = nodes.find(
+                n => n.nodeType === Node.TEXT_NODE && n.textContent.trim().match(/^\d{2}:\d{2}$/),
+              );
               if (timeNode) timeText = timeNode.textContent.trim();
             }
 
@@ -91,7 +102,8 @@ export class EventFinderScraper implements BaseScraper {
               }
             }
 
-            const locationText = element.querySelector('.card-body-footer')?.textContent?.trim() || '';
+            const locationText =
+              element.querySelector('.card-body-footer')?.textContent?.trim() || '';
             const description = element.querySelector('.beschreibung')?.textContent?.trim() || '';
 
             // Konvertiere deutsches Datum ins ISO-Format
@@ -117,11 +129,13 @@ export class EventFinderScraper implements BaseScraper {
               },
               startDate: `${isoDate} ${fromTime}`,
               endDate: `${isoDate} ${toTime}`,
-              dailyTimeSlots: [{
-                date: isoDate,
-                from: fromTime,
-                to: toTime
-              }],
+              dailyTimeSlots: [
+                {
+                  date: isoDate,
+                  from: fromTime,
+                  to: toTime,
+                },
+              ],
               categoryId: 'default',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
@@ -191,4 +205,4 @@ export class EventFinderScraper implements BaseScraper {
   validateConfig(): boolean {
     return !!(this.config.baseUrl && this.config.dateFormat);
   }
-} 
+}

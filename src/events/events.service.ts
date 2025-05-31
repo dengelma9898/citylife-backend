@@ -255,5 +255,4 @@ export class EventsService {
       throw error;
     }
   }
-
 }

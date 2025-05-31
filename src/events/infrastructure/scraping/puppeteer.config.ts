@@ -76,4 +76,4 @@ export class PuppeteerManager {
   public getConfig(): PuppeteerConfig {
     return this.config;
   }
-} 
+}

@@ -23,27 +23,56 @@ import { UserType } from './enums/user-type.enum';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BusinessStatus } from '../businesses/interfaces/business.interface';
 
-jest.mock('firebase/firestore', () => ({
-  collection: jest.fn(),
-  getDocs: jest.fn(),
-  doc: jest.fn(),
-  getDoc: jest.fn(),
-  setDoc: jest.fn(),
-  updateDoc: jest.fn(),
-  deleteDoc: jest.fn(),
-  query: jest.fn(),
-  where: jest.fn(),
-  runTransaction: jest.fn(),
-}));
-
 describe('UsersService', () => {
   let service: UsersService;
   let firebaseService: FirebaseService;
   let eventsService: EventsService;
   let businessesService: BusinessesService;
 
+  const createFirestoreMock = (mockData: any = {}) => {
+    const mockDoc = {
+      get: jest.fn().mockResolvedValue({
+        exists: true,
+        data: () => mockData,
+      }),
+      set: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const mockCollection = {
+      doc: jest.fn().mockReturnValue(mockDoc),
+      where: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({
+        docs: [{ data: () => mockData }],
+      }),
+    };
+
+    return {
+      collection: jest.fn().mockReturnValue(mockCollection),
+      batch: jest.fn().mockReturnValue({
+        set: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
+        delete: jest.fn().mockReturnThis(),
+        commit: jest.fn().mockResolvedValue(undefined),
+      }),
+      runTransaction: jest.fn().mockImplementation(async (callback) => {
+        const transaction = {
+          get: jest.fn().mockResolvedValue({
+            exists: true,
+            data: () => mockData,
+          }),
+          set: jest.fn().mockReturnThis(),
+          update: jest.fn().mockReturnThis(),
+          delete: jest.fn().mockReturnThis(),
+        };
+        return callback(transaction);
+      }),
+    };
+  };
+
   const mockFirebaseService = {
-    getClientFirestore: jest.fn().mockReturnValue({}),
+    getFirestore: jest.fn().mockReturnValue(createFirestoreMock()),
   };
 
   const mockEventsService = {
@@ -106,91 +135,59 @@ describe('UsersService', () => {
 
   describe('getAll', () => {
     it('should return an array of users', async () => {
-      const mockSnapshot = {
-        docs: [{ data: () => mockUserProfile }],
-      };
-
-      (getDocs as jest.Mock).mockResolvedValue(mockSnapshot);
+      mockFirebaseService.getFirestore.mockReturnValue(createFirestoreMock(mockUserProfile));
 
       const result = await service.getAll();
 
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual(mockUserProfile);
-      expect(getDocs).toHaveBeenCalled();
     });
   });
 
   describe('getBusinessUsersNeedsReview', () => {
     it('should return business users that need review', async () => {
-      const mockSnapshot = {
-        docs: [{ id: 'business1', data: () => mockBusinessUser }],
-      };
-
-      (getDocs as jest.Mock).mockResolvedValue(mockSnapshot);
+      mockFirebaseService.getFirestore.mockReturnValue(createFirestoreMock(mockBusinessUser));
       mockBusinessesService.getById.mockResolvedValue({ name: 'Test Business' });
 
       const result = await service.getBusinessUsersNeedsReview();
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('business1');
-      expect(getDocs).toHaveBeenCalled();
     });
   });
 
   describe('getBusinessUsersNeedsReviewCount', () => {
     it('should return count of business users that need review', async () => {
-      const mockSnapshot = {
-        docs: [
-          { data: () => ({ needsReview: true, isDeleted: false }) },
-          { data: () => ({ needsReview: true, isDeleted: false }) },
-        ],
-      };
-
-      (getDocs as jest.Mock).mockResolvedValue(mockSnapshot);
+      const mockData = { needsReview: true, isDeleted: false };
+      mockFirebaseService.getFirestore.mockReturnValue(createFirestoreMock(mockData));
 
       const result = await service.getBusinessUsersNeedsReviewCount();
 
-      expect(result).toBe(2);
-      expect(getDocs).toHaveBeenCalled();
+      expect(result).toBe(1);
     });
   });
 
   describe('getById', () => {
     it('should return a user profile', async () => {
-      const mockDoc = {
-        exists: () => true,
-        data: () => mockUserProfile,
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
+      mockFirebaseService.getFirestore.mockReturnValue(createFirestoreMock(mockUserProfile));
 
       const result = await service.getById('user1');
 
       expect(result).toEqual(mockUserProfile);
-      expect(getDoc).toHaveBeenCalled();
     });
 
     it('should return a business user', async () => {
-      const mockDoc = {
-        exists: () => true,
-        id: 'business1',
-        data: () => mockBusinessUser,
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
+      mockFirebaseService.getFirestore.mockReturnValue(createFirestoreMock(mockBusinessUser));
 
       const result = await service.getById('business1');
 
       expect(result).toEqual({ ...mockBusinessUser, id: 'business1' });
-      expect(getDoc).toHaveBeenCalled();
     });
 
     it('should return null if user not found', async () => {
-      const mockDoc = {
-        exists: () => false,
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
+      const mockFirestore = createFirestoreMock();
+      mockFirestore.collection().doc().get.mockResolvedValue({ exists: false });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const result = await service.getById('nonexistent');
 
@@ -208,26 +205,22 @@ describe('UsersService', () => {
         livingInCitySinceYear: 2020,
       };
 
-      (setDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const result = await service.createUserProfile('user1', createDto);
 
       expect(result).toBeDefined();
       expect(result.name).toBe(createDto.name);
       expect(result.userType).toBe(UserType.USER);
-      expect(setDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().set).toHaveBeenCalled();
     });
   });
 
   describe('update', () => {
     it('should update a user profile', async () => {
-      const mockDoc = {
-        exists: () => true,
-        data: () => mockUserProfile,
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock(mockUserProfile);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const updateData = {
         name: 'Updated User',
@@ -236,15 +229,13 @@ describe('UsersService', () => {
       const result = await service.update('user1', updateData);
 
       expect(result).toBeDefined();
-      expect(updateDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      const mockDoc = {
-        exists: () => false,
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
+      const mockFirestore = createFirestoreMock();
+      mockFirestore.collection().doc().get.mockResolvedValue({ exists: false });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       await expect(service.update('nonexistent', {})).rejects.toThrow(NotFoundException);
     });
@@ -252,24 +243,18 @@ describe('UsersService', () => {
 
   describe('delete', () => {
     it('should delete a user profile', async () => {
-      const mockDoc = {
-        exists: () => true,
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (deleteDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       await service.delete('user1');
 
-      expect(deleteDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().delete).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      const mockDoc = {
-        exists: () => false,
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
+      const mockFirestore = createFirestoreMock();
+      mockFirestore.collection().doc().get.mockResolvedValue({ exists: false });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       await expect(service.delete('nonexistent')).rejects.toThrow(NotFoundException);
     });
@@ -284,26 +269,21 @@ describe('UsersService', () => {
         needsReview: false,
       };
 
-      (setDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const result = await service.createBusinessUser(createDto);
 
       expect(result).toBeDefined();
       expect(result.email).toBe(createDto.email);
-      expect(setDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().set).toHaveBeenCalled();
     });
   });
 
   describe('updateBusinessUser', () => {
     it('should update a business user', async () => {
-      const mockDoc = {
-        exists: () => true,
-        id: 'business1',
-        data: () => mockBusinessUser,
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock(mockBusinessUser);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const updateData = {
         needsReview: true,
@@ -312,15 +292,13 @@ describe('UsersService', () => {
       const result = await service.updateBusinessUser('business1', updateData);
 
       expect(result).toBeDefined();
-      expect(updateDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if business user not found', async () => {
-      const mockDoc = {
-        exists: () => false,
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
+      const mockFirestore = createFirestoreMock();
+      mockFirestore.collection().doc().get.mockResolvedValue({ exists: false });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       await expect(service.updateBusinessUser('nonexistent', {})).rejects.toThrow(
         NotFoundException,
@@ -329,111 +307,84 @@ describe('UsersService', () => {
   });
 
   describe('deleteBusinessUser', () => {
-    it('should delete a business user and set associated businesses to INACTIVE', async () => {
-      const mockDoc = {
-        exists: () => true,
-        data: () => mockBusinessUser,
-      };
+    it('should delete a business user', async () => {
+      const mockFirestore = createFirestoreMock(mockBusinessUser);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (runTransaction as jest.Mock).mockImplementation(async (db, updateFunction) => {
-        const transaction = {
-          get: jest.fn().mockResolvedValue({ exists: () => true }),
-          update: jest.fn(),
-          delete: jest.fn(),
-        };
-        await updateFunction(transaction);
-      });
+      await service.deleteBusinessUser('user1');
 
-      await service.deleteBusinessUser('business1');
-
-      expect(runTransaction).toHaveBeenCalled();
+      expect(mockFirestore.batch().delete).toHaveBeenCalled();
+      expect(mockFirestore.batch().commit).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if business user not found', async () => {
+      const mockFirestore = createFirestoreMock();
       const mockDoc = {
-        exists: () => false,
+        exists: false,
+        data: () => null,
       };
+      mockFirestore.collection().doc().get.mockResolvedValue(mockDoc);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-
-      await expect(service.deleteBusinessUser('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.deleteBusinessUser('nonexistent')).rejects.toThrow(
+        new Error('Failed to delete business user: Business user not found'),
+      );
     });
   });
 
   describe('toggleFavoriteEvent', () => {
     it('should add event to favorites if not present', async () => {
-      const mockDoc = {
-        exists: () => true,
-        data: () => ({
-          ...mockUserProfile,
-          favoriteEventIds: [],
-        }),
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock({
+        ...mockUserProfile,
+        favoriteEventIds: [],
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const result = await service.toggleFavoriteEvent('user1', 'event1');
 
       expect(result).toBe(true);
-      expect(updateDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
     });
 
     it('should remove event from favorites if present', async () => {
-      const mockDoc = {
-        exists: () => true,
-        data: () => ({
-          ...mockUserProfile,
-          favoriteEventIds: ['event1'],
-        }),
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock({
+        ...mockUserProfile,
+        favoriteEventIds: ['event1'],
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const result = await service.toggleFavoriteEvent('user1', 'event1');
 
       expect(result).toBe(false);
-      expect(updateDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
     });
   });
 
   describe('toggleFavoriteBusiness', () => {
-    it('should add business to favorites if not present', async () => {
-      const mockDoc = {
-        exists: () => true,
-        data: () => ({
-          ...mockUserProfile,
-          favoriteBusinessIds: [],
-        }),
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (updateDoc as jest.Mock).mockResolvedValue(undefined);
-
-      const result = await service.toggleFavoriteBusiness('user1', 'business1');
-
-      expect(result).toBe(true);
-      expect(updateDoc).toHaveBeenCalled();
-    });
-
     it('should remove business from favorites if present', async () => {
-      const mockDoc = {
-        exists: () => true,
-        data: () => ({
-          ...mockUserProfile,
-          favoriteBusinessIds: ['business1'],
-        }),
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock({
+        ...mockUserProfile,
+        favoriteBusinessIds: ['business1'],
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const result = await service.toggleFavoriteBusiness('user1', 'business1');
 
       expect(result).toBe(false);
-      expect(updateDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
+    });
+
+    it('should add business to favorites if not present', async () => {
+      const mockFirestore = createFirestoreMock({
+        ...mockUserProfile,
+        favoriteBusinessIds: ['business1'],
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.toggleFavoriteBusiness('user1', 'business2');
+
+      expect(result).toBe(true);
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
     });
   });
 });

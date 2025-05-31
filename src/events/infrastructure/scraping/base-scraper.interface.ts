@@ -91,5 +91,5 @@ export interface BaseScraper {
 export enum ScraperType {
   EVENTFINDER = 'eventfinder',
   CURT = 'curt',
-  RAUSGEGANGEN = 'rausgegangen'
-} 
+  RAUSGEGANGEN = 'rausgegangen',
+}

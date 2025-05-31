@@ -24,4 +24,4 @@ export class ScraperFactory {
         throw new Error(`Unsupported scraper type: ${type}`);
     }
   }
-} 
+}

@@ -12,11 +12,7 @@ import { ScraperFactory } from './infrastructure/scraping/scraper-factory';
 import { RausgegangenScraper } from './infrastructure/scraping/rausgegangen-scraper';
 
 @Module({
-  imports: [
-    FirebaseModule,
-    forwardRef(() => UsersModule),
-    forwardRef(() => BusinessesModule),
-  ],
+  imports: [FirebaseModule, forwardRef(() => UsersModule), forwardRef(() => BusinessesModule)],
   controllers: [EventsController],
   providers: [
     EventsService,

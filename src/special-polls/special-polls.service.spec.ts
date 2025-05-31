@@ -35,8 +35,37 @@ describe('SpecialPollsService', () => {
   let firebaseService: FirebaseService;
   let usersService: UsersService;
 
+  const createFirestoreMock = (mockData: any = {}) => {
+    const mockDoc = {
+      id: 'mock-id',
+      exists: true,
+      data: () => mockData,
+      get: jest.fn().mockResolvedValue({
+        exists: true,
+        data: () => mockData,
+      }),
+      set: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const mockCollection = {
+      doc: jest.fn().mockReturnValue(mockDoc),
+      add: jest.fn().mockResolvedValue({ id: 'mock-id' }),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({
+        docs: [{ id: 'mock-id', data: () => mockData }],
+      }),
+    };
+
+    return {
+      collection: jest.fn().mockReturnValue(mockCollection),
+    };
+  };
+
   const mockFirebaseService = {
-    getClientFirestore: jest.fn().mockReturnValue({}),
+    getFirestore: jest.fn().mockReturnValue(createFirestoreMock()),
   };
 
   const mockUsersService = {
@@ -76,75 +105,66 @@ describe('SpecialPollsService', () => {
 
   describe('findAll', () => {
     it('should return an array of special polls', async () => {
-      const mockSnapshot = {
-        docs: [{ id: 'poll1', data: () => ({ ...mockSpecialPoll }) }],
-      };
-
-      (getDocs as jest.Mock).mockResolvedValue(mockSnapshot);
+      const mockFirestore = createFirestoreMock(mockSpecialPoll);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const result = await service.findAll();
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('poll1');
-      expect(getDocs).toHaveBeenCalled();
+      expect(result[0].title).toBe('Test Poll');
     });
   });
 
   describe('findOne', () => {
     it('should return a special poll by id', async () => {
-      const mockDoc = {
-        exists: () => true,
-        id: 'poll1',
-        data: () => ({ ...mockSpecialPoll }),
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
+      const mockFirestore = createFirestoreMock(mockSpecialPoll);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const result = await service.findOne('poll1');
 
       expect(result).toBeDefined();
       expect(result.id).toBe('poll1');
-      expect(getDoc).toHaveBeenCalled();
+      expect(result.title).toBe('Test Poll');
     });
 
     it('should throw NotFoundException if poll not found', async () => {
+      const mockFirestore = createFirestoreMock();
       const mockDoc = {
-        exists: () => false,
+        exists: false,
+        data: () => null,
       };
+      mockFirestore.collection().doc().get.mockResolvedValue(mockDoc);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-
-      await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('nonexistent')).rejects.toThrow(
+        new Error('Special poll not found'),
+      );
     });
   });
 
   describe('create', () => {
     it('should create a new special poll', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
       const createDto: CreateSpecialPollDto = {
         title: 'New Poll',
       };
-
-      (addDoc as jest.Mock).mockResolvedValue({ id: 'poll1' });
 
       const result = await service.create(createDto);
 
       expect(result).toBeDefined();
       expect(result.title).toBe(createDto.title);
       expect(result.status).toBe(SpecialPollStatus.PENDING);
-      expect(addDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().add).toHaveBeenCalled();
     });
   });
 
   describe('updateStatus', () => {
     it('should update the status of a special poll', async () => {
-      const mockDoc = {
-        exists: () => true,
-        id: 'poll1',
-        data: () => ({ ...mockSpecialPoll }),
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock(mockSpecialPoll);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const updateStatusDto: UpdateSpecialPollStatusDto = {
         status: SpecialPollStatus.ACTIVE,
@@ -153,36 +173,38 @@ describe('SpecialPollsService', () => {
       const result = await service.updateStatus('poll1', updateStatusDto);
 
       expect(result).toBeDefined();
-      expect(updateDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalledWith({
+        status: updateStatusDto.status,
+        updatedAt: expect.any(String),
+      });
     });
 
     it('should throw NotFoundException if poll not found', async () => {
+      const mockFirestore = createFirestoreMock();
       const mockDoc = {
-        exists: () => false,
+        exists: false,
+        data: () => null,
       };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
+      mockFirestore.collection().doc().get.mockResolvedValue(mockDoc);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const updateStatusDto: UpdateSpecialPollStatusDto = {
         status: SpecialPollStatus.ACTIVE,
       };
 
       await expect(service.updateStatus('nonexistent', updateStatusDto)).rejects.toThrow(
-        NotFoundException,
+        new Error('Special poll not found'),
       );
     });
   });
 
   describe('addResponse', () => {
     it('should add a response to a special poll', async () => {
-      const mockDoc = {
-        exists: () => true,
-        id: 'poll1',
-        data: () => ({ ...mockSpecialPoll, status: SpecialPollStatus.ACTIVE }),
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock({
+        ...mockSpecialPoll,
+        status: SpecialPollStatus.ACTIVE,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       mockUsersService.getById.mockResolvedValue({
         id: 'user1',
@@ -192,17 +214,15 @@ describe('SpecialPollsService', () => {
       const result = await service.addResponse('poll1', 'user1', 'Test Response');
 
       expect(result).toBeDefined();
-      expect(updateDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if poll is not active', async () => {
-      const mockDoc = {
-        exists: () => true,
-        id: 'poll1',
-        data: () => ({ ...mockSpecialPoll, status: SpecialPollStatus.CLOSED }),
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
+      const mockFirestore = createFirestoreMock({
+        ...mockSpecialPoll,
+        status: SpecialPollStatus.CLOSED,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       await expect(service.addResponse('poll1', 'user1', 'Test Response')).rejects.toThrow(
         BadRequestException,
@@ -210,31 +230,23 @@ describe('SpecialPollsService', () => {
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      const mockDoc = {
-        exists: () => true,
-        id: 'poll1',
-        data: () => ({ ...mockSpecialPoll, status: SpecialPollStatus.ACTIVE }),
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
+      const mockFirestore = createFirestoreMock({
+        ...mockSpecialPoll,
+        status: SpecialPollStatus.ACTIVE,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
       mockUsersService.getById.mockResolvedValue(null);
 
       await expect(service.addResponse('poll1', 'user1', 'Test Response')).rejects.toThrow(
-        NotFoundException,
+        new Error('User not found'),
       );
     });
   });
 
   describe('updateResponses', () => {
     it('should update responses of a special poll', async () => {
-      const mockDoc = {
-        exists: () => true,
-        id: 'poll1',
-        data: () => ({ ...mockSpecialPoll }),
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock(mockSpecialPoll);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const responses: SpecialPollResponse[] = [
         {
@@ -248,46 +260,49 @@ describe('SpecialPollsService', () => {
       const result = await service.updateResponses('poll1', responses);
 
       expect(result).toBeDefined();
-      expect(updateDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalledWith({
+        responses,
+        updatedAt: expect.any(String),
+      });
     });
 
     it('should throw NotFoundException if poll not found', async () => {
+      const mockFirestore = createFirestoreMock();
       const mockDoc = {
-        exists: () => false,
+        exists: false,
+        data: () => null,
       };
+      mockFirestore.collection().doc().get.mockResolvedValue(mockDoc);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-
-      await expect(service.updateResponses('nonexistent', [])).rejects.toThrow(NotFoundException);
+      await expect(service.updateResponses('nonexistent', [])).rejects.toThrow(
+        new Error('Special poll not found'),
+      );
     });
   });
 
   describe('remove', () => {
     it('should remove a special poll', async () => {
-      const mockDoc = {
-        exists: () => true,
-        id: 'poll1',
-        data: () => ({ ...mockSpecialPoll }),
-      };
-
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (deleteDoc as jest.Mock).mockResolvedValue(undefined);
+      const mockFirestore = createFirestoreMock(mockSpecialPoll);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       await service.remove('poll1');
 
-      expect(deleteDoc).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc().delete).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if poll not found', async () => {
+      const mockFirestore = createFirestoreMock();
       const mockDoc = {
-        exists: () => false,
-        id: 'nonexistent',
+        exists: false,
+        data: () => null,
       };
+      mockFirestore.collection().doc().get.mockResolvedValue(mockDoc);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      (getDoc as jest.Mock).mockResolvedValue(mockDoc);
-      (deleteDoc as jest.Mock).mockResolvedValue(undefined);
-
-      await expect(service.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('nonexistent')).rejects.toThrow(
+        new Error('Special poll not found'),
+      );
     });
   });
 });

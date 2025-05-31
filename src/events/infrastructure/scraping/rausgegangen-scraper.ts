@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BaseScraper, ScraperConfig, ScraperOptions, ScraperResult } from './base-scraper.interface';
+import {
+  BaseScraper,
+  ScraperConfig,
+  ScraperOptions,
+  ScraperResult,
+} from './base-scraper.interface';
 import { Event } from '../../interfaces/event.interface';
 import { DateTimeUtils } from '../../../utils/date-time.utils';
 import { PuppeteerManager } from './puppeteer.config';
@@ -18,8 +23,8 @@ export class RausgegangenScraper implements BaseScraper {
       lat: '49.453872',
       lng: '11.077298',
       city: 'nurnberg',
-      active_city_name: 'Nürnberg'
-    }
+      active_city_name: 'Nürnberg',
+    },
   };
 
   constructor() {
@@ -58,7 +63,9 @@ export class RausgegangenScraper implements BaseScraper {
     let currentDate = new Date(startDate);
     const maxResultsPerDay = this.config.maxResults || 10;
 
-    this.logger.debug(`Scraping events for date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+    this.logger.debug(
+      `Scraping events for date range: ${startDate.toISOString()} to ${endDate.toISOString()}`,
+    );
     this.logger.debug(`Max results per day: ${maxResultsPerDay}`);
 
     while (currentDate <= endDate) {
@@ -78,18 +85,18 @@ export class RausgegangenScraper implements BaseScraper {
     try {
       this.logger.debug(`Scraping events from URL: ${url}`);
       page = await puppeteerManager.getPage();
-      
-      await page.goto(url, { 
+
+      await page.goto(url, {
         timeout: puppeteerManager.getConfig().timeout,
-        waitUntil: 'networkidle0'
+        waitUntil: 'networkidle0',
       });
 
       // Warte auf die horizontalen Scroll-Container
-      await page.waitForSelector('#horizontal-scroll', { 
+      await page.waitForSelector('#horizontal-scroll', {
         timeout: 10000,
-        visible: true
+        visible: true,
       });
-      
+
       this.logger.debug('Horizontal scroll containers found, starting to extract events...');
 
       const events = await page.evaluate(() => {
@@ -97,15 +104,18 @@ export class RausgegangenScraper implements BaseScraper {
         console.log(`Found ${scrollContainers.length} horizontal scroll containers`);
 
         const allEvents = [];
-        
+
         scrollContainers.forEach(container => {
           const eventElements = container.querySelectorAll('.event-tile-text');
-          
+
           eventElements.forEach(element => {
             const dateTimeElement = element.querySelector('.text-sm')?.textContent?.trim() || '';
             const titleElement = element.querySelector('h4.text-base')?.textContent?.trim() || '';
-            const locationElement = element.querySelector('.text-sm.opacity-70.truncate')?.textContent?.trim() || '';
-            const priceElement = element.querySelector('.text-sm.text-primary.truncate.h-4')?.textContent?.trim() || '';
+            const locationElement =
+              element.querySelector('.text-sm.opacity-70.truncate')?.textContent?.trim() || '';
+            const priceElement =
+              element.querySelector('.text-sm.text-primary.truncate.h-4')?.textContent?.trim() ||
+              '';
 
             // Extrahiere Datum und Zeit
             const [dateTime, time] = dateTimeElement.split('|').map(s => s.trim());
@@ -113,11 +123,11 @@ export class RausgegangenScraper implements BaseScraper {
             const [day, month] = date.split('.').map(s => s.trim());
             const currentYear = new Date().getFullYear();
             const isoDate = `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            
+
             // Extrahiere die Uhrzeit
             const [hours, minutes] = time.split(':').map(s => s.trim());
             const fromTime = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
-            
+
             // Verwende die gleiche Zeit für from und to
             const toTime = fromTime;
 
@@ -131,11 +141,13 @@ export class RausgegangenScraper implements BaseScraper {
               },
               startDate: `${isoDate} ${fromTime}`,
               endDate: `${isoDate} ${toTime}`,
-              dailyTimeSlots: [{
-                date: isoDate,
-                from: fromTime,
-                to: toTime
-              }],
+              dailyTimeSlots: [
+                {
+                  date: isoDate,
+                  from: fromTime,
+                  to: toTime,
+                },
+              ],
               categoryId: 'default',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
@@ -152,7 +164,7 @@ export class RausgegangenScraper implements BaseScraper {
         return {
           ...event,
           startDate: DateTimeUtils.convertUTCToBerlinTime(dateObj) || event.startDate,
-          endDate: DateTimeUtils.convertUTCToBerlinTime(dateObj) || event.endDate
+          endDate: DateTimeUtils.convertUTCToBerlinTime(dateObj) || event.endDate,
         };
       });
 
@@ -162,7 +174,9 @@ export class RausgegangenScraper implements BaseScraper {
       const maxResultsPerDay = this.config.maxResults || 10;
       const limitedEvents = convertedEvents.slice(0, maxResultsPerDay);
 
-      this.logger.debug(`Returning ${limitedEvents.length} events for this day (maxResults: ${maxResultsPerDay})`);
+      this.logger.debug(
+        `Returning ${limitedEvents.length} events for this day (maxResults: ${maxResultsPerDay})`,
+      );
 
       const result = {
         events: limitedEvents.map((event: Omit<Event, 'id'>) => ({
@@ -188,7 +202,7 @@ export class RausgegangenScraper implements BaseScraper {
     const params = new URLSearchParams({
       ...this.config.fixedParams,
       start_date: formattedDate,
-      end_date: formattedDate
+      end_date: formattedDate,
     });
     return `${this.config.baseUrl}/?${params.toString()}`;
   }
@@ -198,7 +212,7 @@ export class RausgegangenScraper implements BaseScraper {
       const params = new URLSearchParams({
         ...this.config.fixedParams,
         start_date: options.startDate.toISOString().split('T')[0],
-        end_date: options.endDate.toISOString().split('T')[0]
+        end_date: options.endDate.toISOString().split('T')[0],
       });
       return `${this.config.baseUrl}/?${params.toString()}`;
     }
@@ -209,11 +223,7 @@ export class RausgegangenScraper implements BaseScraper {
   }
 
   validateConfig(): boolean {
-    return !!(
-      this.config.baseUrl &&
-      this.config.dateFormat &&
-      this.config.fixedParams
-    );
+    return !!(this.config.baseUrl && this.config.dateFormat && this.config.fixedParams);
   }
 
   extractDateFromUrl(url: string): Date | null {
@@ -224,4 +234,4 @@ export class RausgegangenScraper implements BaseScraper {
     }
     return null;
   }
-} 
+}
