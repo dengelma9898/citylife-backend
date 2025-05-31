@@ -12,10 +12,6 @@ RUN apt-get update && apt-get install -y \
     # Chromium Browser - der Hauptbrowser, den Puppeteer verwendet
     chromium \
     # Verschiedene Schriftarten für korrekte Darstellung von internationalen Zeichen
-    fonts-ipafont-gothic \    # Japanische Schriftarten
-    fonts-wqy-zenhei \        # Chinesische Schriftarten
-    fonts-thai-tlwg \         # Thailändische Schriftarten
-    fonts-kacst \             # Arabische Schriftarten
     fonts-freefont-ttf \      # Allgemeine Unicode-Schriftarten
     # X11-Bibliothek für die Darstellung von Webseiten
     libxss1 \
