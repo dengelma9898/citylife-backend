@@ -38,9 +38,12 @@ RUN npm run build:${NODE_ENV}
 # Set environment variables
 ENV NODE_ENV=${NODE_ENV}
 ENV PORT=${PORT}
+
 # Puppeteer-Konfiguration für Docker
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true # Verhindert das Herunterladen von Chromium durch Puppeteer
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium # Pfad zur systemseitig installierten Chromium-Version
+# PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: Verhindert das Herunterladen von Chromium durch Puppeteer
+# PUPPETEER_EXECUTABLE_PATH: Pfad zur systemseitig installierten Chromium-Version
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Expose the port
 EXPOSE ${PORT}
