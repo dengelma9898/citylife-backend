@@ -1,10 +1,10 @@
-import eslint from '@eslint/js';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsparser from '@typescript-eslint/parser';
-import prettier from 'eslint-plugin-prettier';
-import prettierConfig from 'eslint-config-prettier';
+const eslint = require('@eslint/js');
+const tseslint = require('@typescript-eslint/eslint-plugin');
+const tsparser = require('@typescript-eslint/parser');
+const prettier = require('eslint-plugin-prettier');
+const prettierConfig = require('eslint-config-prettier');
 
-export default [
+module.exports = [
   eslint.configs.recommended,
   {
     files: ['**/*.ts'],
@@ -56,17 +56,12 @@ export default [
         caughtErrorsIgnorePattern: '^_',
         destructuredArrayIgnorePattern: '^_',
         ignoreRestSiblings: true,
-        // Ignoriere bestimmte Variablen, die später verwendet werden könnten
         vars: 'all',
         args: 'after-used',
-        ignoreRestSiblings: true,
-        argsIgnorePattern: '^_',
-        destructuredArrayIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_',
         caughtErrors: 'none',
       }],
       '@typescript-eslint/no-require-imports': 'warn',
-      'no-undef': 'warn', // Behalte no-undef für andere nicht definierte Variablen
+      'no-undef': 'warn',
     },
   },
 ]; 
