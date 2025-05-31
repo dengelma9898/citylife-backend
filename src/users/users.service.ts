@@ -496,7 +496,7 @@ export class UsersService {
 
       const businessUserRef = db.collection(this.businessUsersCollection).doc(userId);
       const updatedBusinessIds = [...businessUser.businessIds, businessId];
-      
+
       batch.update(businessUserRef, {
         businessIds: updatedBusinessIds,
         updatedAt: DateTimeUtils.getBerlinTime(),

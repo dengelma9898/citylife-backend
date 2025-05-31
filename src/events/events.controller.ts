@@ -14,6 +14,7 @@ import {
   Inject,
   forwardRef,
   Query,
+  ParseEnumPipe,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { Event } from './interfaces/event.interface';
@@ -24,6 +25,8 @@ import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
 import { EventCategory } from './enums/event-category.enum';
+import { ScraperService } from './infrastructure/scraping/scraper.service';
+import { ScraperOptions, ScraperType } from './infrastructure/scraping/base-scraper.interface';
 
 @Controller('events')
 export class EventsController {
@@ -35,12 +38,77 @@ export class EventsController {
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
     private readonly businessesService: BusinessesService,
-  ) {}
+    private readonly scraperService: ScraperService,
+  ) {
+    this.logger.log('EventsController initialized');
+  }
 
   @Get()
   public async getAll(): Promise<Event[]> {
     this.logger.log('GET /events');
     return this.eventsService.getAll();
+  }
+
+  /**
+   * Generischer Endpunkt zum Scrapen von Events
+   * 
+   * @param type - Der Scraper-Typ (EVENTFINDER, CURT)
+   * @param category - Die Event-Kategorie
+   * @param startDate - Startdatum (YYYY-MM-DD)
+   * @param endDate - Enddatum (YYYY-MM-DD)
+   * @param maxResults - Maximale Anzahl der Ergebnisse
+   * @returns Array von Events
+   */
+  @Get('scrape')
+  public async scrapeEvents(
+    @Query('type') type: string,
+    @Query('category') category?: string,
+    @Query('startDate') startDateString?: string,
+    @Query('endDate') endDateString?: string,
+    @Query('maxResults') maxResults?: number,
+  ): Promise<Event[]> {
+    this.logger.log(
+      `GET /events/scrape?type=${type}&category=${category}&startDate=${startDateString}&endDate=${endDateString}&maxResults=${maxResults}`,
+    );
+
+    // Validiere den Scraper-Typ
+    const normalizedType = type?.toLowerCase();
+    if (!normalizedType || !Object.values(ScraperType).includes(normalizedType as ScraperType)) {
+      throw new Error('Ungültiger Scraper-Typ');
+    }
+
+    const scraperType = normalizedType as ScraperType;
+
+    // Validiere und parse Datumsangaben
+    const startDate = startDateString ? new Date(startDateString) : new Date();
+    const endDate = endDateString ? new Date(endDateString) : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 Tage
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new Error('Ungültiges Datum');
+    }
+
+    if (endDate < startDate) {
+      throw new Error('Enddatum muss nach dem Startdatum liegen');
+    }
+
+    // Konvertiere category von 'null' zu null
+    const parsedCategory = category === 'null' ? null : category as EventCategory;
+
+    // Erstelle Scraper-Optionen
+    const options: ScraperOptions = {
+      category: parsedCategory,
+      startDate,
+      endDate,
+      maxResults: maxResults || 10,
+    };
+
+    // Führe das Scraping durch
+    const scraper = this.scraperService.getScraper(scraperType);
+    if (!scraper) {
+      throw new Error(`Scraper ${scraperType} nicht gefunden`);
+    }
+
+    return scraper.scrapeEvents(options);
   }
 
   @Get(':id')
@@ -340,20 +408,11 @@ export class EventsController {
   }
 
   /**
-   * Holt Events von EventFinder für einen bestimmten Zeitraum
-   *
-   * @param timeFrame - Der Zeitraum (z.B. 'naechste-woche', 'dieses-wochenende')
-   * @returns Liste der gefundenen Events
+   * Gibt alle aktiven Scraper zurück
    */
-  @Get('scrape/eventfinder')
-  public async getEventsFromEventFinder(
-    @Query('timeFrame') timeFrame: string = 'naechste-woche',
-    @Query('categoryId') categoryId: EventCategory | null,
-    @Query('maxResults') maxResults?: number,
-  ): Promise<Event[]> {
-    this.logger.log(
-      `GET /events/scrape/eventfinder?timeFrame=${timeFrame}&categoryId=${categoryId}&maxResults=${maxResults}`,
-    );
-    return this.eventsService.importEventsFromEventFinder(timeFrame, categoryId, maxResults);
+  @Get('scrape/active')
+  public async getActiveScrapers(): Promise<ScraperType[]> {
+    this.logger.log('GET /events/scrape/active');
+    return this.scraperService.getActiveScrapers();
   }
 }

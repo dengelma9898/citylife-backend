@@ -3,7 +3,7 @@ import { Event, DailyTimeSlot } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 import { FirebaseService } from '../firebase/firebase.service';
 import { DateTimeUtils } from '../utils/date-time.utils';
-import { EventScraperService } from './event-scraper.service';
+import { ScraperService } from './infrastructure/scraping/scraper.service';
 import { EventCategory } from './enums/event-category.enum';
 
 @Injectable()
@@ -13,7 +13,7 @@ export class EventsService {
 
   constructor(
     private readonly firebaseService: FirebaseService,
-    private readonly eventScraperService: EventScraperService,
+    private readonly scraperService: ScraperService,
   ) {}
 
   private removeUndefined(obj: any): any {
@@ -256,22 +256,4 @@ export class EventsService {
     }
   }
 
-  async importEventsFromEventFinder(
-    timeFrame: string = 'naechste-woche',
-    category: EventCategory | null,
-    maxResults?: number,
-  ): Promise<Event[]> {
-    try {
-      const scrapedEvents = await this.eventScraperService.scrapeEventFinder(
-        timeFrame,
-        category,
-        maxResults,
-      );
-      this.logger.log(`${scrapedEvents.length} Events wurden erfolgreich importiert`);
-      return scrapedEvents;
-    } catch (error) {
-      this.logger.error('Fehler beim Importieren der Events:', error);
-      throw error;
-    }
-  }
 }
