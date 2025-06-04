@@ -142,7 +142,7 @@ describe('ChatMessagesService', () => {
     it('should return all messages for a chatroom', async () => {
       mockChatMessageRepository.findAll.mockResolvedValue(mockMessages);
 
-      const result = await service.getAll('chatroom1');
+      const result = await service.findAll('chatroom1');
 
       expect(result).toBeDefined();
       expect(result).toHaveLength(2);
@@ -154,7 +154,7 @@ describe('ChatMessagesService', () => {
     it('should return limited messages when limit is provided', async () => {
       mockChatMessageRepository.findAll.mockResolvedValue([mockMessages[0]]);
 
-      const result = await service.getAll('chatroom1', 1);
+      const result = await service.findAll('chatroom1', 1);
 
       expect(result).toBeDefined();
       expect(result).toHaveLength(1);
@@ -166,7 +166,7 @@ describe('ChatMessagesService', () => {
     it('should return a message by id', async () => {
       mockChatMessageRepository.findById.mockResolvedValue(mockMessages[0]);
 
-      const result = await service.getById('chatroom1', 'message1');
+      const result = await service.findOne('chatroom1', 'message1');
 
       expect(result).toBeDefined();
       expect(result.id).toBe('message1');
@@ -177,7 +177,7 @@ describe('ChatMessagesService', () => {
     it('should throw NotFoundException if message not found', async () => {
       mockChatMessageRepository.findById.mockResolvedValue(null);
 
-      await expect(service.getById('chatroom1', 'nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('chatroom1', 'nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -270,7 +270,7 @@ describe('ChatMessagesService', () => {
     it('should return messages for a chatroom', async () => {
       mockChatMessageRepository.findByChatroom.mockResolvedValue(mockMessages);
 
-      const result = await service.findByChatroom('chatroom1');
+      const result = await service.findAll('chatroom1');
 
       expect(result).toBeDefined();
       expect(result).toHaveLength(2);
