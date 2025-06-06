@@ -55,7 +55,7 @@ export interface BaseScraper {
   /**
    * Holt Events von einer bestimmten URL
    */
-  scrapeEventsFromUrl(url: string): Promise<ScraperResult>;
+  scrapeEventsFromUrl(url: string, options?: ScraperOptions): Promise<ScraperResult>;
 
   /**
    * Holt Events mit verschiedenen Optionen
@@ -92,4 +92,5 @@ export enum ScraperType {
   EVENTFINDER = 'eventfinder',
   CURT = 'curt',
   RAUSGEGANGEN = 'rausgegangen',
+  PARKS = 'parks',
 }

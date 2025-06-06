@@ -138,7 +138,7 @@ describe('ChatMessagesService', () => {
     jest.clearAllMocks();
   });
 
-  describe('getAll', () => {
+  describe('findAll', () => {
     it('should return all messages for a chatroom', async () => {
       mockChatMessageRepository.findAll.mockResolvedValue(mockMessages);
 
@@ -148,7 +148,7 @@ describe('ChatMessagesService', () => {
       expect(result).toHaveLength(2);
       expect(result[0].content).toBe('Test Message 1');
       expect(result[1].content).toBe('Test Message 2');
-      expect(mockChatMessageRepository.findAll).toHaveBeenCalledWith('chatroom1', undefined);
+      expect(mockChatMessageRepository.findAll).toHaveBeenCalledWith('chatroom1', 50);
     });
 
     it('should return limited messages when limit is provided', async () => {
@@ -162,7 +162,7 @@ describe('ChatMessagesService', () => {
     });
   });
 
-  describe('getById', () => {
+  describe('findOne', () => {
     it('should return a message by id', async () => {
       mockChatMessageRepository.findById.mockResolvedValue(mockMessages[0]);
 
@@ -266,15 +266,23 @@ describe('ChatMessagesService', () => {
     });
   });
 
-  describe('findByChatroom', () => {
-    it('should return messages for a chatroom', async () => {
-      mockChatMessageRepository.findByChatroom.mockResolvedValue(mockMessages);
+  describe('remove', () => {
+    it('should remove a message if user is sender', async () => {
+      mockChatMessageRepository.findById.mockResolvedValue(mockMessages[0]);
+      mockChatMessageRepository.delete.mockResolvedValue(undefined);
 
-      const result = await service.findAll('chatroom1');
+      await service.remove('chatroom1', 'message1', 'user1');
 
-      expect(result).toBeDefined();
-      expect(result).toHaveLength(2);
-      expect(mockChatMessageRepository.findByChatroom).toHaveBeenCalledWith('chatroom1');
+      expect(mockChatMessageRepository.findById).toHaveBeenCalledWith('chatroom1', 'message1');
+      expect(mockChatMessageRepository.delete).toHaveBeenCalledWith('chatroom1', 'message1');
+    });
+
+    it('should throw BadRequestException if user is not sender', async () => {
+      mockChatMessageRepository.findById.mockResolvedValue(mockMessages[0]);
+
+      await expect(service.remove('chatroom1', 'message1', 'user2')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -345,178 +353,51 @@ describe('ChatMessagesService', () => {
     });
   });
 
-  describe('findAll', () => {
-    it('should return messages from Firestore', async () => {
-      const mockFirestore = {};
-      mockFirebaseService.getClientFirestore.mockReturnValue(mockFirestore);
-
-      const mockCollection = {};
-      (collection as jest.Mock).mockReturnValue(mockCollection);
-
-      const mockQuery = {};
-      (query as jest.Mock).mockReturnValue(mockQuery);
-      (orderBy as jest.Mock).mockReturnThis();
-      (limit as jest.Mock).mockReturnThis();
-
-      (getDocs as jest.Mock).mockResolvedValue({
-        docs: mockMessages.map(msg => ({
-          id: msg.id,
-          data: () => ({
-            content: msg.content,
-            senderId: msg.senderId,
-            senderName: msg.senderName,
-            reactions: msg.reactions,
-            createdAt: msg.createdAt,
-            updatedAt: msg.updatedAt,
-          }),
-        })),
-      });
-
-      const result = await service.findAll('chatroom1');
-
-      expect(result).toBeDefined();
-      expect(result).toHaveLength(2);
-      expect(collection).toHaveBeenCalledWith(mockFirestore, 'chatrooms/chatroom1/messages');
-      expect(query).toHaveBeenCalled();
-      expect(orderBy).toHaveBeenCalledWith('createdAt', 'desc');
-      expect(limit).toHaveBeenCalledWith(50);
-    });
-  });
-
-  describe('findOne', () => {
-    it('should return a message from Firestore', async () => {
-      const mockFirestore = {};
-      mockFirebaseService.getClientFirestore.mockReturnValue(mockFirestore);
-
-      const mockDoc = {};
-      (doc as jest.Mock).mockReturnValue(mockDoc);
-
-      (getDoc as jest.Mock).mockResolvedValue({
-        exists: () => true,
-        id: 'message1',
-        data: () => ({
-          content: 'Test Message 1',
-          senderId: 'user1',
-          senderName: 'User 1',
-          reactions: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }),
-      });
-
-      const result = await service.findOne('chatroom1', 'message1');
-
-      expect(result).toBeDefined();
-      expect(result.id).toBe('message1');
-      expect(result.content).toBe('Test Message 1');
-      expect(doc).toHaveBeenCalledWith(mockFirestore, 'chatrooms/chatroom1/messages', 'message1');
-    });
-
-    it('should throw NotFoundException if message not found', async () => {
-      const mockFirestore = {};
-      mockFirebaseService.getClientFirestore.mockReturnValue(mockFirestore);
-
-      const mockDoc = {};
-      (doc as jest.Mock).mockReturnValue(mockDoc);
-
-      (getDoc as jest.Mock).mockResolvedValue({
-        exists: () => false,
-      });
-
-      await expect(service.findOne('chatroom1', 'nonexistent')).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('remove', () => {
-    it('should remove a message if user is sender', async () => {
-      const mockFirestore = {};
-      mockFirebaseService.getClientFirestore.mockReturnValue(mockFirestore);
-
-      const mockDoc = {};
-      (doc as jest.Mock).mockReturnValue(mockDoc);
-
-      (getDoc as jest.Mock).mockResolvedValue({
-        exists: () => true,
-        id: 'message1',
-        data: () => ({
-          content: 'Test Message 1',
-          senderId: 'user1',
-          senderName: 'User 1',
-          reactions: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }),
-      });
-
-      await service.remove('chatroom1', 'message1', 'user1');
-
-      expect(doc).toHaveBeenCalledWith(mockFirestore, 'chatrooms/chatroom1/messages', 'message1');
-      expect(deleteDoc).toHaveBeenCalledWith(mockDoc);
-    });
-
-    it('should throw BadRequestException if user is not sender', async () => {
-      const mockFirestore = {};
-      mockFirebaseService.getClientFirestore.mockReturnValue(mockFirestore);
-
-      const mockDoc = {};
-      (doc as jest.Mock).mockReturnValue(mockDoc);
-
-      (getDoc as jest.Mock).mockResolvedValue({
-        exists: () => true,
-        id: 'message1',
-        data: () => ({
-          content: 'Test Message 1',
-          senderId: 'user2',
-          senderName: 'User 2',
-          reactions: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }),
-      });
-
-      await expect(service.remove('chatroom1', 'message1', 'user1')).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-  });
-
   describe('adminUpdate', () => {
-    xit('should update a message as admin', async () => {
-      const mockFirestore = createFirestoreMock({
-        ...mockMessages[0],
-        editedByAdmin: false,
-      });
-      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
-
+    it('should update a message as admin', async () => {
       const updateDto = {
         content: 'Admin Updated Message',
       };
+
+      const updatedMessage = ChatMessage.fromProps({
+        ...mockMessages[0],
+        content: updateDto.content,
+        updatedAt: new Date().toISOString(),
+        editedAt: new Date().toISOString(),
+        editedByAdmin: true,
+      });
+
+      mockChatMessageRepository.update.mockResolvedValue(updatedMessage);
 
       const result = await service.adminUpdate('chatroom1', 'message1', updateDto);
 
       expect(result).toBeDefined();
       expect(result.content).toBe(updateDto.content);
       expect(result.editedByAdmin).toBe(true);
-      expect(mockFirestore.collection().doc().update).toHaveBeenCalledWith({
+      expect(mockChatMessageRepository.update).toHaveBeenCalledWith('chatroom1', 'message1', {
         content: updateDto.content,
-        editedByAdmin: true,
         updatedAt: expect.any(String),
+        editedAt: expect.any(String),
+        editedByAdmin: true,
       });
+    });
+
+    it('should throw NotFoundException if message not found', async () => {
+      mockChatMessageRepository.update.mockResolvedValue(null);
+
+      await expect(
+        service.adminUpdate('chatroom1', 'nonexistent', { content: 'New Content' }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('adminRemove', () => {
     it('should remove a message as admin', async () => {
-      const mockFirestore = {};
-      mockFirebaseService.getClientFirestore.mockReturnValue(mockFirestore);
-
-      const mockDoc = {};
-      (doc as jest.Mock).mockReturnValue(mockDoc);
+      mockChatMessageRepository.delete.mockResolvedValue(undefined);
 
       await service.adminRemove('chatroom1', 'message1');
 
-      expect(doc).toHaveBeenCalledWith(mockFirestore, 'chatrooms/chatroom1/messages', 'message1');
-      expect(deleteDoc).toHaveBeenCalledWith(mockDoc);
+      expect(mockChatMessageRepository.delete).toHaveBeenCalledWith('chatroom1', 'message1');
     });
   });
 });

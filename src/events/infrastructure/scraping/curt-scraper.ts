@@ -72,7 +72,7 @@ export class CurtScraper implements BaseScraper {
     return events;
   }
 
-  async scrapeEventsFromUrl(url: string): Promise<ScraperResult> {
+  async scrapeEventsFromUrl(url: string, options?: ScraperOptions): Promise<ScraperResult> {
     const puppeteerManager = PuppeteerManager.getInstance();
     let page: Page | null = null;
 
@@ -102,62 +102,98 @@ export class CurtScraper implements BaseScraper {
 
         return Array.from(eventElements)
           .map(element => {
-            const timeElement =
-              element.querySelector('.links .time, .time, .uhrzeit')?.textContent?.trim() || '';
-            const dateElement =
-              element.querySelector('.links .dat, .date, .datum')?.textContent?.trim() || '';
-            const categoryElement =
-              element.querySelector('.mitte .cat, .category, .kategorie')?.textContent?.trim() ||
-              '';
-            const locationElement =
-              element.querySelector('.mitte .loc, .location, .ort')?.textContent?.trim() || '';
-            const titleElement =
-              element.querySelector('.title a, .event-title, .titel')?.textContent?.trim() || '';
-            const descriptionElement =
-              element
-                .querySelector('.description a, .event-description, .beschreibung')
-                ?.textContent?.trim() || '';
+            const title = element.querySelector('.titel')?.textContent?.trim() || '';
+            const datetimeContainer = element.querySelector('.datetime-mobile');
+            let dateText = '';
+            let timeText = '';
+            if (datetimeContainer) {
+              const nodes = Array.from(datetimeContainer.childNodes);
+              // Suche nach deutschem Datum
+              const dateNode = nodes.find(
+                n =>
+                  n.nodeType === Node.TEXT_NODE &&
+                  n.textContent.trim().match(/^\d{2}\.\d{2}\.\d{4}$/),
+              );
+              if (dateNode) dateText = dateNode.textContent.trim();
+              // Suche nach Uhrzeit
+              const timeNode = nodes.find(
+                n => n.nodeType === Node.TEXT_NODE && n.textContent.trim().match(/^\d{2}:\d{2}$/),
+              );
+              if (timeNode) timeText = timeNode.textContent.trim();
+            }
 
-            const startDate =
-              dateElement && timeElement ? `${dateElement} ${timeElement}` : dateElement;
+            let fromTime = timeText || '00:00';
+            let toTime = timeText || '23:59';
+            if (timeText) {
+              const [hours, minutes] = timeText.split(':');
+              if (hours && minutes) {
+                const end = new Date();
+                end.setHours(Number(hours) + 1, Number(minutes), 0, 0);
+                toTime = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
+              }
+            }
+
+            const locationText =
+              element.querySelector('.card-body-footer')?.textContent?.trim() || '';
+            const description = element.querySelector('.beschreibung')?.textContent?.trim() || '';
+
+            // Konvertiere deutsches Datum ins ISO-Format
+            let isoDate = '';
+            if (dateText) {
+              const [day, month, year] = dateText.split('.');
+              if (day && month && year) {
+                isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+              }
+            }
+
+            if (!isoDate) {
+              return null;
+            }
 
             return {
-              title: titleElement,
-              description: descriptionElement,
+              title,
+              description,
               location: {
-                address: locationElement,
+                address: locationText,
                 latitude: 0,
                 longitude: 0,
               },
-              startDate,
-              endDate: startDate,
-              categoryId: categoryElement || 'default',
+              dailyTimeSlots: [
+                {
+                  date: isoDate,
+                  from: fromTime,
+                  to: toTime,
+                },
+              ],
+              categoryId: 'default',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             };
           })
-          .filter(event => event.title.length > 0);
+          .filter(event => event && event.title.length > 0);
       });
 
-      this.logger.debug(`Found ${events.length} events after filtering`);
+      const maxResults = options?.maxResults || this.config.maxResults;
+      const filteredEvents = events.filter(event => {
+        if (!event.title) return false;
+        if (options?.startDate && options?.endDate) {
+          const eventDate = new Date(event.dailyTimeSlots[0].date);
+          return eventDate >= options.startDate && eventDate <= options.endDate;
+        }
+        return true;
+      });
 
-      // Begrenze die Anzahl der Ergebnisse pro Tag
-      const maxResultsPerDay = this.config.maxResults || 10;
-      const limitedEvents = events.slice(0, maxResultsPerDay);
+      const limitedEvents = filteredEvents.slice(0, maxResults);
 
-      this.logger.debug(
-        `Returning ${limitedEvents.length} events for this day (maxResults: ${maxResultsPerDay})`,
-      );
+      this.logger.debug(`Found ${events.length} events, filtered to ${filteredEvents.length}, limited to ${limitedEvents.length}`);
 
-      const result = {
+      return {
         events: limitedEvents.map((event: Omit<Event, 'id'>) => ({
           ...event,
           id: crypto.randomUUID(),
         })),
-        hasMorePages: events.length > maxResultsPerDay,
+        hasMorePages: filteredEvents.length > maxResults,
       };
-
-      return result;
     } catch (error) {
       this.logger.error(`Error scraping events from URL ${url}: ${error.message}`);
       throw error;
@@ -170,20 +206,13 @@ export class CurtScraper implements BaseScraper {
 
   async handleCookieBanner(page: Page): Promise<void> {
     try {
-      this.logger.debug('Warte auf Cookie-Banner...');
-      await page
-        .waitForSelector('button[data-testid="uc-accept-all-button"]', { timeout: 2500 })
-        .then(async () => {
-          this.logger.debug('Cookie-Banner gefunden, klicke Akzeptieren...');
-          await page.click('button[data-testid="uc-accept-all-button"]');
-          this.logger.debug('Cookie-Banner akzeptiert');
-        })
-        .catch(() => {
-          this.logger.debug('Kein Cookie-Banner gefunden');
-        });
+      const cookieButton = await page.$('.cookie-banner button, .cookie-notice button, #cookie-notice button');
+      if (cookieButton) {
+        await cookieButton.click();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     } catch (error) {
-      this.logger.error('Fehler beim Behandeln des Cookie-Banners:', error);
-      throw error;
+      console.error('[CurtScraper] Fehler beim Behandeln des Cookie-Banners:', error);
     }
   }
 

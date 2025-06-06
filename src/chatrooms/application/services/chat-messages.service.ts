@@ -46,11 +46,13 @@ export class ChatMessagesService {
     };
 
     this.logger.error('Detailed error information:', JSON.stringify(errorDetails, null, 2));
-    
+
     if (error.code === 'permission-denied') {
-      throw new Error(`Berechtigungsfehler bei ${details.operation}: ${JSON.stringify(errorDetails)}`);
+      throw new Error(
+        `Berechtigungsfehler bei ${details.operation}: ${JSON.stringify(errorDetails)}`,
+      );
     }
-    
+
     throw error;
   }
 
@@ -62,7 +64,7 @@ export class ChatMessagesService {
       this.handleError(error, {
         operation: 'findAll',
         chatroomId,
-        limit
+        limit,
       });
     }
   }
@@ -79,7 +81,7 @@ export class ChatMessagesService {
       this.handleError(error, {
         operation: 'findOne',
         chatroomId,
-        messageId: id
+        messageId: id,
       });
     }
   }
@@ -106,7 +108,7 @@ export class ChatMessagesService {
       this.handleError(error, {
         operation: 'create',
         chatroomId,
-        userId
+        userId,
       });
     }
   }
@@ -123,7 +125,7 @@ export class ChatMessagesService {
       this.handleError(error, {
         operation: 'update',
         chatroomId,
-        messageId: id
+        messageId: id,
       });
     }
   }
@@ -136,7 +138,7 @@ export class ChatMessagesService {
       this.handleError(error, {
         operation: 'delete',
         chatroomId,
-        messageId: id
+        messageId: id,
       });
     }
   }
@@ -156,7 +158,7 @@ export class ChatMessagesService {
         operation: 'remove',
         chatroomId,
         messageId,
-        userId
+        userId,
       });
     }
   }
@@ -169,7 +171,12 @@ export class ChatMessagesService {
   ): Promise<ChatMessage> {
     try {
       this.logger.log(`Adding reaction to message with id: ${id}`);
-      const message = await this.chatMessageRepository.addReaction(chatroomId, id, userId, reaction);
+      const message = await this.chatMessageRepository.addReaction(
+        chatroomId,
+        id,
+        userId,
+        reaction,
+      );
       if (!message) {
         throw new NotFoundException(`Nachricht mit ID ${id} nicht gefunden`);
       }
@@ -179,7 +186,7 @@ export class ChatMessagesService {
         operation: 'addReaction',
         chatroomId,
         messageId: id,
-        userId
+        userId,
       });
     }
   }
@@ -197,7 +204,7 @@ export class ChatMessagesService {
         operation: 'removeReaction',
         chatroomId,
         messageId: id,
-        userId
+        userId,
       });
     }
   }
@@ -209,7 +216,7 @@ export class ChatMessagesService {
   ): Promise<ChatMessage> {
     try {
       this.logger.debug(`Admin updating message ${messageId} in chatroom ${chatroomId}`);
-      
+
       const message = await this.chatMessageRepository.update(chatroomId, messageId, {
         content: updateMessageDto.content,
         updatedAt: DateTimeUtils.getBerlinTime(),
@@ -226,7 +233,7 @@ export class ChatMessagesService {
       this.handleError(error, {
         operation: 'adminUpdate',
         chatroomId,
-        messageId
+        messageId,
       });
     }
   }
@@ -239,7 +246,7 @@ export class ChatMessagesService {
       this.handleError(error, {
         operation: 'adminRemove',
         chatroomId,
-        messageId
+        messageId,
       });
     }
   }

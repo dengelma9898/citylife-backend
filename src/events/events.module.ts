@@ -10,6 +10,7 @@ import { EventFinderScraper } from './infrastructure/scraping/eventfinder-scrape
 import { CurtScraper } from './infrastructure/scraping/curt-scraper';
 import { ScraperFactory } from './infrastructure/scraping/scraper-factory';
 import { RausgegangenScraper } from './infrastructure/scraping/rausgegangen-scraper';
+import { ParksScraper } from './infrastructure/scraping/parks-scraper';
 
 @Module({
   imports: [FirebaseModule, forwardRef(() => UsersModule), forwardRef(() => BusinessesModule)],
@@ -22,6 +23,7 @@ import { RausgegangenScraper } from './infrastructure/scraping/rausgegangen-scra
     CurtScraper,
     ScraperFactory,
     RausgegangenScraper,
+    ParksScraper,
   ],
   exports: [EventsService],
 })

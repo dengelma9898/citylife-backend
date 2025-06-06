@@ -25,7 +25,13 @@ export interface Event {
     latitude: number;
     longitude: number;
   };
+  /**
+   * @deprecated Verwende stattdessen dailyTimeSlots für die Zeitplanung
+   */
   startDate?: string;
+  /**
+   * @deprecated Verwende stattdessen dailyTimeSlots für die Zeitplanung
+   */
   endDate?: string;
   titleImageUrl?: string;
   imageUrls?: string[];

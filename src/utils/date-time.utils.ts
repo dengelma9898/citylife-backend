@@ -88,4 +88,45 @@ export class DateTimeUtils {
 
     return date.setZone(this.BERLIN_TIMEZONE).toFormat('HH:mm');
   }
+
+  /**
+   * Konvertiert ein deutsches Datum ins ISO-Format
+   * @param germanDate Das Datum im deutschen Format (z.B. "11. Juni 2024" oder "11.06.2024")
+   * @returns {string} Datum im ISO-Format (YYYY-MM-DD) oder null bei Fehler
+   */
+  public static convertToISO(germanDate: string): string | null {
+    if (!germanDate) return null;
+
+    try {
+      // Versuche zuerst das Format "DD.MM.YYYY"
+      const parts = germanDate.split('.');
+      if (parts.length === 3) {
+        const [day, month, year] = parts.map(part => part.trim());
+        if (day && month && year) {
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+      }
+
+      // Versuche dann das Format "DD. Monat YYYY"
+      const months: { [key: string]: string } = {
+        'Januar': '01', 'Februar': '02', 'März': '03', 'April': '04',
+        'Mai': '05', 'Juni': '06', 'Juli': '07', 'August': '08',
+        'September': '09', 'Oktober': '10', 'November': '11', 'Dezember': '12'
+      };
+
+      const dateParts = germanDate.split(' ');
+      if (dateParts.length === 3) {
+        const [day, month, year] = dateParts;
+        const monthNumber = months[month];
+        if (day && monthNumber && year) {
+          return `${year}-${monthNumber}-${day.padStart(2, '0')}`;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error converting German date to ISO:', error);
+      return null;
+    }
+  }
 }

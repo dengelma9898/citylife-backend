@@ -43,11 +43,11 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     try {
       this.logger.debug(`Attempting to find messages for chatroom ${chatroomId}`);
       const db = this.firebaseService.getFirestore();
-      
+
       // Überprüfen Sie zuerst, ob der Chatroom existiert
       const chatroomRef = db.collection(this.collection).doc(chatroomId);
       const chatroomDoc = await chatroomRef.get();
-      
+
       if (!chatroomDoc.exists) {
         this.logger.error(`Chatroom ${chatroomId} does not exist`);
         throw new Error(`Chatroom ${chatroomId} does not exist`);
@@ -63,7 +63,7 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
 
       const snapshot = await query.get();
       this.logger.debug(`Found ${snapshot.docs.length} messages for chatroom ${chatroomId}`);
-      
+
       return snapshot.docs.map(doc =>
         ChatMessage.fromProps(this.toEntityProps(doc.data(), doc.id)),
       );
@@ -77,15 +77,17 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
         operation: 'findAll',
         chatroomId,
         collection: this.collection,
-        subcollection: this.messagesCollection
+        subcollection: this.messagesCollection,
       };
 
       this.logger.error('Detailed error information:', JSON.stringify(errorDetails, null, 2));
-      
+
       if (error.code === 'permission-denied') {
-        throw new Error(`Berechtigungsfehler beim Zugriff auf Chat-Nachrichten: ${JSON.stringify(errorDetails)}`);
+        throw new Error(
+          `Berechtigungsfehler beim Zugriff auf Chat-Nachrichten: ${JSON.stringify(errorDetails)}`,
+        );
       }
-      
+
       throw error;
     }
   }
@@ -94,11 +96,11 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     try {
       this.logger.debug(`Attempting to find message ${id} in chatroom ${chatroomId}`);
       const db = this.firebaseService.getFirestore();
-      
+
       // Überprüfen Sie zuerst, ob der Chatroom existiert
       const chatroomRef = db.collection(this.collection).doc(chatroomId);
       const chatroomDoc = await chatroomRef.get();
-      
+
       if (!chatroomDoc.exists) {
         this.logger.error(`Chatroom ${chatroomId} does not exist`);
         return null;
@@ -126,11 +128,11 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     try {
       this.logger.debug(`Attempting to create message in chatroom ${chatroomId}`);
       const db = this.firebaseService.getFirestore();
-      
+
       // Überprüfen Sie zuerst, ob der Chatroom existiert
       const chatroomRef = db.collection(this.collection).doc(chatroomId);
       const chatroomDoc = await chatroomRef.get();
-      
+
       if (!chatroomDoc.exists) {
         this.logger.error(`Chatroom ${chatroomId} does not exist`);
         throw new Error(`Chatroom ${chatroomId} does not exist`);
@@ -158,11 +160,11 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     try {
       this.logger.debug(`Attempting to update message ${id} in chatroom ${chatroomId}`);
       const db = this.firebaseService.getFirestore();
-      
+
       // Überprüfen Sie zuerst, ob der Chatroom existiert
       const chatroomRef = db.collection(this.collection).doc(chatroomId);
       const chatroomDoc = await chatroomRef.get();
-      
+
       if (!chatroomDoc.exists) {
         this.logger.error(`Chatroom ${chatroomId} does not exist`);
         return null;
@@ -192,11 +194,11 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     try {
       this.logger.debug(`Attempting to delete message ${id} from chatroom ${chatroomId}`);
       const db = this.firebaseService.getFirestore();
-      
+
       // Überprüfen Sie zuerst, ob der Chatroom existiert
       const chatroomRef = db.collection(this.collection).doc(chatroomId);
       const chatroomDoc = await chatroomRef.get();
-      
+
       if (!chatroomDoc.exists) {
         this.logger.error(`Chatroom ${chatroomId} does not exist`);
         throw new Error(`Chatroom ${chatroomId} does not exist`);
@@ -252,7 +254,9 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     userId: string,
   ): Promise<ChatMessage | null> {
     try {
-      this.logger.debug(`Attempting to remove reaction from message ${id} in chatroom ${chatroomId}`);
+      this.logger.debug(
+        `Attempting to remove reaction from message ${id} in chatroom ${chatroomId}`,
+      );
       const message = await this.findById(chatroomId, id);
       if (!message || !message.reactions) {
         this.logger.debug(`Message ${id} not found or has no reactions in chatroom ${chatroomId}`);

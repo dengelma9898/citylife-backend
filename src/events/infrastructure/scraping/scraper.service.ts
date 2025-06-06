@@ -3,6 +3,7 @@ import { BaseScraper, ScraperType } from './base-scraper.interface';
 import { EventFinderScraper } from './eventfinder-scraper';
 import { CurtScraper } from './curt-scraper';
 import { RausgegangenScraper } from './rausgegangen-scraper';
+import { ParksScraper } from './parks-scraper';
 import { Event } from '../../interfaces/event.interface';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class ScraperService {
     private readonly eventFinderScraper: EventFinderScraper,
     private readonly curtScraper: CurtScraper,
     private readonly rausgegangenScraper: RausgegangenScraper,
+    private readonly parksScraper: ParksScraper,
   ) {
     this.initializeScrapers();
   }
@@ -22,6 +24,7 @@ export class ScraperService {
     this.scrapers.set(ScraperType.EVENTFINDER, this.eventFinderScraper);
     this.scrapers.set(ScraperType.CURT, this.curtScraper);
     this.scrapers.set(ScraperType.RAUSGEGANGEN, this.rausgegangenScraper);
+    this.scrapers.set(ScraperType.PARKS, this.parksScraper);
   }
 
   /**
