@@ -4,6 +4,7 @@ import { EventFinderScraper } from './eventfinder-scraper';
 import { CurtScraper } from './curt-scraper';
 import { RausgegangenScraper } from './rausgegangen-scraper';
 import { ParksScraper } from './parks-scraper';
+import { EventbriteScraper } from './eventbrite-scraper';
 import { Event } from '../../interfaces/event.interface';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class ScraperService {
     private readonly curtScraper: CurtScraper,
     private readonly rausgegangenScraper: RausgegangenScraper,
     private readonly parksScraper: ParksScraper,
+    private readonly eventbriteScraper: EventbriteScraper,
   ) {
     this.initializeScrapers();
   }
@@ -25,6 +27,7 @@ export class ScraperService {
     this.scrapers.set(ScraperType.CURT, this.curtScraper);
     this.scrapers.set(ScraperType.RAUSGEGANGEN, this.rausgegangenScraper);
     this.scrapers.set(ScraperType.PARKS, this.parksScraper);
+    this.scrapers.set(ScraperType.EVENTBRITE, this.eventbriteScraper);
   }
 
   /**
@@ -51,14 +54,20 @@ export class ScraperService {
    */
   async scrapeEventsForDate(date: Date): Promise<Event[]> {
     const events: Event[] = [];
-    const promises: Promise<Event[]>[] = [];
+    const promises: Promise<any>[] = [];
 
     for (const scraper of this.scrapers.values()) {
       promises.push(scraper.scrapeEventsForDate(date));
     }
 
     const results = await Promise.all(promises);
-    results.forEach(result => events.push(...result));
+    results.forEach(result => {
+      if (Array.isArray(result)) {
+        events.push(...result);
+      } else if (result && Array.isArray(result.events)) {
+        events.push(...result.events);
+      }
+    });
 
     return events;
   }
@@ -68,14 +77,20 @@ export class ScraperService {
    */
   async scrapeEventsForDateRange(startDate: Date, endDate: Date): Promise<Event[]> {
     const events: Event[] = [];
-    const promises: Promise<Event[]>[] = [];
+    const promises: Promise<any>[] = [];
 
     for (const scraper of this.scrapers.values()) {
       promises.push(scraper.scrapeEventsForDateRange(startDate, endDate));
     }
 
     const results = await Promise.all(promises);
-    results.forEach(result => events.push(...result));
+    results.forEach(result => {
+      if (Array.isArray(result)) {
+        events.push(...result);
+      } else if (result && Array.isArray(result.events)) {
+        events.push(...result.events);
+      }
+    });
 
     return events;
   }

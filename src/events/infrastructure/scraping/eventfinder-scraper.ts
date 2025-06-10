@@ -123,7 +123,9 @@ export class EventFinderScraper implements BaseScraper {
 
       const limitedEvents = filteredEvents.slice(0, maxResults);
 
-      this.logger.debug(`Found ${events.length} events, filtered to ${filteredEvents.length}, limited to ${limitedEvents.length}`);
+      this.logger.debug(
+        `Found ${events.length} events, filtered to ${filteredEvents.length}, limited to ${limitedEvents.length}`,
+      );
 
       return {
         events: limitedEvents.map((event: Omit<Event, 'id'>) => ({
@@ -144,7 +146,9 @@ export class EventFinderScraper implements BaseScraper {
 
   async handleCookieBanner(page: Page): Promise<void> {
     try {
-      const cookieButton = await page.$('.cookie-banner button, .cookie-notice button, #cookie-notice button');
+      const cookieButton = await page.$(
+        '.cookie-banner button, .cookie-notice button, #cookie-notice button',
+      );
       if (cookieButton) {
         await cookieButton.click();
         await new Promise(resolve => setTimeout(resolve, 1000)); // Warte kurz, damit die Animation abgeschlossen ist

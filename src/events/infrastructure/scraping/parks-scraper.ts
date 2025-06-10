@@ -64,7 +64,7 @@ export class ParksScraper implements BaseScraper {
       await page.waitForSelector('.em-view-container', {
         timeout: puppeteerManager.getConfig().timeout,
       });
-      
+
       const events = await page.evaluate(() => {
         const eventElements = document.querySelectorAll('.em-event.em-item');
         console.log(`Found ${eventElements.length} event elements`);
@@ -72,9 +72,18 @@ export class ParksScraper implements BaseScraper {
         // Hilfsfunktion zur Konvertierung deutscher Monatsnamen
         const convertGermanDate = (dateStr: string): string => {
           const monthMap: { [key: string]: string } = {
-            'Januar': '01', 'Februar': '02', 'März': '03', 'April': '04',
-            'Mai': '05', 'Juni': '06', 'Juli': '07', 'August': '08',
-            'September': '09', 'Oktober': '10', 'November': '11', 'Dezember': '12'
+            Januar: '01',
+            Februar: '02',
+            März: '03',
+            April: '04',
+            Mai: '05',
+            Juni: '06',
+            Juli: '07',
+            August: '08',
+            September: '09',
+            Oktober: '10',
+            November: '11',
+            Dezember: '12',
           };
 
           // Extrahiere Tag, Monat und Jahr
@@ -97,12 +106,14 @@ export class ParksScraper implements BaseScraper {
         return Array.from(eventElements)
           .map(element => {
             const titleElement = element.querySelector('h3 a')?.textContent?.trim() || '';
-            const descriptionElement = element.querySelector('.em-item-desc')?.textContent?.trim() || '';
-            
+            const descriptionElement =
+              element.querySelector('.em-item-desc')?.textContent?.trim() || '';
+
             // Extrahiere Datum
             const dateElement = element.querySelector('.em-event-date')?.textContent?.trim() || '';
             const timeElement = element.querySelector('.em-event-time')?.textContent?.trim() || '';
-            const locationElement = element.querySelector('.em-event-location a')?.textContent?.trim() || '';
+            const locationElement =
+              element.querySelector('.em-event-location a')?.textContent?.trim() || '';
 
             // Konvertiere deutsches Datum ins ISO-Format
             let isoDate = '';
@@ -158,7 +169,13 @@ export class ParksScraper implements BaseScraper {
               updatedAt: new Date().toISOString(),
             };
           })
-          .filter(event => event !== null && event.title.length > 0 && event.dailyTimeSlots && event.dailyTimeSlots.length > 0);
+          .filter(
+            event =>
+              event !== null &&
+              event.title.length > 0 &&
+              event.dailyTimeSlots &&
+              event.dailyTimeSlots.length > 0,
+          );
       });
 
       this.logger.debug(`Found ${events.length} events after filtering`);
@@ -167,7 +184,8 @@ export class ParksScraper implements BaseScraper {
       // Filtere Events nach Zeitraum, falls Optionen übergeben wurden
       let filteredEvents = events;
       if (options && options.startDate && options.endDate) {
-        const start = options.startDate instanceof Date ? options.startDate : new Date(options.startDate);
+        const start =
+          options.startDate instanceof Date ? options.startDate : new Date(options.startDate);
         const end = options.endDate instanceof Date ? options.endDate : new Date(options.endDate);
         filteredEvents = events.filter(event => {
           if (!event.dailyTimeSlots || event.dailyTimeSlots.length === 0) return false;
@@ -177,7 +195,9 @@ export class ParksScraper implements BaseScraper {
       }
       this.logger.debug(`Found ${filteredEvents.length} events after date filtering`);
       const limitedEvents = filteredEvents.slice(0, maxResults);
-      this.logger.debug(`Returning ${limitedEvents.length} events (limited by maxResults: ${maxResults})`);
+      this.logger.debug(
+        `Returning ${limitedEvents.length} events (limited by maxResults: ${maxResults})`,
+      );
 
       return {
         events: limitedEvents.map((event: Omit<Event, 'id'>) => ({
@@ -211,4 +231,4 @@ export class ParksScraper implements BaseScraper {
   extractDateFromUrl(url: string): Date | null {
     return null;
   }
-} 
+}

@@ -3,6 +3,7 @@ import { BaseScraper, ScraperType } from './base-scraper.interface';
 import { EventFinderScraper } from './eventfinder-scraper';
 import { CurtScraper } from './curt-scraper';
 import { RausgegangenScraper } from './rausgegangen-scraper';
+import { EventbriteScraper } from './eventbrite-scraper';
 
 @Injectable()
 export class ScraperFactory {
@@ -10,6 +11,7 @@ export class ScraperFactory {
     private readonly eventFinderScraper: EventFinderScraper,
     private readonly curtScraper: CurtScraper,
     private readonly rausgegangenScraper: RausgegangenScraper,
+    private readonly eventbriteScraper: EventbriteScraper,
   ) {}
 
   createScraper(type: ScraperType): BaseScraper {
@@ -20,6 +22,8 @@ export class ScraperFactory {
         return this.curtScraper;
       case ScraperType.RAUSGEGANGEN:
         return this.rausgegangenScraper;
+      case ScraperType.EVENTBRITE:
+        return this.eventbriteScraper;
       default:
         throw new Error(`Unsupported scraper type: ${type}`);
     }

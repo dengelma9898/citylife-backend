@@ -93,4 +93,5 @@ export enum ScraperType {
   CURT = 'curt',
   RAUSGEGANGEN = 'rausgegangen',
   PARKS = 'parks',
+  EVENTBRITE = 'eventbrite',
 }

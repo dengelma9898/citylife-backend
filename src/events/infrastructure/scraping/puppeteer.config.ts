@@ -15,7 +15,7 @@ export interface PuppeteerConfig {
 
 export const defaultPuppeteerConfig: PuppeteerConfig = {
   launchOptions: {
-    headless: true,
+    headless: false,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',

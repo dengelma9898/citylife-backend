@@ -4,6 +4,7 @@ import { EventFinderScraper } from './eventfinder-scraper';
 import { CurtScraper } from './curt-scraper';
 import { RausgegangenScraper } from './rausgegangen-scraper';
 import { ParksScraper } from './parks-scraper';
+import { EventbriteScraper } from './eventbrite-scraper';
 import { ScraperType } from './base-scraper.interface';
 import { Event } from '../../interfaces/event.interface';
 
@@ -44,6 +45,14 @@ describe('ScraperService', () => {
         },
         {
           provide: ParksScraper,
+          useValue: {
+            scrapeEventsForDate: jest.fn(),
+            scrapeEventsForDateRange: jest.fn(),
+            scrapeEventsFromUrl: jest.fn(),
+          },
+        },
+        {
+          provide: EventbriteScraper,
           useValue: {
             scrapeEventsForDate: jest.fn(),
             scrapeEventsForDateRange: jest.fn(),
@@ -100,10 +109,10 @@ describe('ScraperService', () => {
         },
       ];
 
-      (eventFinderScraper.scrapeEventsForDate as jest.Mock).mockResolvedValue(mockEvents);
-      (curtScraper.scrapeEventsForDate as jest.Mock).mockResolvedValue(mockEvents);
-      (rausgegangenScraper.scrapeEventsForDate as jest.Mock).mockResolvedValue(mockEvents);
-      (parksScraper.scrapeEventsForDate as jest.Mock).mockResolvedValue(mockEvents);
+      (eventFinderScraper.scrapeEventsForDate as jest.Mock).mockResolvedValue({ events: mockEvents });
+      (curtScraper.scrapeEventsForDate as jest.Mock).mockResolvedValue({ events: mockEvents });
+      (rausgegangenScraper.scrapeEventsForDate as jest.Mock).mockResolvedValue({ events: mockEvents });
+      (parksScraper.scrapeEventsForDate as jest.Mock).mockResolvedValue({ events: mockEvents });
 
       const result = await service.scrapeEventsForDate(date);
 
@@ -142,10 +151,10 @@ describe('ScraperService', () => {
         },
       ];
 
-      (eventFinderScraper.scrapeEventsForDateRange as jest.Mock).mockResolvedValue(mockEvents);
-      (curtScraper.scrapeEventsForDateRange as jest.Mock).mockResolvedValue(mockEvents);
-      (rausgegangenScraper.scrapeEventsForDateRange as jest.Mock).mockResolvedValue(mockEvents);
-      (parksScraper.scrapeEventsForDateRange as jest.Mock).mockResolvedValue(mockEvents);
+      (eventFinderScraper.scrapeEventsForDateRange as jest.Mock).mockResolvedValue({ events: mockEvents });
+      (curtScraper.scrapeEventsForDateRange as jest.Mock).mockResolvedValue({ events: mockEvents });
+      (rausgegangenScraper.scrapeEventsForDateRange as jest.Mock).mockResolvedValue({ events: mockEvents });
+      (parksScraper.scrapeEventsForDateRange as jest.Mock).mockResolvedValue({ events: mockEvents });
 
       const result = await service.scrapeEventsForDateRange(startDate, endDate);
 
