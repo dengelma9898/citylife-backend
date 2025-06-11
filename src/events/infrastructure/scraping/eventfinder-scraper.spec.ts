@@ -22,7 +22,16 @@ describe('EventFinderScraper', () => {
       waitForSelector: jest.fn(),
       evaluate: jest.fn(),
       close: jest.fn(),
+      click: jest.fn(),
     };
+
+    // Mock waitForSelector to return a rejected promise for cookie banner (no cookie banner found)
+    (mockPage.waitForSelector as jest.Mock).mockImplementation((selector) => {
+      if (selector === 'button[data-testid="uc-accept-all-button"]') {
+        return Promise.reject(new Error('Selector not found'));
+      }
+      return Promise.resolve();
+    });
 
     (PuppeteerManager.getInstance as jest.Mock).mockReturnValue({
       getPage: jest.fn().mockResolvedValue(mockPage),
@@ -49,6 +58,8 @@ describe('EventFinderScraper', () => {
             latitude: 0,
             longitude: 0,
           },
+          startDate: '2024-06-11 18:00',
+          endDate: '2024-06-11 19:00',
           dailyTimeSlots: [
             {
               date: '2024-06-11',
@@ -67,10 +78,7 @@ describe('EventFinderScraper', () => {
         return mockEvents;
       });
 
-      const result = await scraper.scrapeEventsFromUrl('https://www.eventfinder.de/nuernberg', {
-        startDate: new Date('2024-06-11'),
-        endDate: new Date('2024-06-11'),
-      });
+      const result = await scraper.scrapeEventsFromUrl('https://www.eventfinder.de/nuernberg');
 
       expect(result.events).toHaveLength(1);
       expect(result.events[0].title).toBe('Test Event');
@@ -87,6 +95,8 @@ describe('EventFinderScraper', () => {
             latitude: 0,
             longitude: 0,
           },
+          startDate: '2024-06-11 18:00',
+          endDate: '2024-06-11 19:00',
           dailyTimeSlots: [
             {
               date: '2024-06-11',
@@ -106,6 +116,8 @@ describe('EventFinderScraper', () => {
             latitude: 0,
             longitude: 0,
           },
+          startDate: '2024-06-12 20:00',
+          endDate: '2024-06-12 22:00',
           dailyTimeSlots: [
             {
               date: '2024-06-12',
@@ -124,14 +136,13 @@ describe('EventFinderScraper', () => {
         return mockEvents;
       });
 
-      const result = await scraper.scrapeEventsFromUrl('https://www.eventfinder.de/nuernberg', {
-        startDate: new Date('2024-06-11'),
-        endDate: new Date('2024-06-11'),
-      });
+      const result = await scraper.scrapeEventsFromUrl('https://www.eventfinder.de/nuernberg');
 
-      expect(result.events).toHaveLength(1);
+      expect(result.events).toHaveLength(2);
       expect(result.events[0].title).toBe('Event 1');
       expect(result.events[0].dailyTimeSlots[0].date).toBe('2024-06-11');
+      expect(result.events[1].title).toBe('Event 2');
+      expect(result.events[1].dailyTimeSlots[0].date).toBe('2024-06-12');
     });
 
     it('should handle empty events', async () => {
@@ -140,10 +151,7 @@ describe('EventFinderScraper', () => {
         return [];
       });
 
-      const result = await scraper.scrapeEventsFromUrl('https://www.eventfinder.de/nuernberg', {
-        startDate: new Date('2024-06-11'),
-        endDate: new Date('2024-06-11'),
-      });
+      const result = await scraper.scrapeEventsFromUrl('https://www.eventfinder.de/nuernberg');
 
       expect(result.events).toHaveLength(0);
     });
@@ -152,10 +160,7 @@ describe('EventFinderScraper', () => {
       (mockPage.goto as jest.Mock).mockRejectedValue(new Error('Page load failed'));
 
       await expect(
-        scraper.scrapeEventsFromUrl('https://www.eventfinder.de/nuernberg', {
-          startDate: new Date('2024-06-11'),
-          endDate: new Date('2024-06-11'),
-        }),
+        scraper.scrapeEventsFromUrl('https://www.eventfinder.de/nuernberg'),
       ).rejects.toThrow('Page load failed');
     });
   });
@@ -171,6 +176,8 @@ describe('EventFinderScraper', () => {
             latitude: 0,
             longitude: 0,
           },
+          startDate: '2024-06-11 18:00',
+          endDate: '2024-06-11 19:00',
           dailyTimeSlots: [
             {
               date: '2024-06-11',
@@ -209,6 +216,8 @@ describe('EventFinderScraper', () => {
           latitude: 0,
           longitude: 0,
         },
+        startDate: '2024-06-11 18:00',
+        endDate: '2024-06-11 19:00',
         dailyTimeSlots: [
           {
             date: '2024-06-11',

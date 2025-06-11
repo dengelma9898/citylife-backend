@@ -62,7 +62,7 @@ export class EventbriteScraper implements BaseScraper {
         timeout: puppeteerManager.getConfig().timeout,
         waitUntil: 'networkidle2',
       });
-      
+
       // Cookie-Banner behandeln
       // await this.handleCookieBanner(page);
 
@@ -80,7 +80,9 @@ export class EventbriteScraper implements BaseScraper {
           const eventCardDetails = element.querySelector('.event-card-details');
           const titleElement = eventCardDetails?.querySelector('.event-card-link h3');
           const dateTimeElement = eventCardDetails?.querySelector('.event-card__clamp-line--one');
-          const locationElement = eventCardDetails?.querySelectorAll('.event-card__clamp-line--one')[1];
+          const locationElement = eventCardDetails?.querySelectorAll(
+            '.event-card__clamp-line--one',
+          )[1];
           const locationSpan = locationElement?.nextElementSibling;
           const priceElement = locationSpan?.nextElementSibling?.querySelector('p');
 
@@ -93,20 +95,33 @@ export class EventbriteScraper implements BaseScraper {
           let eventDate = '';
           let fromTime = '';
           // Neue Regex für z.B. 'So., 22. Juni, 08:00'
-          const germanMatch = dateTimeText.match(/([A-Za-zäöüÄÖÜß]{2,4})\.,\s*(\d{1,2})\.\s*([A-Za-zäöüÄÖÜß]+),\s*(\d{2}:\d{2})/);
+          const germanMatch = dateTimeText.match(
+            /([A-Za-zäöüÄÖÜß]{2,4})\.,\s*(\d{1,2})\.\s*([A-Za-zäöüÄÖÜß]+),\s*(\d{2}:\d{2})/,
+          );
           if (germanMatch) {
             const [_, day, date, month, time] = germanMatch;
             const monthMap: { [key: string]: string } = {
-              'Januar': '01', 'Februar': '02', 'März': '03', 'April': '04',
-              'Mai': '05', 'Juni': '06', 'Juli': '07', 'August': '08',
-              'September': '09', 'Oktober': '10', 'November': '11', 'Dezember': '12'
+              Januar: '01',
+              Februar: '02',
+              März: '03',
+              April: '04',
+              Mai: '05',
+              Juni: '06',
+              Juli: '07',
+              August: '08',
+              September: '09',
+              Oktober: '10',
+              November: '11',
+              Dezember: '12',
             };
             const currentYear = new Date().getFullYear();
             eventDate = `${currentYear}-${monthMap[month]}-${date.padStart(2, '0')}`;
             fromTime = time;
           }
 
-          const price = priceText ? parseFloat(priceText.replace(/[^0-9,]/g, '').replace(',', '.')) : 0;
+          const price = priceText
+            ? parseFloat(priceText.replace(/[^0-9,]/g, '').replace(',', '.'))
+            : 0;
 
           return {
             title,
@@ -195,7 +210,7 @@ export class EventbriteScraper implements BaseScraper {
 
   generateUrl(options: ScraperOptions): string {
     const params = new URLSearchParams();
-    
+
     if (options.startDate && options.endDate) {
       const startDate = options.startDate.toISOString().split('T')[0];
       const endDate = options.endDate.toISOString().split('T')[0];
@@ -219,4 +234,4 @@ export class EventbriteScraper implements BaseScraper {
   validateConfig(): boolean {
     return !!(this.config.baseUrl && this.config.dateFormat);
   }
-} 
+}

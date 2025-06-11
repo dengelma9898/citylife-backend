@@ -49,11 +49,13 @@ describe('RausgegangenScraper', () => {
             latitude: 0,
             longitude: 0,
           },
+          startDate: '2024-06-11 18:00',
+          endDate: '2024-06-11 18:00',
           dailyTimeSlots: [
             {
               date: '2024-06-11',
               from: '18:00',
-              to: '19:00',
+              to: '18:00',
             },
           ],
           categoryId: 'default',
@@ -67,10 +69,7 @@ describe('RausgegangenScraper', () => {
         return mockEvents;
       });
 
-      const result = await scraper.scrapeEventsFromUrl('https://www.rausgegangen.de/nuernberg', {
-        startDate: new Date('2024-06-11'),
-        endDate: new Date('2024-06-11'),
-      });
+      const result = await scraper.scrapeEventsFromUrl('https://www.rausgegangen.de/nuernberg');
 
       expect(result.events).toHaveLength(1);
       expect(result.events[0].title).toBe('Test Event');
@@ -87,11 +86,13 @@ describe('RausgegangenScraper', () => {
             latitude: 0,
             longitude: 0,
           },
+          startDate: '2024-06-11 18:00',
+          endDate: '2024-06-11 18:00',
           dailyTimeSlots: [
             {
               date: '2024-06-11',
               from: '18:00',
-              to: '19:00',
+              to: '18:00',
             },
           ],
           categoryId: 'default',
@@ -106,11 +107,13 @@ describe('RausgegangenScraper', () => {
             latitude: 0,
             longitude: 0,
           },
+          startDate: '2024-06-12 20:00',
+          endDate: '2024-06-12 20:00',
           dailyTimeSlots: [
             {
               date: '2024-06-12',
               from: '20:00',
-              to: '22:00',
+              to: '20:00',
             },
           ],
           categoryId: 'default',
@@ -124,14 +127,13 @@ describe('RausgegangenScraper', () => {
         return mockEvents;
       });
 
-      const result = await scraper.scrapeEventsFromUrl('https://www.rausgegangen.de/nuernberg', {
-        startDate: new Date('2024-06-11'),
-        endDate: new Date('2024-06-11'),
-      });
+      const result = await scraper.scrapeEventsFromUrl('https://www.rausgegangen.de/nuernberg');
 
-      expect(result.events).toHaveLength(1);
+      expect(result.events).toHaveLength(2);
       expect(result.events[0].title).toBe('Event 1');
       expect(result.events[0].dailyTimeSlots[0].date).toBe('2024-06-11');
+      expect(result.events[1].title).toBe('Event 2');
+      expect(result.events[1].dailyTimeSlots[0].date).toBe('2024-06-12');
     });
 
     it('should handle empty events', async () => {
@@ -140,10 +142,7 @@ describe('RausgegangenScraper', () => {
         return [];
       });
 
-      const result = await scraper.scrapeEventsFromUrl('https://www.rausgegangen.de/nuernberg', {
-        startDate: new Date('2024-06-11'),
-        endDate: new Date('2024-06-11'),
-      });
+      const result = await scraper.scrapeEventsFromUrl('https://www.rausgegangen.de/nuernberg');
 
       expect(result.events).toHaveLength(0);
     });
@@ -152,10 +151,7 @@ describe('RausgegangenScraper', () => {
       (mockPage.goto as jest.Mock).mockRejectedValue(new Error('Page load failed'));
 
       await expect(
-        scraper.scrapeEventsFromUrl('https://www.rausgegangen.de/nuernberg', {
-          startDate: new Date('2024-06-11'),
-          endDate: new Date('2024-06-11'),
-        }),
+        scraper.scrapeEventsFromUrl('https://www.rausgegangen.de/nuernberg'),
       ).rejects.toThrow('Page load failed');
     });
   });
@@ -171,11 +167,13 @@ describe('RausgegangenScraper', () => {
             latitude: 0,
             longitude: 0,
           },
+          startDate: '2024-06-11 18:00',
+          endDate: '2024-06-11 18:00',
           dailyTimeSlots: [
             {
               date: '2024-06-11',
               from: '18:00',
-              to: '19:00',
+              to: '18:00',
             },
           ],
           categoryId: 'default',
@@ -209,11 +207,13 @@ describe('RausgegangenScraper', () => {
           latitude: 0,
           longitude: 0,
         },
+        startDate: '2024-06-11 18:00',
+        endDate: '2024-06-11 18:00',
         dailyTimeSlots: [
           {
             date: '2024-06-11',
             from: '18:00',
-            to: '19:00',
+            to: '18:00',
           },
         ],
         categoryId: 'default',

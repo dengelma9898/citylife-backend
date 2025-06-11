@@ -5,7 +5,7 @@ import {
   ScraperOptions,
   ScraperResult,
 } from './base-scraper.interface';
-import { Event } from '../../interfaces/event.interface';
+import { Event, DailyTimeSlot } from '../../interfaces/event.interface';
 import { DateTimeUtils } from '../../../utils/date-time.utils';
 import { PuppeteerManager } from './puppeteer.config';
 import { Page } from 'puppeteer';
@@ -72,7 +72,7 @@ export class CurtScraper implements BaseScraper {
     return events;
   }
 
-  async scrapeEventsFromUrl(url: string, options?: ScraperOptions): Promise<ScraperResult> {
+  async scrapeEventsFromUrl(url: string): Promise<ScraperResult> {
     const puppeteerManager = PuppeteerManager.getInstance();
     let page: Page | null = null;
 
@@ -102,100 +102,67 @@ export class CurtScraper implements BaseScraper {
 
         return Array.from(eventElements)
           .map(element => {
-            const title = element.querySelector('.titel')?.textContent?.trim() || '';
-            const datetimeContainer = element.querySelector('.datetime-mobile');
-            let dateText = '';
-            let timeText = '';
-            if (datetimeContainer) {
-              const nodes = Array.from(datetimeContainer.childNodes);
-              // Suche nach deutschem Datum
-              const dateNode = nodes.find(
-                n =>
-                  n.nodeType === Node.TEXT_NODE &&
-                  n.textContent.trim().match(/^\d{2}\.\d{2}\.\d{4}$/),
-              );
-              if (dateNode) dateText = dateNode.textContent.trim();
-              // Suche nach Uhrzeit
-              const timeNode = nodes.find(
-                n => n.nodeType === Node.TEXT_NODE && n.textContent.trim().match(/^\d{2}:\d{2}$/),
-              );
-              if (timeNode) timeText = timeNode.textContent.trim();
-            }
-
-            let fromTime = timeText || '00:00';
-            let toTime = timeText || '23:59';
-            if (timeText) {
-              const [hours, minutes] = timeText.split(':');
-              if (hours && minutes) {
-                const end = new Date();
-                end.setHours(Number(hours) + 1, Number(minutes), 0, 0);
-                toTime = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
-              }
-            }
-
-            const locationText =
-              element.querySelector('.card-body-footer')?.textContent?.trim() || '';
-            const description = element.querySelector('.beschreibung')?.textContent?.trim() || '';
-
-            // Konvertiere deutsches Datum ins ISO-Format
-            let isoDate = '';
-            if (dateText) {
-              const [day, month, year] = dateText.split('.');
-              if (day && month && year) {
-                isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-              }
-            }
-
-            if (!isoDate) {
-              return null;
-            }
+            const timeElement =
+              element.querySelector('.links .time, .time, .uhrzeit')?.textContent?.trim() || '';
+            const dateElement =
+              element.querySelector('.links .dat, .date, .datum')?.textContent?.trim() || '';
+            const categoryElement =
+              element.querySelector('.mitte .cat, .category, .kategorie')?.textContent?.trim() ||
+              '';
+            const locationElement =
+              element.querySelector('.mitte .loc, .location, .ort')?.textContent?.trim() || '';
+            const titleElement =
+              element.querySelector('.title a, .event-title, .titel')?.textContent?.trim() || '';
+            const descriptionElement =
+              element
+                .querySelector('.description a, .event-description, .beschreibung')
+                ?.textContent?.trim() || '';
 
             return {
-              title,
-              description,
+              title: titleElement,
+              description: descriptionElement,
               location: {
-                address: locationText,
+                address: locationElement,
                 latitude: 0,
                 longitude: 0,
               },
-              dailyTimeSlots: [
-                {
-                  date: isoDate,
-                  from: fromTime,
-                  to: toTime,
-                },
-              ],
-              categoryId: 'default',
+              dateElement,
+              timeElement,
+              categoryId: categoryElement || 'default',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             };
           })
-          .filter(event => event && event.title.length > 0);
+          .filter(event => event.title.length > 0);
       });
 
-      const maxResults = options?.maxResults || this.config.maxResults;
-      const filteredEvents = events.filter(event => {
-        if (!event.title) return false;
-        if (options?.startDate && options?.endDate) {
-          const eventDate = new Date(event.dailyTimeSlots[0].date);
-          return eventDate >= options.startDate && eventDate <= options.endDate;
-        }
-        return true;
-      });
+      this.logger.debug(`Found ${events.length} events after filtering`);
 
-      const limitedEvents = filteredEvents.slice(0, maxResults);
+      // Begrenze die Anzahl der Ergebnisse pro Tag
+      const maxResultsPerDay = this.config.maxResults || 10;
+      const limitedEvents = events.slice(0, maxResultsPerDay);
 
       this.logger.debug(
-        `Found ${events.length} events, filtered to ${filteredEvents.length}, limited to ${limitedEvents.length}`,
+        `Returning ${limitedEvents.length} events for this day (maxResults: ${maxResultsPerDay})`,
       );
 
-      return {
-        events: limitedEvents.map((event: Omit<Event, 'id'>) => ({
-          ...event,
-          id: crypto.randomUUID(),
-        })),
-        hasMorePages: filteredEvents.length > maxResults,
+      const result = {
+        events: limitedEvents.map((event: any) => {
+          const { dateElement, timeElement, ...eventData } = event;
+          
+          // Konvertiere Datum und Zeit zu dailyTimeSlots
+          const dailyTimeSlots = this.createDailyTimeSlots(dateElement, timeElement);
+
+          return {
+            ...eventData,
+            id: crypto.randomUUID(),
+            dailyTimeSlots,
+          } as Event;
+        }),
+        hasMorePages: events.length > maxResultsPerDay,
       };
+
+      return result;
     } catch (error) {
       this.logger.error(`Error scraping events from URL ${url}: ${error.message}`);
       throw error;
@@ -208,15 +175,18 @@ export class CurtScraper implements BaseScraper {
 
   async handleCookieBanner(page: Page): Promise<void> {
     try {
-      const cookieButton = await page.$(
-        '.cookie-banner button, .cookie-notice button, #cookie-notice button',
-      );
-      if (cookieButton) {
-        await cookieButton.click();
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      this.logger.debug('Warte auf Cookie-Banner...');
+      try {
+        await page.waitForSelector('button[data-testid="uc-accept-all-button"]', { timeout: 2500 });
+        this.logger.debug('Cookie-Banner gefunden, klicke Akzeptieren...');
+        await page.click('button[data-testid="uc-accept-all-button"]');
+        this.logger.debug('Cookie-Banner akzeptiert');
+      } catch {
+        this.logger.debug('Kein Cookie-Banner gefunden');
       }
     } catch (error) {
-      console.error('[CurtScraper] Fehler beim Behandeln des Cookie-Banners:', error);
+      this.logger.error('Fehler beim Behandeln des Cookie-Banners:', error);
+      throw error;
     }
   }
 
@@ -242,5 +212,42 @@ export class CurtScraper implements BaseScraper {
 
   validateConfig(): boolean {
     return !!(this.config.baseUrl && this.config.dateFormat && this.config.paginationPattern);
+  }
+
+  private createDailyTimeSlots(dateElement: string, timeElement: string): DailyTimeSlot[] {
+    if (!dateElement) {
+      return [];
+    }
+
+    // Entferne trailing dots und füge das aktuelle Jahr hinzu, wenn es fehlt
+    let processedDateElement = dateElement.trim().replace(/\.$/, '');
+    if (processedDateElement.match(/^\d{1,2}\.\d{1,2}$/)) {
+      const currentYear = new Date().getFullYear();
+      processedDateElement = `${processedDateElement}.${currentYear}`;
+      this.logger.debug(`Added current year to date: ${dateElement} -> ${processedDateElement}`);
+    }
+
+    // Konvertiere das deutsche Datum zu ISO-Format
+    const isoDate = DateTimeUtils.convertToISO(processedDateElement);
+    if (!isoDate) {
+      this.logger.warn(`Could not convert date: ${processedDateElement}`);
+      return [];
+    }
+
+    const dailyTimeSlot: DailyTimeSlot = {
+      date: isoDate,
+    };
+
+    // Parse Zeitinformation falls vorhanden
+    if (timeElement) {
+      const timeMatch = timeElement.match(/(\d{1,2}):(\d{2})/);
+      if (timeMatch) {
+        const hours = timeMatch[1].padStart(2, '0');
+        const minutes = timeMatch[2];
+        dailyTimeSlot.from = `${hours}:${minutes}`;
+      }
+    }
+
+    return [dailyTimeSlot];
   }
 }

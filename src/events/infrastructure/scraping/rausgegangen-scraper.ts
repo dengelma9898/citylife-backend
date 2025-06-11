@@ -78,7 +78,7 @@ export class RausgegangenScraper implements BaseScraper {
     return events;
   }
 
-  async scrapeEventsFromUrl(url: string, options?: ScraperOptions): Promise<ScraperResult> {
+  async scrapeEventsFromUrl(url: string): Promise<ScraperResult> {
     const puppeteerManager = PuppeteerManager.getInstance();
     let page: Page | null = null;
 
@@ -91,75 +91,102 @@ export class RausgegangenScraper implements BaseScraper {
         waitUntil: 'networkidle0',
       });
 
-      await this.handleCookieBanner(page);
-
-      await page.waitForSelector('.event-list', {
+      // Warte auf die horizontalen Scroll-Container
+      await page.waitForSelector('#horizontal-scroll', {
         timeout: 10000,
         visible: true,
       });
 
-      this.logger.debug('Event container found, starting to extract events...');
+      this.logger.debug('Horizontal scroll containers found, starting to extract events...');
 
       const events = await page.evaluate(() => {
-        const eventElements = document.querySelectorAll('.event-item');
-        console.log(`Found ${eventElements.length} event elements`);
+        const scrollContainers = document.querySelectorAll('#horizontal-scroll');
+        console.log(`Found ${scrollContainers.length} horizontal scroll containers`);
 
-        return Array.from(eventElements).map(element => {
-          const titleElement = element.querySelector('.event-title');
-          const dateElement = element.querySelector('.event-date');
-          const locationElement = element.querySelector('.event-location');
-          const descriptionElement = element.querySelector('.event-description');
+        const allEvents = [];
 
-          const title = titleElement?.textContent?.trim() || '';
-          const date = dateElement?.textContent?.trim() || '';
-          const location = locationElement?.textContent?.trim() || '';
-          const description = descriptionElement?.textContent?.trim() || '';
+        scrollContainers.forEach(container => {
+          const eventElements = container.querySelectorAll('.event-tile-text');
 
-          return {
-            title,
-            description,
-            location: {
-              address: location,
-              latitude: 0,
-              longitude: 0,
-            },
-            dailyTimeSlots: [
-              {
-                date: DateTimeUtils.convertToISO(date),
-                from: '00:00',
-                to: '23:59',
+          eventElements.forEach(element => {
+            const dateTimeElement = element.querySelector('.text-sm')?.textContent?.trim() || '';
+            const titleElement = element.querySelector('h4.text-base')?.textContent?.trim() || '';
+            const locationElement =
+              element.querySelector('.text-sm.opacity-70.truncate')?.textContent?.trim() || '';
+            const priceElement =
+              element.querySelector('.text-sm.text-primary.truncate.h-4')?.textContent?.trim() ||
+              '';
+
+            // Extrahiere Datum und Zeit
+            const [dateTime, time] = dateTimeElement.split('|').map(s => s.trim());
+            const [_, date] = dateTime.split(', ').map(s => s.trim()); // Ignoriere den Wochentag
+            const [day, month] = date.split('.').map(s => s.trim());
+            const currentYear = new Date().getFullYear();
+            const isoDate = `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+            // Extrahiere die Uhrzeit
+            const [hours, minutes] = time.split(':').map(s => s.trim());
+            const fromTime = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+
+            // Verwende die gleiche Zeit für from und to
+            const toTime = fromTime;
+
+            allEvents.push({
+              title: titleElement,
+              description: `${locationElement}${priceElement ? ` - ${priceElement}` : ''}`,
+              location: {
+                address: locationElement,
+                latitude: 0,
+                longitude: 0,
               },
-            ],
-            categoryId: 'default',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
+              startDate: `${isoDate} ${fromTime}`,
+              endDate: `${isoDate} ${toTime}`,
+              dailyTimeSlots: [
+                {
+                  date: isoDate,
+                  from: fromTime,
+                  to: toTime,
+                },
+              ],
+              categoryId: 'default',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+          });
         });
+
+        return allEvents.filter(event => event.title.length > 0);
       });
 
-      const maxResults = options?.maxResults || this.config.maxResults;
-      const filteredEvents = events.filter(event => {
-        if (!event.title) return false;
-        if (options?.startDate && options?.endDate) {
-          const eventDate = new Date(event.dailyTimeSlots[0].date);
-          return eventDate >= options.startDate && eventDate <= options.endDate;
-        }
-        return true;
+      // Konvertiere die Datumsangaben außerhalb von page.evaluate()
+      const convertedEvents = events.map(event => {
+        const dateObj = new Date(event.startDate);
+        return {
+          ...event,
+          startDate: DateTimeUtils.convertUTCToBerlinTime(dateObj) || event.startDate,
+          endDate: DateTimeUtils.convertUTCToBerlinTime(dateObj) || event.endDate,
+        };
       });
 
-      const limitedEvents = filteredEvents.slice(0, maxResults);
+      this.logger.debug(`Found ${convertedEvents.length} events after filtering`);
+
+      // Begrenze die Anzahl der Ergebnisse pro Tag
+      const maxResultsPerDay = this.config.maxResults || 10;
+      const limitedEvents = convertedEvents.slice(0, maxResultsPerDay);
 
       this.logger.debug(
-        `Found ${events.length} events, filtered to ${filteredEvents.length}, limited to ${limitedEvents.length}`,
+        `Returning ${limitedEvents.length} events for this day (maxResults: ${maxResultsPerDay})`,
       );
 
-      return {
+      const result = {
         events: limitedEvents.map((event: Omit<Event, 'id'>) => ({
           ...event,
           id: crypto.randomUUID(),
         })),
-        hasMorePages: filteredEvents.length > maxResults,
+        hasMorePages: events.length > maxResultsPerDay,
       };
+
+      return result;
     } catch (error) {
       this.logger.error(`Error scraping events from URL ${url}: ${error.message}`);
       throw error;
@@ -206,19 +233,5 @@ export class RausgegangenScraper implements BaseScraper {
       return new Date(startDate);
     }
     return null;
-  }
-
-  async handleCookieBanner(page: Page): Promise<void> {
-    try {
-      const cookieButton = await page.$(
-        '.cookie-banner button, .cookie-notice button, #cookie-notice button',
-      );
-      if (cookieButton) {
-        await cookieButton.click();
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    } catch (error) {
-      console.error('[RausgegangenScraper] Fehler beim Behandeln des Cookie-Banners:', error);
-    }
   }
 }
