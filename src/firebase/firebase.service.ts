@@ -37,6 +37,8 @@ export class FirebaseService implements OnModuleInit {
         storageBucket: firebaseConfig.storageBucket,
       });
 
+      admin.firestore().settings({ databaseId: this.configService.get<string>('FIREBASE_STORAGE_ID') });
+
       // Initialize Firebase App
       initializeApp(firebaseConfig);
 
@@ -57,6 +59,7 @@ export class FirebaseService implements OnModuleInit {
 
   public getClientFirestore(): Firestore {
     if (process.env.NODE_ENV === 'prd') {
+      this.logger.log('Using Firestore database ID:', this.configService.get<string>('FIREBASE_STORAGE_ID'));
       return getFirestore(this.configService.get<string>('FIREBASE_STORAGE_ID')!);
     }
     return getFirestore();
