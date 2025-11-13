@@ -1,0 +1,19 @@
+@baseUrl = http://localhost:3000
+@firebaseApiKey = YOUR_FIREBASE_API_KEY
+@adminToken = YOUR_ADMIN_TOKEN
+
+### Get Firebase ID Token (für Admin-User)
+### Ersetze YOUR_FIREBASE_API_KEY mit deiner Firebase API Key aus der .env Datei
+### Ersetze email und password mit den Credentials eines Admin-Users
+POST https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebaseApiKey}}
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "your-password",
+  "returnSecureToken": true
+}
+
+### Der Response enthält ein "idToken" Feld - kopiere diesen Wert und verwende ihn als Bearer Token
+### Setze dann @adminToken = <idToken> für die Verwendung in anderen Requests
+
