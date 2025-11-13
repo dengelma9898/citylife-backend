@@ -20,6 +20,7 @@ import { JobOfferCategoriesModule } from './job-offer-categories/job-offer-categ
 import { JobOffersModule } from './job-offers/job-offers.module';
 import { SpecialPollsModule } from './special-polls/special-polls.module';
 import { AccountManagementModule } from './account-management/account-management.module';
+import { DowntimeModule } from './downtime/downtime.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { AccountManagementModule } from './account-management/account-management
     JobOffersModule,
     SpecialPollsModule,
     AccountManagementModule,
+    DowntimeModule,
   ],
   providers: [
     {
