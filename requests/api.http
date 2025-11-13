@@ -302,6 +302,10 @@ Content-Type: image/jpeg
 < ./test-files/profile.jpg
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
+### Get Downtime Status
+GET {{baseUrl}}/downtime
+Authorization: Bearer {{adminToken}}
+
 ### Set Downtime Status (Admin only)
 PUT {{baseUrl}}/downtime
 Authorization: Bearer {{adminToken}}
