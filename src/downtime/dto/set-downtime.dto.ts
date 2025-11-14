@@ -10,4 +10,3 @@ export class SetDowntimeDto {
   @IsNotEmpty()
   readonly isDowntime: boolean;
 }
-

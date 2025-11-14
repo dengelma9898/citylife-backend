@@ -34,4 +34,3 @@ export class DowntimeService {
     return data?.isDowntime || false;
   }
 }
-
