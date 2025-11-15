@@ -21,4 +21,3 @@ import { FirebaseStorageService } from '../firebase/firebase-storage.service';
   exports: [AdventCalendarService],
 })
 export class AdventCalendarModule {}
-

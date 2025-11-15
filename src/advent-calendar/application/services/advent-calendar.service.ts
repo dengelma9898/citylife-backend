@@ -40,14 +40,19 @@ export class AdventCalendarService {
     return this.adventCalendarEntryRepository.create(entry);
   }
 
-  public async update(id: string, updateDto: UpdateAdventCalendarEntryDto): Promise<AdventCalendarEntry> {
+  public async update(
+    id: string,
+    updateDto: UpdateAdventCalendarEntryDto,
+  ): Promise<AdventCalendarEntry> {
     this.logger.log(`Updating advent calendar entry with id: ${id}`);
     const existingEntry = await this.adventCalendarEntryRepository.findById(id);
     if (!existingEntry) {
       throw new NotFoundException('Advent calendar entry not found');
     }
     if (updateDto.number && updateDto.number !== existingEntry.number) {
-      const entryWithNumber = await this.adventCalendarEntryRepository.findByNumber(updateDto.number);
+      const entryWithNumber = await this.adventCalendarEntryRepository.findByNumber(
+        updateDto.number,
+      );
       if (entryWithNumber && entryWithNumber.id !== id) {
         throw new BadRequestException(`Entry with number ${updateDto.number} already exists`);
       }
@@ -96,4 +101,3 @@ export class AdventCalendarService {
     return this.adventCalendarEntryRepository.update(id, updatedEntry);
   }
 }
-

@@ -59,4 +59,3 @@ export class CreateAdventCalendarEntryDto {
   @IsOptional()
   readonly linkUrl?: string;
 }
-

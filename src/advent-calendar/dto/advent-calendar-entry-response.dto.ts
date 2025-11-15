@@ -81,4 +81,3 @@ export class AdventCalendarEntryResponseDto {
   })
   readonly updatedAt: string;
 }
-

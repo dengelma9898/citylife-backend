@@ -10,4 +10,3 @@ export class AddWinnerDto {
   @IsNotEmpty()
   readonly userId: string;
 }
-

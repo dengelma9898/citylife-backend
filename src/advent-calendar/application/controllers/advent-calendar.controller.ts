@@ -193,4 +193,3 @@ export class AdventCalendarController {
     return updatedEntry.toJSON();
   }
 }
-

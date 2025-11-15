@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { AdventCalendarEntry, AdventCalendarEntryProps } from '../../domain/entities/advent-calendar-entry.entity';
+import {
+  AdventCalendarEntry,
+  AdventCalendarEntryProps,
+} from '../../domain/entities/advent-calendar-entry.entity';
 import { AdventCalendarEntryRepository } from '../../domain/repositories/advent-calendar-entry.repository';
 
 @Injectable()
@@ -64,7 +67,10 @@ export class FirebaseAdventCalendarEntryRepository implements AdventCalendarEntr
 
   async findByNumber(number: number): Promise<AdventCalendarEntry | null> {
     const db = this.firebaseService.getFirestore();
-    const snapshot = await db.collection('adventCalendarEntries').where('number', '==', number).get();
+    const snapshot = await db
+      .collection('adventCalendarEntries')
+      .where('number', '==', number)
+      .get();
     if (snapshot.empty) {
       return null;
     }
@@ -108,4 +114,3 @@ export class FirebaseAdventCalendarEntryRepository implements AdventCalendarEntr
     this.logger.log(`Deleted advent calendar entry with id: ${id}`);
   }
 }
-
