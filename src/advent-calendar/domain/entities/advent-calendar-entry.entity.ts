@@ -46,7 +46,10 @@ export class AdventCalendarEntry {
   }
 
   static create(
-    props: Omit<AdventCalendarEntryProps, 'id' | 'createdAt' | 'updatedAt' | 'participants' | 'winners' | 'imageUrl'>,
+    props: Omit<
+      AdventCalendarEntryProps,
+      'id' | 'createdAt' | 'updatedAt' | 'participants' | 'winners' | 'imageUrl'
+    >,
   ): AdventCalendarEntry {
     const now = new Date().toISOString();
     return new AdventCalendarEntry({
@@ -111,4 +114,3 @@ export class AdventCalendarEntry {
     };
   }
 }
-

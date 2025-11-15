@@ -10,4 +10,3 @@ export interface AdventCalendarEntryRepository {
   update(id: string, entry: AdventCalendarEntry): Promise<AdventCalendarEntry>;
   delete(id: string): Promise<void>;
 }
-
