@@ -1,0 +1,81 @@
+@baseUrl = http://localhost:3000
+@adminToken = eyJhbGciOiJSUzI1NiIsImtpZCI6IjM4MDI5MzRmZTBlZWM0NmE1ZWQwMDA2ZDE0YTFiYWIwMWUzNDUwODMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vY2l0eWxpZmUtZmU3NWEiLCJhdWQiOiJjaXR5bGlmZS1mZTc1YSIsImF1dGhfdGltZSI6MTc2MzA2NTQ5NywidXNlcl9pZCI6InlaVFpaNGJSaG5PUlIzT3kyamwybUpMbDBlZjIiLCJzdWIiOiJ5WlRaWjRiUmhuT1JSM095MmpsMm1KTGwwZWYyIiwiaWF0IjoxNzYzMDY1NDk3LCJleHAiOjE3NjMwNjkwOTcsImVtYWlsIjoiZGVuZ2VsbWFAaWNsb3VkLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImVtYWlsIjpbImRlbmdlbG1hQGljbG91ZC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.YR6F8OEJRorIfqFWgvFRNpOA5evoo-ix2Xiu5IEa_rvM_Ylk6E7oxWf_UAOwe27kn8ductKA8HKGI03eB5AVfWIABuVyYJsTe4qXuz6BnRc7WAoBOb1bXp5sluxZeR9y2b1YyNWnqhsbZIuPP2SazG8la5a-W9uQgY40DbsYIa5DggXqZOfOJEx1BXzOt7TxC0nWLh_lZsWSm__ULntBM6Zm2e48N_lL73dnNq3lGzTROMR9YyCSffUhgeUNTBWzppGINBYfIY2gYNHo_jSKYP36z9kEkMM20bEbuD_rDSVJSvDffdGqnuxMuhSO4t9NzIcdnsbxZB_dL0gwFwKiXA
+
+### Advent Calendar - Get All Entries
+GET {{baseUrl}}/advent-calendar
+Authorization: Bearer {{adminToken}}
+
+### Advent Calendar - Get Entry by ID
+GET {{baseUrl}}/advent-calendar/entry123
+Authorization: Bearer {{adminToken}}
+
+### Advent Calendar - Create Entry (Admin/Super Admin only)
+POST {{baseUrl}}/advent-calendar
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "number": 1,
+  "canParticipate": true,
+  "isActive": true,
+  "date": "2024-12-01",
+  "isSpecial": false,
+  "description": "Erster Tag des Adventskalenders",
+  "linkUrl": "https://example.com/day1"
+}
+
+### Advent Calendar - Create Special Entry (Admin/Super Admin only)
+POST {{baseUrl}}/advent-calendar
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "number": 24,
+  "canParticipate": true,
+  "isActive": true,
+  "date": "2024-12-24",
+  "isSpecial": true,
+  "description": "Heiliger Abend - Spezieller Tag!",
+  "linkUrl": "https://example.com/day24"
+}
+
+### Advent Calendar - Upload Image (Admin/Super Admin only)
+POST {{baseUrl}}/advent-calendar/entry123/image
+Authorization: Bearer {{adminToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="advent-image.jpg"
+Content-Type: image/jpeg
+
+< ./test-files/advent-image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Advent Calendar - Update Entry (Admin/Super Admin only)
+PATCH {{baseUrl}}/advent-calendar/entry123
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "canParticipate": false,
+  "isActive": true,
+  "description": "Aktualisierte Beschreibung"
+}
+
+### Advent Calendar - Delete Entry (Admin/Super Admin only)
+DELETE {{baseUrl}}/advent-calendar/entry123
+Authorization: Bearer {{adminToken}}
+
+### Advent Calendar - Participate in Entry (User/Admin/Super Admin)
+PATCH {{baseUrl}}/advent-calendar/entry123/participate
+Authorization: Bearer {{adminToken}}
+
+### Advent Calendar - Add Winner (Admin/Super Admin only)
+PATCH {{baseUrl}}/advent-calendar/entry123/winners
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": "user123"
+}
+
