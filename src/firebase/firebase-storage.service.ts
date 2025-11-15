@@ -25,7 +25,7 @@ export class FirebaseStorageService {
       this.logger.debug(`Uploading file to ${path}`);
       const bucket = this.getBucket();
       const fileRef = bucket.file(path);
-      
+
       await fileRef.save(file.buffer, {
         metadata: {
           contentType: file.mimetype,
@@ -47,22 +47,22 @@ export class FirebaseStorageService {
   public async deleteFile(url: string): Promise<void> {
     try {
       this.logger.debug(`Deleting file from URL: ${url}`);
-      
+
       // Extract path from URL
       // URL formats:
       // - https://storage.googleapis.com/bucket-name/path/to/file
       // - https://firebasestorage.googleapis.com/v0/b/bucket-name/o/path%2Fto%2Ffile?alt=media&token=...
       let path: string;
-      
+
       if (url.includes('storage.googleapis.com')) {
         // Format: https://storage.googleapis.com/bucket-name/path/to/file
         const urlParts = url.split('/');
         const bucketIndex = urlParts.findIndex(part => part.includes('.googleapis.com'));
-        
+
         if (bucketIndex === -1) {
           throw new Error('Invalid storage URL format');
         }
-        
+
         path = urlParts.slice(bucketIndex + 1).join('/');
       } else if (url.includes('firebasestorage.googleapis.com')) {
         // Format: https://firebasestorage.googleapis.com/v0/b/bucket-name/o/path%2Fto%2Ffile?alt=media&token=...
@@ -75,7 +75,7 @@ export class FirebaseStorageService {
         // Assume it's already a path
         path = url;
       }
-      
+
       const bucket = this.getBucket();
       const fileRef = bucket.file(path);
       await fileRef.delete();

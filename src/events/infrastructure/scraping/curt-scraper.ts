@@ -149,7 +149,7 @@ export class CurtScraper implements BaseScraper {
       const result = {
         events: limitedEvents.map((event: any) => {
           const { dateElement, timeElement, ...eventData } = event;
-          
+
           // Konvertiere Datum und Zeit zu dailyTimeSlots
           const dailyTimeSlots = this.createDailyTimeSlots(dateElement, timeElement);
 

@@ -21,6 +21,7 @@ import { JobOffersModule } from './job-offers/job-offers.module';
 import { SpecialPollsModule } from './special-polls/special-polls.module';
 import { AccountManagementModule } from './account-management/account-management.module';
 import { DowntimeModule } from './downtime/downtime.module';
+import { AdventCalendarModule } from './advent-calendar/advent-calendar.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { DowntimeModule } from './downtime/downtime.module';
     SpecialPollsModule,
     AccountManagementModule,
     DowntimeModule,
+    AdventCalendarModule,
   ],
   providers: [
     {
