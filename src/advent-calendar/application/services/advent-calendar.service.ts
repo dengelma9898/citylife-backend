@@ -84,6 +84,12 @@ export class AdventCalendarService {
     if (entry.participants.includes(userId)) {
       throw new BadRequestException('User has already participated in this entry');
     }
+    const today = new Date().toISOString().split('T')[0];
+    if (entry.date !== today) {
+      throw new BadRequestException(
+        `Participation is only allowed on the entry date (${entry.date}), not on ${today}`,
+      );
+    }
     const updatedEntry = entry.addParticipant(userId);
     return this.adventCalendarEntryRepository.update(id, updatedEntry);
   }
