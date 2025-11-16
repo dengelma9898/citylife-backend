@@ -10,4 +10,3 @@ export class SetFeatureActiveDto {
   @IsNotEmpty()
   readonly isFeatureActive: boolean;
 }
-
