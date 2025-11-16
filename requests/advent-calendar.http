@@ -1,6 +1,28 @@
 @baseUrl = http://localhost:3000
 @adminToken = eyJhbGciOiJSUzI1NiIsImtpZCI6IjM4MDI5MzRmZTBlZWM0NmE1ZWQwMDA2ZDE0YTFiYWIwMWUzNDUwODMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vY2l0eWxpZmUtZmU3NWEiLCJhdWQiOiJjaXR5bGlmZS1mZTc1YSIsImF1dGhfdGltZSI6MTc2MzA2NTQ5NywidXNlcl9pZCI6InlaVFpaNGJSaG5PUlIzT3kyamwybUpMbDBlZjIiLCJzdWIiOiJ5WlRaWjRiUmhuT1JSM095MmpsMm1KTGwwZWYyIiwiaWF0IjoxNzYzMDY1NDk3LCJleHAiOjE3NjMwNjkwOTcsImVtYWlsIjoiZGVuZ2VsbWFAaWNsb3VkLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImVtYWlsIjpbImRlbmdlbG1hQGljbG91ZC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.YR6F8OEJRorIfqFWgvFRNpOA5evoo-ix2Xiu5IEa_rvM_Ylk6E7oxWf_UAOwe27kn8ductKA8HKGI03eB5AVfWIABuVyYJsTe4qXuz6BnRc7WAoBOb1bXp5sluxZeR9y2b1YyNWnqhsbZIuPP2SazG8la5a-W9uQgY40DbsYIa5DggXqZOfOJEx1BXzOt7TxC0nWLh_lZsWSm__ULntBM6Zm2e48N_lL73dnNq3lGzTROMR9YyCSffUhgeUNTBWzppGINBYfIY2gYNHo_jSKYP36z9kEkMM20bEbuD_rDSVJSvDffdGqnuxMuhSO4t9NzIcdnsbxZB_dL0gwFwKiXA
 
+### Advent Calendar - Get Feature Status
+GET {{baseUrl}}/advent-calendar/feature-status
+Authorization: Bearer {{adminToken}}
+
+### Advent Calendar - Set Feature Status (Admin/Super Admin only)
+PUT {{baseUrl}}/advent-calendar/feature-status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isFeatureActive": true
+}
+
+### Advent Calendar - Set Feature Status to False (Admin/Super Admin only)
+PUT {{baseUrl}}/advent-calendar/feature-status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "isFeatureActive": false
+}
+
 ### Advent Calendar - Get All Entries
 GET {{baseUrl}}/advent-calendar
 Authorization: Bearer {{adminToken}}
