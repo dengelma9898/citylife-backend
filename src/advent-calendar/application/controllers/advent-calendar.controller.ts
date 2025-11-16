@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Delete,
   Body,
@@ -21,6 +22,7 @@ import { CreateAdventCalendarEntryDto } from '../../dto/create-advent-calendar-e
 import { UpdateAdventCalendarEntryDto } from '../../dto/update-advent-calendar-entry.dto';
 import { AdventCalendarEntryResponseDto } from '../../dto/advent-calendar-entry-response.dto';
 import { AddWinnerDto } from '../../dto/add-winner.dto';
+import { SetFeatureActiveDto } from '../../dto/set-feature-active.dto';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 import { Roles } from '../../../core/decorators/roles.decorator';
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
@@ -37,6 +39,19 @@ export class AdventCalendarController {
     private readonly adventCalendarService: AdventCalendarService,
     private readonly firebaseStorageService: FirebaseStorageService,
   ) {}
+
+  @Get('feature-status')
+  @Roles('user', 'admin', 'super_admin', 'business_user')
+  @ApiOperation({ summary: 'Gibt den Status des Adventskalender-Features zurück' })
+  @ApiResponse({
+    status: 200,
+    description: 'Der Status des Adventskalender-Features',
+  })
+  public async getFeatureStatus(): Promise<{ isFeatureActive: boolean }> {
+    this.logger.log('GET /advent-calendar/feature-status');
+    const isFeatureActive = await this.adventCalendarService.getFeatureActive();
+    return { isFeatureActive };
+  }
 
   @Get()
   @Roles('user', 'admin', 'super_admin', 'business_user')
@@ -191,5 +206,21 @@ export class AdventCalendarController {
 
     const updatedEntry = await this.adventCalendarService.update(entryId, { imageUrl });
     return updatedEntry.toJSON();
+  }
+
+  @Put('feature-status')
+  @Roles('admin', 'super_admin')
+  @ApiOperation({ summary: 'Aktiviert oder deaktiviert das Adventskalender-Feature' })
+  @ApiResponse({
+    status: 200,
+    description: 'Der Feature-Status wurde erfolgreich gesetzt',
+  })
+  public async setFeatureStatus(
+    @Body() setFeatureActiveDto: SetFeatureActiveDto,
+  ): Promise<{ isFeatureActive: boolean }> {
+    this.logger.log(
+      `PUT /advent-calendar/feature-status - Setting feature active to: ${setFeatureActiveDto.isFeatureActive}`,
+    );
+    return this.adventCalendarService.setFeatureActive(setFeatureActiveDto.isFeatureActive);
   }
 }

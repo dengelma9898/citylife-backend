@@ -6,14 +6,17 @@ import {
 } from '../../domain/repositories/advent-calendar-entry.repository';
 import { CreateAdventCalendarEntryDto } from '../../dto/create-advent-calendar-entry.dto';
 import { UpdateAdventCalendarEntryDto } from '../../dto/update-advent-calendar-entry.dto';
+import { FirebaseService } from '../../../firebase/firebase.service';
 
 @Injectable()
 export class AdventCalendarService {
   private readonly logger = new Logger(AdventCalendarService.name);
+  private readonly FEATURE_STATUS_DOC_ID = 'feature-status';
 
   constructor(
     @Inject(ADVENT_CALENDAR_ENTRY_REPOSITORY)
     private readonly adventCalendarEntryRepository: AdventCalendarEntryRepository,
+    private readonly firebaseService: FirebaseService,
   ) {}
 
   public async getAll(): Promise<AdventCalendarEntry[]> {
@@ -99,5 +102,31 @@ export class AdventCalendarService {
     }
     const updatedEntry = entry.addWinner(userId);
     return this.adventCalendarEntryRepository.update(id, updatedEntry);
+  }
+
+  public async setFeatureActive(isFeatureActive: boolean): Promise<{ isFeatureActive: boolean }> {
+    this.logger.log(`Setting advent calendar feature status to: ${isFeatureActive}`);
+    const db = this.firebaseService.getFirestore();
+    const docRef = db.collection('adventCalendar').doc(this.FEATURE_STATUS_DOC_ID);
+    await docRef.set(
+      {
+        isFeatureActive,
+        updatedAt: new Date(),
+      },
+      { merge: true },
+    );
+    this.logger.log(`Advent calendar feature status successfully set to: ${isFeatureActive}`);
+    return { isFeatureActive };
+  }
+
+  public async getFeatureActive(): Promise<boolean> {
+    const db = this.firebaseService.getFirestore();
+    const docRef = db.collection('adventCalendar').doc(this.FEATURE_STATUS_DOC_ID);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return false;
+    }
+    const data = doc.data();
+    return data?.isFeatureActive || false;
   }
 }
