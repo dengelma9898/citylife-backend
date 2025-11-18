@@ -2,9 +2,9 @@ name: Docker Build and Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [ '**' ]
   pull_request:
-    branches: [ main ]
+    branches: [ '**' ]
   workflow_dispatch:
 
 env:
@@ -40,6 +40,7 @@ jobs:
 
   build-and-push-dev:
     needs: test
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     environment: dev
     runs-on: ubuntu-latest
     permissions:
@@ -117,6 +118,7 @@ jobs:
 
   build-and-push-prd:
     needs: [test, build-and-push-dev]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     environment: prd
     runs-on: ubuntu-latest
     permissions:
