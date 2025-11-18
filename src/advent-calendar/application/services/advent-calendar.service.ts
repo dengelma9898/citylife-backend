@@ -35,10 +35,6 @@ export class AdventCalendarService {
 
   public async create(createDto: CreateAdventCalendarEntryDto): Promise<AdventCalendarEntry> {
     this.logger.log(`Creating advent calendar entry with number: ${createDto.number}`);
-    const existingEntry = await this.adventCalendarEntryRepository.findByNumber(createDto.number);
-    if (existingEntry) {
-      throw new BadRequestException(`Entry with number ${createDto.number} already exists`);
-    }
     const entry = AdventCalendarEntry.create(createDto);
     return this.adventCalendarEntryRepository.create(entry);
   }
