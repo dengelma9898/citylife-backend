@@ -251,8 +251,7 @@ export class NewsService {
         throw new NotFoundException('News item not found');
       }
 
-      const isContentOrImageUpdate =
-        'content' in data || 'imageUrls' in data || 'question' in data;
+      const isContentOrImageUpdate = 'content' in data || 'imageUrls' in data || 'question' in data;
       const hasExplicitBearbeitet = 'bearbeitet' in data;
 
       const updateData = {
