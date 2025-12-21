@@ -40,7 +40,10 @@ export class ChatroomsService {
     return this.chatroomRepository.create(chatroomData);
   }
 
-  async update(id: string, data: UpdateChatroomDto): Promise<Chatroom> {
+  async update(
+    id: string,
+    data: UpdateChatroomDto | Partial<Omit<Chatroom, 'id' | 'createdAt'>>,
+  ): Promise<Chatroom> {
     this.logger.log(`Updating chatroom with id: ${id}`);
     const chatroom = await this.chatroomRepository.update(id, data);
     if (!chatroom) {

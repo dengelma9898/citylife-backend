@@ -59,7 +59,43 @@ export class ChatroomsController {
     @Body() updateChatroomDto: UpdateChatroomDto,
   ): Promise<Chatroom> {
     this.logger.log(`PATCH /chatrooms/${id}`);
-    return this.chatroomsService.update(id, updateChatroomDto);
+
+    // Prüfe, ob das Bild gelöscht werden soll (null oder leerer String)
+    const shouldDeleteImage =
+      updateChatroomDto.image === null || updateChatroomDto.image === '';
+
+    if (shouldDeleteImage) {
+      // Hole das bestehende Chatroom, um die aktuelle imageUrl zu erhalten
+      const currentChatroom = await this.chatroomsService.getById(id);
+      if (!currentChatroom) {
+        throw new NotFoundException('Chatroom not found');
+      }
+
+      // Lösche das Bild aus dem Storage, falls vorhanden
+      if (currentChatroom.imageUrl) {
+        this.logger.debug('Deleting chatroom image from storage');
+        try {
+          await this.firebaseStorageService.deleteFile(currentChatroom.imageUrl);
+        } catch (error) {
+          this.logger.error(`Failed to delete image from storage: ${error.message}`);
+          // Weiter mit dem Update, auch wenn das Löschen fehlschlägt
+        }
+      }
+
+      // Setze imageUrl auf leeren String (wird als null gespeichert)
+      updateChatroomDto.image = '';
+    }
+
+    // Mappe 'image' aus DTO auf 'imageUrl' für die Entity
+    const updateData: any = {};
+    if (updateChatroomDto.title !== undefined) {
+      updateData.title = updateChatroomDto.title;
+    }
+    if (updateChatroomDto.image !== undefined) {
+      updateData.imageUrl = updateChatroomDto.image === '' ? null : updateChatroomDto.image;
+    }
+
+    return this.chatroomsService.update(id, updateData);
   }
 
   @Delete(':id')
