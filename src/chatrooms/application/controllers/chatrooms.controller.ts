@@ -61,8 +61,7 @@ export class ChatroomsController {
     this.logger.log(`PATCH /chatrooms/${id}`);
 
     // Prüfe, ob das Bild gelöscht werden soll (null oder leerer String)
-    const shouldDeleteImage =
-      updateChatroomDto.image === null || updateChatroomDto.image === '';
+    const shouldDeleteImage = updateChatroomDto.image === null || updateChatroomDto.image === '';
 
     if (shouldDeleteImage) {
       // Hole das bestehende Chatroom, um die aktuelle imageUrl zu erhalten
