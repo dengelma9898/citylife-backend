@@ -136,14 +136,16 @@ describe('ChatroomsController', () => {
     it('should update a chatroom', async () => {
       const mockChatroom = {
         id: 'chatroom1',
-        ...updateDto,
+        title: 'Updated Chatroom',
         imageUrl: 'image1.jpg',
+        description: 'Description',
         createdBy: 'user1',
         participants: ['user1'],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
+      mockChatroomsService.getById.mockResolvedValue(mockChatroom);
       mockChatroomsService.update.mockResolvedValue(mockChatroom);
 
       const result = await controller.update('chatroom1', updateDto);
@@ -151,7 +153,134 @@ describe('ChatroomsController', () => {
       expect(result).toBeDefined();
       expect(result.title).toBe(updateDto.title);
       expect(result.imageUrl).toBe(updateDto.image);
-      expect(mockChatroomsService.update).toHaveBeenCalledWith('chatroom1', updateDto);
+      expect(mockChatroomsService.update).toHaveBeenCalledWith('chatroom1', {
+        title: 'Updated Chatroom',
+        imageUrl: 'image1.jpg',
+      });
+    });
+
+    it('should delete image from storage when image is null', async () => {
+      const currentChatroom = {
+        id: 'chatroom1',
+        title: 'Test Chatroom',
+        description: 'Description',
+        imageUrl: 'old-image.jpg',
+        createdBy: 'user1',
+        participants: ['user1'],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const updateDtoWithNullImage: UpdateChatroomDto = {
+        title: 'Updated Chatroom',
+        image: null,
+      };
+
+      const updatedChatroom = {
+        ...currentChatroom,
+        title: 'Updated Chatroom',
+        imageUrl: null,
+      };
+
+      mockChatroomsService.getById.mockResolvedValue(currentChatroom);
+      mockFirebaseStorageService.deleteFile.mockResolvedValue(undefined);
+      mockChatroomsService.update.mockResolvedValue(updatedChatroom);
+
+      const result = await controller.update('chatroom1', updateDtoWithNullImage);
+
+      expect(result).toBeDefined();
+      expect(result.imageUrl).toBeNull();
+      expect(mockFirebaseStorageService.deleteFile).toHaveBeenCalledWith('old-image.jpg');
+      expect(mockChatroomsService.update).toHaveBeenCalledWith('chatroom1', {
+        title: 'Updated Chatroom',
+        imageUrl: null,
+      });
+    });
+
+    it('should delete image from storage when image is empty string', async () => {
+      const currentChatroom = {
+        id: 'chatroom1',
+        title: 'Test Chatroom',
+        description: 'Description',
+        imageUrl: 'old-image.jpg',
+        createdBy: 'user1',
+        participants: ['user1'],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const updateDtoWithEmptyImage: UpdateChatroomDto = {
+        title: 'Updated Chatroom',
+        image: '',
+      };
+
+      const updatedChatroom = {
+        ...currentChatroom,
+        title: 'Updated Chatroom',
+        imageUrl: null,
+      };
+
+      mockChatroomsService.getById.mockResolvedValue(currentChatroom);
+      mockFirebaseStorageService.deleteFile.mockResolvedValue(undefined);
+      mockChatroomsService.update.mockResolvedValue(updatedChatroom);
+
+      const result = await controller.update('chatroom1', updateDtoWithEmptyImage);
+
+      expect(result).toBeDefined();
+      expect(result.imageUrl).toBeNull();
+      expect(mockFirebaseStorageService.deleteFile).toHaveBeenCalledWith('old-image.jpg');
+      expect(mockChatroomsService.update).toHaveBeenCalledWith('chatroom1', {
+        title: 'Updated Chatroom',
+        imageUrl: null,
+      });
+    });
+
+    it('should not delete image if no image exists when setting to null', async () => {
+      const currentChatroom = {
+        id: 'chatroom1',
+        title: 'Test Chatroom',
+        description: 'Description',
+        imageUrl: null,
+        createdBy: 'user1',
+        participants: ['user1'],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const updateDtoWithNullImage: UpdateChatroomDto = {
+        title: 'Updated Chatroom',
+        image: null,
+      };
+
+      const updatedChatroom = {
+        ...currentChatroom,
+        title: 'Updated Chatroom',
+      };
+
+      mockChatroomsService.getById.mockResolvedValue(currentChatroom);
+      mockChatroomsService.update.mockResolvedValue(updatedChatroom);
+
+      const result = await controller.update('chatroom1', updateDtoWithNullImage);
+
+      expect(result).toBeDefined();
+      expect(mockFirebaseStorageService.deleteFile).not.toHaveBeenCalled();
+      expect(mockChatroomsService.update).toHaveBeenCalledWith('chatroom1', {
+        title: 'Updated Chatroom',
+        imageUrl: null,
+      });
+    });
+
+    it('should throw NotFoundException if chatroom not found when deleting image', async () => {
+      const updateDtoWithNullImage: UpdateChatroomDto = {
+        title: 'Updated Chatroom',
+        image: null,
+      };
+
+      mockChatroomsService.getById.mockResolvedValue(null);
+
+      await expect(controller.update('nonexistent', updateDtoWithNullImage)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
