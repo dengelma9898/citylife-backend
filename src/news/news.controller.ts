@@ -154,8 +154,12 @@ export class NewsController {
 
     const newImageUrls = await Promise.all(uploadPromises);
 
+    // Prüfe, ob bereits Bilder vorhanden sind (nachträgliche Bearbeitung) oder nicht (initialer Upload)
+    const existingImageUrls = (newsItem as ImageNewsItem).imageUrls || [];
+    const isInitialUpload = existingImageUrls.length === 0;
+
     // Add new image URLs to existing ones
-    const imageUrls = [...((newsItem as ImageNewsItem).imageUrls || []), ...newImageUrls];
+    const imageUrls = [...existingImageUrls, ...newImageUrls];
 
     // Stelle sicher, dass die Anzahl der Bilder das Limit nicht überschreitet
     if (imageUrls.length > 5) {
@@ -163,6 +167,11 @@ export class NewsController {
     }
 
     // Aktualisiere die Bilder im News-Item
-    return this.newsService.update(id, { imageUrls }) as Promise<ImageNewsItem>;
+    // Nur bei nachträglicher Bearbeitung (nicht beim initialen Upload) wird bearbeitet gesetzt
+    return this.newsService.update(
+      id,
+      { imageUrls },
+      { skipBearbeitetFlag: isInitialUpload },
+    ) as Promise<ImageNewsItem>;
   }
 }

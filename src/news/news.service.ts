@@ -155,6 +155,7 @@ export class NewsService {
         createdBy: data.authorId,
         reactions: [],
         views: 0,
+        bearbeitet: false,
       };
 
       return this.saveNewsItem(newsItem) as Promise<TextNewsItem>;
@@ -178,6 +179,7 @@ export class NewsService {
         createdBy: data.authorId,
         reactions: [],
         views: 0,
+        bearbeitet: false,
       };
 
       return this.saveNewsItem(newsItem) as Promise<ImageNewsItem>;
@@ -210,6 +212,7 @@ export class NewsService {
         reactions: [],
         views: 0,
         votes: 0,
+        bearbeitet: false,
       };
 
       return this.saveNewsItem(newsItem) as Promise<PollNewsItem>;
@@ -234,7 +237,11 @@ export class NewsService {
     }
   }
 
-  public async update(id: string, data: Partial<NewsItem>): Promise<NewsItem> {
+  public async update(
+    id: string,
+    data: Partial<NewsItem>,
+    options?: { skipBearbeitetFlag?: boolean },
+  ): Promise<NewsItem> {
     try {
       this.logger.debug(`Updating news item ${id}`);
       const db = this.firebaseService.getFirestore();
@@ -244,9 +251,16 @@ export class NewsService {
         throw new NotFoundException('News item not found');
       }
 
+      const isContentOrImageUpdate =
+        'content' in data || 'imageUrls' in data || 'question' in data;
+      const hasExplicitBearbeitet = 'bearbeitet' in data;
+
       const updateData = {
         ...data,
         updatedAt: DateTimeUtils.getBerlinTime(),
+        ...(isContentOrImageUpdate &&
+          !options?.skipBearbeitetFlag &&
+          !hasExplicitBearbeitet && { bearbeitet: true }),
       };
 
       await db.collection(this.collectionName).doc(id).update(this.removeUndefined(updateData));

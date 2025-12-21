@@ -13,6 +13,7 @@ export interface BaseNewsItem {
   authorImageUrl?: string;
   reactions?: Reaction[];
   views?: number;
+  bearbeitet?: boolean | null;
 }
 
 export interface TextNewsItem extends BaseNewsItem {
