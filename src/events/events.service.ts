@@ -30,11 +30,17 @@ export class EventsService {
   }
 
   private convertDateRangeToDailyTimeSlots(
-    startDate: string,
-    endDate: string,
+    startDate: string | undefined,
+    endDate: string | undefined,
     dailyTimeSlots: DailyTimeSlot[],
   ): DailyTimeSlot[] {
     if (dailyTimeSlots?.length > 0) return dailyTimeSlots;
+
+    // Wenn startDate oder endDate fehlen, gib leeres Array zurück
+    if (!startDate || !endDate) {
+      this.logger.warn('startDate or endDate is missing, returning empty dailyTimeSlots');
+      return [];
+    }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
