@@ -10,13 +10,29 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   // Enable CORS
+  const allowedOrigins: string[] = ['http://localhost:5173']; // Local Frontend Development
+  const frontendUrl = configService.get<string>('FRONTEND_URL');
+  if (frontendUrl) {
+    allowedOrigins.push(frontendUrl);
+  }
   app.enableCors({
-    origin: [
-      configService.get<string>('FRONTEND_URL'),
-      'http://localhost:5173', // Local Frontend (falls benötigt)
-    ],
+    origin: (origin, callback) => {
+      // Blockiere Anfragen ohne Origin
+      if (!origin) {
+        return callback(new Error('Not allowed by CORS'));
+      }
+      // Erlaube localhost für lokale Entwicklung
+      if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        return callback(null, true);
+      }
+      // Prüfe erlaubte Origins
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true,
   });
 
