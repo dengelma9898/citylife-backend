@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { TimezoneInterceptor } from './core/interceptors/timezone.interceptor';
 
@@ -15,20 +15,26 @@ async function bootstrap() {
   if (frontendUrl) {
     allowedOrigins.push(frontendUrl);
   }
+  const corsLogger = new Logger('CORS');
+  corsLogger.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
   app.enableCors({
     origin: (origin, callback) => {
-      // Blockiere Anfragen ohne Origin
+      // Erlaube Anfragen ohne Origin für OPTIONS-Requests (Preflight) und andere legitime Anfragen
       if (!origin) {
-        return callback(new Error('Not allowed by CORS'));
+        corsLogger.debug('Request without origin - allowing (likely OPTIONS preflight)');
+        return callback(null, true);
       }
       // Erlaube localhost für lokale Entwicklung
       if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        corsLogger.debug(`Allowing localhost origin: ${origin}`);
         return callback(null, true);
       }
       // Prüfe erlaubte Origins
       if (allowedOrigins.includes(origin)) {
+        corsLogger.debug(`Allowing configured origin: ${origin}`);
         return callback(null, true);
       }
+      corsLogger.warn(`CORS blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
