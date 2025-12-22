@@ -39,7 +39,11 @@ export class CreateEventDto {
 
   @IsOptional()
   @IsNumber()
-  public readonly price?: number;
+  public readonly price?: number | null;
+
+  @IsOptional()
+  @IsString()
+  public readonly priceString?: string;
 
   @IsString()
   @IsNotEmpty()

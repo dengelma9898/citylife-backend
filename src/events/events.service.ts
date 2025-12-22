@@ -140,6 +140,7 @@ export class EventsService {
         titleImageUrl: '',
         ticketsNeeded: data.ticketsNeeded || false,
         price: data.price || 0,
+        priceString: data.priceString,
         categoryId: data.categoryId,
         contactEmail: data.contactEmail || '',
         contactPhone: data.contactPhone || '',

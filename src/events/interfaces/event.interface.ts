@@ -39,7 +39,17 @@ export interface Event {
   updatedAt: string;
   favoriteCount?: number;
   ticketsNeeded?: boolean;
-  price?: number;
+  /**
+   * @deprecated
+   * Preis als Zahl (für Rückwärtskompatibilität mit der App)
+   * Die App erwartet ausschließlich Zahlen oder null
+   */
+  price?: number | null;
+  /**
+   * Preis als String für komplexe Preisstrukturen (z.B. "ab 10,00€", "Kostenlos", "15,00€ - 25,00€")
+   * Wenn vorhanden, sollte dieser Wert für die Anzeige verwendet werden
+   */
+  priceString?: string;
   categoryId: string;
   contactEmail?: string;
   contactPhone?: string;
