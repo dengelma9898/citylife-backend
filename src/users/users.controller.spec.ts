@@ -6,6 +6,7 @@ import { UserProfile } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
+import { BlockUserDto } from './dto/block-user.dto';
 import { UserType } from './enums/user-type.enum';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 
@@ -29,6 +30,7 @@ describe('UsersController', () => {
     toggleFavoriteBusiness: jest.fn(),
     getUserProfile: jest.fn(),
     getBusinessUser: jest.fn(),
+    blockUser: jest.fn(),
   };
 
   const mockFirebaseStorageService = {
@@ -377,6 +379,82 @@ describe('UsersController', () => {
       mockUsersService.getBusinessUser.mockResolvedValue(null);
 
       await expect(controller.getTypeOfUser('nonexistent')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('blockUser', () => {
+    it('should block a user with reason', async () => {
+      const blockUserDto: BlockUserDto = {
+        userId: 'user1',
+        isBlocked: true,
+        blockReason: 'Verstoß gegen Nutzungsbedingungen',
+      };
+      const blockedUserProfile: UserProfile = {
+        ...mockUserProfile,
+        isBlocked: true,
+        blockedAt: '2024-01-01T00:00:00.000Z',
+        blockReason: 'Verstoß gegen Nutzungsbedingungen',
+      };
+
+      mockUsersService.blockUser.mockResolvedValue(blockedUserProfile);
+
+      const result = await controller.blockUser(blockUserDto);
+
+      expect(result).toEqual(blockedUserProfile);
+      expect(usersService.blockUser).toHaveBeenCalledWith(
+        'user1',
+        true,
+        'Verstoß gegen Nutzungsbedingungen',
+      );
+    });
+
+    it('should block a user without reason', async () => {
+      const blockUserDto: BlockUserDto = {
+        userId: 'user1',
+        isBlocked: true,
+      };
+      const blockedUserProfile: UserProfile = {
+        ...mockUserProfile,
+        isBlocked: true,
+        blockedAt: '2024-01-01T00:00:00.000Z',
+      };
+
+      mockUsersService.blockUser.mockResolvedValue(blockedUserProfile);
+
+      const result = await controller.blockUser(blockUserDto);
+
+      expect(result).toEqual(blockedUserProfile);
+      expect(usersService.blockUser).toHaveBeenCalledWith('user1', true, undefined);
+    });
+
+    it('should unblock a user', async () => {
+      const blockUserDto: BlockUserDto = {
+        userId: 'user1',
+        isBlocked: false,
+      };
+      const unblockedUserProfile: UserProfile = {
+        ...mockUserProfile,
+        isBlocked: false,
+      };
+
+      mockUsersService.blockUser.mockResolvedValue(unblockedUserProfile);
+
+      const result = await controller.blockUser(blockUserDto);
+
+      expect(result).toEqual(unblockedUserProfile);
+      expect(usersService.blockUser).toHaveBeenCalledWith('user1', false, undefined);
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      const blockUserDto: BlockUserDto = {
+        userId: 'nonexistent',
+        isBlocked: true,
+      };
+
+      mockUsersService.blockUser.mockRejectedValue(new NotFoundException('User profile not found'));
+
+      await expect(controller.blockUser(blockUserDto)).rejects.toThrow(NotFoundException);
+      expect(usersService.blockUser).toHaveBeenCalledWith('nonexistent', true, undefined);
     });
   });
 });

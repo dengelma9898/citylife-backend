@@ -549,6 +549,42 @@ export class UsersService {
     }
   }
 
+  public async blockUser(
+    userId: string,
+    isBlocked: boolean,
+    blockReason?: string,
+  ): Promise<UserProfile> {
+    try {
+      this.logger.debug(`Blocking/unblocking user ${userId}, isBlocked: ${isBlocked}`);
+      const userProfile = await this.getUserProfile(userId);
+
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found');
+      }
+
+      const updateData: any = {
+        isBlocked,
+      };
+
+      if (isBlocked) {
+        updateData.blockedAt = DateTimeUtils.getBerlinTime();
+        if (blockReason) {
+          updateData.blockReason = blockReason;
+        } else {
+          updateData.blockReason = null;
+        }
+      } else {
+        updateData.blockedAt = null;
+        updateData.blockReason = null;
+      }
+
+      return this.update(userId, updateData);
+    } catch (error) {
+      this.logger.error(`Error blocking/unblocking user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
   private chunkArray<T>(array: T[], size: number): T[][] {
     const chunks: T[][] = [];
     for (let i = 0; i < array.length; i += size) {
