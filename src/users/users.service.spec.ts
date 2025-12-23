@@ -387,4 +387,62 @@ describe('UsersService', () => {
       expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
     });
   });
+
+  describe('blockUser', () => {
+    it('should block a user with reason', async () => {
+      const mockFirestore = createFirestoreMock(mockUserProfile);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.blockUser('user1', true, 'Verstoß gegen Nutzungsbedingungen');
+
+      expect(result).toBeDefined();
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
+      const updateCall = mockFirestore.collection().doc().update.mock.calls[0][0];
+      expect(updateCall.isBlocked).toBe(true);
+      expect(updateCall.blockReason).toBe('Verstoß gegen Nutzungsbedingungen');
+      expect(updateCall.blockedAt).toBeDefined();
+    });
+
+    it('should block a user without reason', async () => {
+      const mockFirestore = createFirestoreMock(mockUserProfile);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.blockUser('user1', true);
+
+      expect(result).toBeDefined();
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
+      const updateCall = mockFirestore.collection().doc().update.mock.calls[0][0];
+      expect(updateCall.isBlocked).toBe(true);
+      expect(updateCall.blockReason).toBeNull();
+      expect(updateCall.blockedAt).toBeDefined();
+    });
+
+    it('should unblock a user', async () => {
+      const blockedUserProfile = {
+        ...mockUserProfile,
+        isBlocked: true,
+        blockedAt: '2024-01-01T00:00:00.000Z',
+        blockReason: 'Test reason',
+      };
+      const mockFirestore = createFirestoreMock(blockedUserProfile);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.blockUser('user1', false);
+
+      expect(result).toBeDefined();
+      expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
+      const updateCall = mockFirestore.collection().doc().update.mock.calls[0][0];
+      expect(updateCall.isBlocked).toBe(false);
+      expect(updateCall.blockReason).toBeNull();
+      expect(updateCall.blockedAt).toBeNull();
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirestore.collection().doc().get.mockResolvedValue({ exists: false });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      await expect(service.blockUser('nonexistent', true)).rejects.toThrow(NotFoundException);
+    });
+  });
 });

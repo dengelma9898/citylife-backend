@@ -13,6 +13,7 @@ import {
   Patch,
   BadRequestException,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserProfile } from './interfaces/user-profile.interface';
@@ -20,11 +21,14 @@ import { UserProfileDto } from './dto/user-profile.dto';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
+import { BlockUserDto } from './dto/block-user.dto';
 import { UserType } from './enums/user-type.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
-import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Roles } from '../core/decorators/roles.decorator';
+import { RolesGuard } from '../core/guards/roles.guard';
 
 @Controller('users')
 export class UsersController {
@@ -314,5 +318,36 @@ export class UsersController {
   ): Promise<BusinessUser> {
     this.logger.log(`POST /users/${userId}/business-user/businesses/${businessId}`);
     return this.usersService.addBusinessIdToUser(userId, businessId);
+  }
+
+  @Patch('block')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  @ApiOperation({ summary: 'Sperrt oder entsperrt einen User (nur für SUPER_ADMIN)' })
+  @ApiResponse({
+    status: 200,
+    description: 'User wurde erfolgreich gesperrt/entsperrt',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User wurde nicht gefunden',
+  })
+  @ApiBody({
+    type: BlockUserDto,
+    description: 'Daten zum Sperren/Entsperren eines Users',
+  })
+  public async blockUser(@Body() blockUserDto: BlockUserDto): Promise<UserProfile> {
+    this.logger.log(
+      `PATCH /users/block - Blocking user ${blockUserDto.userId}, isBlocked: ${blockUserDto.isBlocked}`,
+    );
+    return this.usersService.blockUser(
+      blockUserDto.userId,
+      blockUserDto.isBlocked,
+      blockUserDto.blockReason,
+    );
   }
 }
