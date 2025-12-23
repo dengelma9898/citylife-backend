@@ -6,7 +6,26 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { TimezoneInterceptor } from './core/interceptors/timezone.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Log-Level basierend auf Umgebung konfigurieren
+  // Umgebungsvariablen direkt aus process.env lesen, da ConfigService erst nach App-Erstellung verfügbar ist
+  const nodeEnv = process.env.NODE_ENV;
+  const logLevel = process.env.LOG_LEVEL;
+  
+  // Bestimme das Log-Level:
+  // - In Produktion: 'warn' (nur warn und error)
+  // - Wenn LOG_LEVEL=debug gesetzt: 'debug' (alle Logs)
+  // - Standard: 'log' (log, warn, error, aber keine debug)
+  const loggerLevels: ('log' | 'error' | 'warn' | 'debug' | 'verbose')[] = 
+    logLevel === 'debug'
+      ? ['log', 'error', 'warn', 'debug', 'verbose']
+      : nodeEnv === 'prd'
+      ? ['error', 'warn']
+      : ['log', 'error', 'warn'];
+  
+  const app = await NestFactory.create(AppModule, {
+    logger: loggerLevels,
+  });
+  
   const configService = app.get(ConfigService);
 
   // Enable CORS
