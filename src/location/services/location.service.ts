@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LocationResult } from '../interfaces/location-result.interface';
+import { HereApiResponse } from '../interfaces/here-api-response.interface';
 import fetch from 'node-fetch';
 
 @Injectable()
@@ -36,7 +37,7 @@ export class LocationService {
         throw new Error(`HERE API responded with status: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as HereApiResponse;
       this.logger.debug(`Found ${data.items?.length || 0} location results`);
       return data.items || [];
     } catch (error) {

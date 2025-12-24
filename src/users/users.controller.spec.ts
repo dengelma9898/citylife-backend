@@ -156,7 +156,7 @@ describe('UsersController', () => {
     });
   });
 
-  describe('createBusinessProfile', () => {
+  describe('createBusinessUser', () => {
     it('should create a new business profile', async () => {
       const createDto: CreateBusinessUserDto = {
         userId: 'business1',
@@ -167,7 +167,7 @@ describe('UsersController', () => {
 
       mockUsersService.createBusinessUser.mockResolvedValue(mockBusinessUser);
 
-      const result = await controller.createBusinessProfile('business1', createDto);
+      const result = await controller.createBusinessUser(createDto);
 
       expect(result).toEqual(mockBusinessUser);
       expect(usersService.createBusinessUser).toHaveBeenCalledWith(createDto);

@@ -90,6 +90,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(uuid|node-fetch|data-uri-to-buffer|fetch-blob|formdata-polyfill)/)"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
