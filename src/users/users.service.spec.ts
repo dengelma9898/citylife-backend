@@ -40,9 +40,18 @@ describe('UsersService', () => {
       delete: jest.fn().mockResolvedValue(undefined),
     };
 
+    const mockQuery = {
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({
+        empty: false,
+        docs: [{ id: 'user1', data: () => mockData }],
+      }),
+    };
+
     const mockCollection = {
       doc: jest.fn().mockReturnValue(mockDoc),
-      where: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnValue(mockQuery),
       get: jest.fn().mockResolvedValue({
         docs: [{ data: () => mockData }],
       }),
@@ -388,14 +397,40 @@ describe('UsersService', () => {
     });
   });
 
+  describe('getUserProfileByCustomerId', () => {
+    it('should return user profile by customerId', async () => {
+      const mockFirestore = createFirestoreMock(mockUserProfile);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.getUserProfileByCustomerId('NSP-user1');
+
+      expect(result).toBeDefined();
+      expect(result?.id).toBe('user1');
+      expect(result?.profile).toEqual(mockUserProfile);
+      expect(mockFirestore.collection().where).toHaveBeenCalledWith('customerId', '==', 'NSP-user1');
+    });
+
+    it('should return null if user not found', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirestore.collection().where().limit().get.mockResolvedValue({ empty: true, docs: [] });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.getUserProfileByCustomerId('NSP-nonexistent');
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('blockUser', () => {
     it('should block a user with reason', async () => {
       const mockFirestore = createFirestoreMock(mockUserProfile);
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      const result = await service.blockUser('user1', true, 'Verstoß gegen Nutzungsbedingungen');
+      const result = await service.blockUser('NSP-user1', true, 'Verstoß gegen Nutzungsbedingungen');
 
       expect(result).toBeDefined();
+      expect(mockFirestore.collection().where).toHaveBeenCalledWith('customerId', '==', 'NSP-user1');
+      expect(mockFirestore.collection().doc).toHaveBeenCalledWith('user1');
       expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
       const updateCall = mockFirestore.collection().doc().update.mock.calls[0][0];
       expect(updateCall.isBlocked).toBe(true);
@@ -407,9 +442,11 @@ describe('UsersService', () => {
       const mockFirestore = createFirestoreMock(mockUserProfile);
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      const result = await service.blockUser('user1', true);
+      const result = await service.blockUser('NSP-user1', true);
 
       expect(result).toBeDefined();
+      expect(mockFirestore.collection().where).toHaveBeenCalledWith('customerId', '==', 'NSP-user1');
+      expect(mockFirestore.collection().doc).toHaveBeenCalledWith('user1');
       expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
       const updateCall = mockFirestore.collection().doc().update.mock.calls[0][0];
       expect(updateCall.isBlocked).toBe(true);
@@ -427,9 +464,11 @@ describe('UsersService', () => {
       const mockFirestore = createFirestoreMock(blockedUserProfile);
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      const result = await service.blockUser('user1', false);
+      const result = await service.blockUser('NSP-user1', false);
 
       expect(result).toBeDefined();
+      expect(mockFirestore.collection().where).toHaveBeenCalledWith('customerId', '==', 'NSP-user1');
+      expect(mockFirestore.collection().doc).toHaveBeenCalledWith('user1');
       expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
       const updateCall = mockFirestore.collection().doc().update.mock.calls[0][0];
       expect(updateCall.isBlocked).toBe(false);
@@ -439,10 +478,10 @@ describe('UsersService', () => {
 
     it('should throw NotFoundException if user not found', async () => {
       const mockFirestore = createFirestoreMock();
-      mockFirestore.collection().doc().get.mockResolvedValue({ exists: false });
+      mockFirestore.collection().where().limit().get.mockResolvedValue({ empty: true, docs: [] });
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      await expect(service.blockUser('nonexistent', true)).rejects.toThrow(NotFoundException);
+      await expect(service.blockUser('NSP-nonexistent', true)).rejects.toThrow(NotFoundException);
     });
   });
 });

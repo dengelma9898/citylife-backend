@@ -163,6 +163,33 @@ export class UsersService {
     }
   }
 
+  public async getUserProfileByCustomerId(customerId: string): Promise<{ id: string; profile: UserProfile } | null> {
+    try {
+      this.logger.debug(`Getting user profile for customerId: ${customerId}`);
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db
+        .collection(this.usersCollection)
+        .where('customerId', '==', customerId)
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) {
+        this.logger.debug(`No user found with customerId: ${customerId}`);
+        return null;
+      }
+
+      const doc = snapshot.docs[0];
+      this.logger.debug(`Found user with customerId ${customerId}, document id: ${doc.id}`);
+      return {
+        id: doc.id,
+        profile: doc.data() as UserProfile,
+      };
+    } catch (error) {
+      this.logger.error(`Error getting user profile for customerId ${customerId}: ${error.message}`);
+      throw error;
+    }
+  }
+
   public async getBusinessUser(id: string): Promise<BusinessUser | null> {
     try {
       this.logger.debug(`Getting business user for id: ${id}`);
@@ -550,17 +577,19 @@ export class UsersService {
   }
 
   public async blockUser(
-    userId: string,
+    customerId: string,
     isBlocked: boolean,
     blockReason?: string,
   ): Promise<UserProfile> {
     try {
-      this.logger.debug(`Blocking/unblocking user ${userId}, isBlocked: ${isBlocked}`);
-      const userProfile = await this.getUserProfile(userId);
+      this.logger.debug(`Blocking/unblocking user with customerId ${customerId}, isBlocked: ${isBlocked}`);
+      const userResult = await this.getUserProfileByCustomerId(customerId);
 
-      if (!userProfile) {
-        throw new NotFoundException('User profile not found');
+      if (!userResult) {
+        throw new NotFoundException(`User with customerId ${customerId} not found`);
       }
+
+      const { id: userId, profile: userProfile } = userResult;
 
       const updateData: any = {
         isBlocked,
@@ -580,7 +609,7 @@ export class UsersService {
 
       return this.update(userId, updateData);
     } catch (error) {
-      this.logger.error(`Error blocking/unblocking user ${userId}: ${error.message}`);
+      this.logger.error(`Error blocking/unblocking user with customerId ${customerId}: ${error.message}`);
       throw error;
     }
   }

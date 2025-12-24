@@ -64,7 +64,7 @@ export class UsersController {
   public async getProfile(@Param('id') id: string): Promise<UserProfile | BusinessUser> {
     this.logger.log(`GET /users/${id}/profile`);
     const user = await this.usersService.getById(id);
-    console.log('user', user);
+    this.logger.debug(`User data for ${id}:`, user);
     if (!user) {
       throw new NotFoundException('User profile not found');
     }
@@ -78,15 +78,6 @@ export class UsersController {
   ): Promise<UserProfile> {
     this.logger.log(`POST /users/${id}/profile`);
     return this.usersService.createUserProfile(id, userProfileDto);
-  }
-
-  @Post(':id/business-profile')
-  public async createBusinessProfile(
-    @Param('id') id: string,
-    @Body() businessUserDto: CreateBusinessUserDto,
-  ): Promise<BusinessUser> {
-    this.logger.log(`POST /users/${id}/business-profile`);
-    return this.usersService.createBusinessUser(businessUserDto);
   }
 
   @Patch(':id/profile')
@@ -108,7 +99,7 @@ export class UsersController {
   public async createBusinessUser(
     @Body() createUserDto: CreateBusinessUserDto,
   ): Promise<BusinessUser> {
-    this.logger.log('POST /users/business-profile');
+    this.logger.log(`POST /users/:id/business-profile`);
     return this.usersService.createBusinessUser(createUserDto);
   }
 
@@ -342,10 +333,10 @@ export class UsersController {
   })
   public async blockUser(@Body() blockUserDto: BlockUserDto): Promise<UserProfile> {
     this.logger.log(
-      `PATCH /users/block - Blocking user ${blockUserDto.userId}, isBlocked: ${blockUserDto.isBlocked}`,
+      `PATCH /users/block - Blocking user with customerId ${blockUserDto.customerId}, isBlocked: ${blockUserDto.isBlocked}`,
     );
     return this.usersService.blockUser(
-      blockUserDto.userId,
+      blockUserDto.customerId,
       blockUserDto.isBlocked,
       blockUserDto.blockReason,
     );
