@@ -3,11 +3,11 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class BlockUserDto {
   @ApiProperty({
-    description: 'ID des zu sperrenden/entsperrenden Users',
-    example: 'user123',
+    description: 'Customer-ID des zu sperrenden/entsperrenden Users',
+    example: 'NSP-user123',
   })
   @IsString()
-  public readonly userId: string;
+  public readonly customerId: string;
 
   @ApiProperty({
     description: 'Sperr-Status (true = sperren, false = entsperren)',

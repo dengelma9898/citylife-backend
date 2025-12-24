@@ -385,7 +385,7 @@ describe('UsersController', () => {
   describe('blockUser', () => {
     it('should block a user with reason', async () => {
       const blockUserDto: BlockUserDto = {
-        userId: 'user1',
+        customerId: 'NSP-user1',
         isBlocked: true,
         blockReason: 'Verstoß gegen Nutzungsbedingungen',
       };
@@ -402,7 +402,7 @@ describe('UsersController', () => {
 
       expect(result).toEqual(blockedUserProfile);
       expect(usersService.blockUser).toHaveBeenCalledWith(
-        'user1',
+        'NSP-user1',
         true,
         'Verstoß gegen Nutzungsbedingungen',
       );
@@ -410,7 +410,7 @@ describe('UsersController', () => {
 
     it('should block a user without reason', async () => {
       const blockUserDto: BlockUserDto = {
-        userId: 'user1',
+        customerId: 'NSP-user1',
         isBlocked: true,
       };
       const blockedUserProfile: UserProfile = {
@@ -424,12 +424,12 @@ describe('UsersController', () => {
       const result = await controller.blockUser(blockUserDto);
 
       expect(result).toEqual(blockedUserProfile);
-      expect(usersService.blockUser).toHaveBeenCalledWith('user1', true, undefined);
+      expect(usersService.blockUser).toHaveBeenCalledWith('NSP-user1', true, undefined);
     });
 
     it('should unblock a user', async () => {
       const blockUserDto: BlockUserDto = {
-        userId: 'user1',
+        customerId: 'NSP-user1',
         isBlocked: false,
       };
       const unblockedUserProfile: UserProfile = {
@@ -442,19 +442,21 @@ describe('UsersController', () => {
       const result = await controller.blockUser(blockUserDto);
 
       expect(result).toEqual(unblockedUserProfile);
-      expect(usersService.blockUser).toHaveBeenCalledWith('user1', false, undefined);
+      expect(usersService.blockUser).toHaveBeenCalledWith('NSP-user1', false, undefined);
     });
 
     it('should throw NotFoundException if user not found', async () => {
       const blockUserDto: BlockUserDto = {
-        userId: 'nonexistent',
+        customerId: 'NSP-nonexistent',
         isBlocked: true,
       };
 
-      mockUsersService.blockUser.mockRejectedValue(new NotFoundException('User profile not found'));
+      mockUsersService.blockUser.mockRejectedValue(
+        new NotFoundException('User with customerId NSP-nonexistent not found'),
+      );
 
       await expect(controller.blockUser(blockUserDto)).rejects.toThrow(NotFoundException);
-      expect(usersService.blockUser).toHaveBeenCalledWith('nonexistent', true, undefined);
+      expect(usersService.blockUser).toHaveBeenCalledWith('NSP-nonexistent', true, undefined);
     });
   });
 });
