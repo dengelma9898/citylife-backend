@@ -163,7 +163,9 @@ export class UsersService {
     }
   }
 
-  public async getUserProfileByCustomerId(customerId: string): Promise<{ id: string; profile: UserProfile } | null> {
+  public async getUserProfileByCustomerId(
+    customerId: string,
+  ): Promise<{ id: string; profile: UserProfile } | null> {
     try {
       this.logger.debug(`Getting user profile for customerId: ${customerId}`);
       const db = this.firebaseService.getFirestore();
@@ -185,7 +187,9 @@ export class UsersService {
         profile: doc.data() as UserProfile,
       };
     } catch (error) {
-      this.logger.error(`Error getting user profile for customerId ${customerId}: ${error.message}`);
+      this.logger.error(
+        `Error getting user profile for customerId ${customerId}: ${error.message}`,
+      );
       throw error;
     }
   }
@@ -582,7 +586,9 @@ export class UsersService {
     blockReason?: string,
   ): Promise<UserProfile> {
     try {
-      this.logger.debug(`Blocking/unblocking user with customerId ${customerId}, isBlocked: ${isBlocked}`);
+      this.logger.debug(
+        `Blocking/unblocking user with customerId ${customerId}, isBlocked: ${isBlocked}`,
+      );
       const userResult = await this.getUserProfileByCustomerId(customerId);
 
       if (!userResult) {
@@ -609,7 +615,9 @@ export class UsersService {
 
       return this.update(userId, updateData);
     } catch (error) {
-      this.logger.error(`Error blocking/unblocking user with customerId ${customerId}: ${error.message}`);
+      this.logger.error(
+        `Error blocking/unblocking user with customerId ${customerId}: ${error.message}`,
+      );
       throw error;
     }
   }
