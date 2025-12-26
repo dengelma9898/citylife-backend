@@ -42,11 +42,12 @@ describe('LegalDocumentService', () => {
   });
 
   describe('create', () => {
-    it('should create a new legal document', async () => {
+    it('should create a new legal document with version 1 when no existing document', async () => {
       const type = LegalDocumentType.IMPRESSUM;
       const content = '# Impressum\n\nTest content';
       const createdBy = 'user123';
 
+      mockRepository.findLatestByType.mockResolvedValue(null);
       mockRepository.save.mockResolvedValue(mockDocument);
 
       const result = await service.create(type, content, createdBy);
@@ -55,8 +56,34 @@ describe('LegalDocumentService', () => {
       expect(result.type).toBe(type);
       expect(result.content).toBe(content);
       expect(result.createdBy).toBe(createdBy);
-      expect(result.version).toBe(1);
-      expect(result.isActive).toBe(true);
+      expect(mockRepository.findLatestByType).toHaveBeenCalledWith(type);
+      expect(mockRepository.save).toHaveBeenCalled();
+    });
+
+    it('should create a new legal document with incremented version when existing document exists', async () => {
+      const type = LegalDocumentType.IMPRESSUM;
+      const content = '# Impressum\n\nUpdated content';
+      const createdBy = 'user456';
+      const existingDocument = LegalDocument.create({
+        type,
+        content: '# Impressum\n\nOld content',
+        createdBy: 'user123',
+      });
+
+      mockRepository.findLatestByType.mockResolvedValue(existingDocument);
+      const newDocument = LegalDocument.createWithVersion({
+        type,
+        content,
+        createdBy,
+        version: 2,
+      });
+      mockRepository.save.mockResolvedValue(newDocument);
+
+      const result = await service.create(type, content, createdBy);
+
+      expect(result).toBeDefined();
+      expect(result.version).toBe(2);
+      expect(mockRepository.findLatestByType).toHaveBeenCalledWith(type);
       expect(mockRepository.save).toHaveBeenCalled();
     });
   });

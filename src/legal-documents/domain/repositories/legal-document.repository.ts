@@ -10,4 +10,3 @@ export interface LegalDocumentRepository {
   findLatestByType(type: LegalDocumentType): Promise<LegalDocument | null>;
   update(document: LegalDocument): Promise<LegalDocument>;
 }
-

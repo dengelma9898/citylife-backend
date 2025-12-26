@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Logger,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Logger, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { Roles } from '../core/decorators/roles.decorator';
 import { RolesGuard } from '../core/guards/roles.guard';
@@ -67,7 +59,9 @@ export class LegalDocumentsController {
 
   @Get('type/:type')
   @Roles('super_admin')
-  @ApiOperation({ summary: 'Gibt alle Rechtsdokumente eines bestimmten Typs zurück (nur für SUPER_ADMIN)' })
+  @ApiOperation({
+    summary: 'Gibt alle Rechtsdokumente eines bestimmten Typs zurück (nur für SUPER_ADMIN)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Liste aller Rechtsdokumente des Typs',
@@ -107,4 +101,3 @@ export class LegalDocumentsController {
     return this.legalDocumentService.getById(id);
   }
 }
-

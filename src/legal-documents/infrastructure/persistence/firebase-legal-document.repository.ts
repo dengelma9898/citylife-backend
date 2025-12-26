@@ -96,7 +96,9 @@ export class FirebaseLegalDocumentRepository implements LegalDocumentRepository 
       if (snapshot.empty) {
         return null;
       }
-      return LegalDocument.fromProps(this.toEntityProps(snapshot.docs[0].data(), snapshot.docs[0].id));
+      return LegalDocument.fromProps(
+        this.toEntityProps(snapshot.docs[0].data(), snapshot.docs[0].id),
+      );
     } catch (error) {
       this.logger.error(`Error finding latest legal document by type ${type}: ${error.message}`);
       throw error;
@@ -116,4 +118,3 @@ export class FirebaseLegalDocumentRepository implements LegalDocumentRepository 
     }
   }
 }
-

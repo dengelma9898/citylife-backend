@@ -33,10 +33,23 @@ export class LegalDocument {
     this.isActive = props.isActive;
   }
 
-  static create(props: Omit<LegalDocumentProps, 'id' | 'version' | 'createdAt' | 'isActive'>): LegalDocument {
+  static create(
+    props: Omit<LegalDocumentProps, 'id' | 'version' | 'createdAt' | 'isActive'>,
+  ): LegalDocument {
     return new LegalDocument({
       id: crypto.randomUUID(),
       version: 1,
+      createdAt: new Date().toISOString(),
+      isActive: true,
+      ...props,
+    });
+  }
+
+  static createWithVersion(
+    props: Omit<LegalDocumentProps, 'id' | 'createdAt' | 'isActive'>,
+  ): LegalDocument {
+    return new LegalDocument({
+      id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       isActive: true,
       ...props,
@@ -78,4 +91,3 @@ export class LegalDocument {
     };
   }
 }
-

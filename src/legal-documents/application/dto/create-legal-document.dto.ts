@@ -20,4 +20,3 @@ export class CreateLegalDocumentDto {
   @IsNotEmpty()
   content: string;
 }
-

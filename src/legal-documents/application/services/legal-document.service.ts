@@ -1,5 +1,8 @@
 import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
-import { LegalDocumentRepository, LEGAL_DOCUMENT_REPOSITORY } from '../../domain/repositories/legal-document.repository';
+import {
+  LegalDocumentRepository,
+  LEGAL_DOCUMENT_REPOSITORY,
+} from '../../domain/repositories/legal-document.repository';
 import { LegalDocument, LegalDocumentType } from '../../domain/entities/legal-document.entity';
 
 @Injectable()
@@ -11,9 +14,20 @@ export class LegalDocumentService {
     private readonly legalDocumentRepository: LegalDocumentRepository,
   ) {}
 
-  async create(type: LegalDocumentType, content: string, createdBy: string): Promise<LegalDocument> {
+  async create(
+    type: LegalDocumentType,
+    content: string,
+    createdBy: string,
+  ): Promise<LegalDocument> {
     this.logger.log(`Creating new legal document of type ${type}`);
-    const newDocument = LegalDocument.create({ type, content, createdBy });
+    const latestDocument = await this.legalDocumentRepository.findLatestByType(type);
+    const nextVersion = latestDocument ? latestDocument.version + 1 : 1;
+    const newDocument = LegalDocument.createWithVersion({
+      type,
+      content,
+      createdBy,
+      version: nextVersion,
+    });
     return this.legalDocumentRepository.save(newDocument);
   }
 
@@ -40,4 +54,3 @@ export class LegalDocumentService {
     return document;
   }
 }
-

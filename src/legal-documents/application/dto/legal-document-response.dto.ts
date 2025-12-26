@@ -45,4 +45,3 @@ export class LegalDocumentResponseDto {
   })
   readonly isActive: boolean;
 }
-
