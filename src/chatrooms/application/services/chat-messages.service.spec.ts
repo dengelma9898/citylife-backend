@@ -288,6 +288,7 @@ describe('ChatMessagesService', () => {
       const mockUser = {
         id: 'user1',
         name: 'User 1',
+        userType: UserType.USER,
       };
 
       mockUsersService.getById.mockResolvedValue(mockUser);
@@ -300,10 +301,6 @@ describe('ChatMessagesService', () => {
       });
 
       mockChatMessageRepository.create.mockResolvedValue(mockCreatedMessage);
-      mockUsersService.getById.mockResolvedValue({
-        id: 'user1',
-        userType: UserType.USER,
-      });
 
       const result = await service.create('chatroom1', 'user1', createDto);
 

@@ -86,7 +86,7 @@ describe('ChatMessagesController', () => {
 
       expect(result).toBeDefined();
       expect(result).toHaveLength(1);
-      expect(mockChatMessagesService.findAll).toHaveBeenCalledWith('chatroom1', undefined);
+      expect(mockChatMessagesService.findAll).toHaveBeenCalledWith('chatroom1', undefined, undefined);
     });
 
     it('should return limited messages when limit is provided', async () => {
@@ -108,7 +108,7 @@ describe('ChatMessagesController', () => {
 
       expect(result).toBeDefined();
       expect(result).toHaveLength(1);
-      expect(mockChatMessagesService.findAll).toHaveBeenCalledWith('chatroom1', 1);
+      expect(mockChatMessagesService.findAll).toHaveBeenCalledWith('chatroom1', 1, undefined);
     });
   });
 
@@ -130,7 +130,7 @@ describe('ChatMessagesController', () => {
 
       expect(result).toBeDefined();
       expect(result.id).toBe('message1');
-      expect(mockChatMessagesService.findOne).toHaveBeenCalledWith('chatroom1', 'message1');
+      expect(mockChatMessagesService.findOne).toHaveBeenCalledWith('chatroom1', 'message1', undefined);
     });
   });
 
@@ -160,6 +160,7 @@ describe('ChatMessagesController', () => {
         'chatroom1',
         'message1',
         updateDto,
+        'user1',
       );
     });
   });
