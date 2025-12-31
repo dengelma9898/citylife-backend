@@ -47,7 +47,9 @@ export class ChatMessage {
     this.editedByAdmin = props.editedByAdmin;
   }
 
-  static create(props: Omit<ChatMessageProps, 'id' | 'createdAt' | 'updatedAt' | 'isEditable'>): ChatMessage {
+  static create(
+    props: Omit<ChatMessageProps, 'id' | 'createdAt' | 'updatedAt' | 'isEditable'>,
+  ): ChatMessage {
     return new ChatMessage({
       id: crypto.randomUUID(),
       ...props,

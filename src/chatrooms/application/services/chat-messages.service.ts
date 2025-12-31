@@ -57,7 +57,11 @@ export class ChatMessagesService {
     throw error;
   }
 
-  async findAll(chatroomId: string, limit: number = 50, currentUserId?: string): Promise<ChatMessage[]> {
+  async findAll(
+    chatroomId: string,
+    limit: number = 50,
+    currentUserId?: string,
+  ): Promise<ChatMessage[]> {
     try {
       this.logger.log(`Getting all messages for chatroom: ${chatroomId}`);
       const messages = await this.chatMessageRepository.findAll(chatroomId, limit);
@@ -119,10 +123,15 @@ export class ChatMessagesService {
     }
   }
 
-  async update(chatroomId: string, id: string, data: UpdateMessageDto, currentUserId?: string): Promise<ChatMessage> {
+  async update(
+    chatroomId: string,
+    id: string,
+    data: UpdateMessageDto,
+    currentUserId?: string,
+  ): Promise<ChatMessage> {
     try {
       this.logger.log(`Updating message with id: ${id}`);
-      
+
       if (currentUserId) {
         const existingMessage = await this.chatMessageRepository.findById(chatroomId, id);
         if (!existingMessage) {
@@ -258,7 +267,10 @@ export class ChatMessagesService {
     }
   }
 
-  private async enrichWithIsEditable(message: ChatMessage, currentUserId?: string): Promise<ChatMessage> {
+  private async enrichWithIsEditable(
+    message: ChatMessage,
+    currentUserId?: string,
+  ): Promise<ChatMessage> {
     if (currentUserId === undefined) {
       return ChatMessage.fromProps({
         ...message.toJSON(),

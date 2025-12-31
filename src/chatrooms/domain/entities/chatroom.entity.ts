@@ -50,7 +50,9 @@ export class Chatroom {
     this.updatedAt = props.updatedAt;
   }
 
-  static create(props: Omit<ChatroomProps, 'id' | 'createdAt' | 'updatedAt' | 'participantCount'>): Chatroom {
+  static create(
+    props: Omit<ChatroomProps, 'id' | 'createdAt' | 'updatedAt' | 'participantCount'>,
+  ): Chatroom {
     const participantCount = props.participants?.length || 0;
     return new Chatroom({
       id: crypto.randomUUID(),
