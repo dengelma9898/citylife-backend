@@ -28,15 +28,23 @@ export class ChatMessagesController {
   @Get()
   @ApiOperation({ summary: 'Get all messages in a chatroom' })
   @ApiResponse({ status: 200, description: 'Returns all messages' })
-  async findAll(@Param('chatroomId') chatroomId: string, @Query('limit') limit?: number) {
-    return this.chatMessagesService.findAll(chatroomId, limit);
+  async findAll(
+    @Param('chatroomId') chatroomId: string,
+    @Query('limit') limit?: number,
+    @CurrentUser() userId?: string,
+  ) {
+    return this.chatMessagesService.findAll(chatroomId, limit, userId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific message' })
   @ApiResponse({ status: 200, description: 'Returns the message' })
-  async findOne(@Param('chatroomId') chatroomId: string, @Param('id') id: string) {
-    return this.chatMessagesService.findOne(chatroomId, id);
+  async findOne(
+    @Param('chatroomId') chatroomId: string,
+    @Param('id') id: string,
+    @CurrentUser() userId?: string,
+  ) {
+    return this.chatMessagesService.findOne(chatroomId, id, userId);
   }
 
   @Patch(':id')
@@ -49,7 +57,7 @@ export class ChatMessagesController {
     @CurrentUser() userId: string,
     @Body() updateMessageDto: UpdateMessageDto,
   ) {
-    return this.chatMessagesService.update(chatroomId, id, updateMessageDto);
+    return this.chatMessagesService.update(chatroomId, id, updateMessageDto, userId);
   }
 
   @Delete(':id')

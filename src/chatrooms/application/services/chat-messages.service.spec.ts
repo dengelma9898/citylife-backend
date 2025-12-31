@@ -18,6 +18,7 @@ import {
   limit,
 } from 'firebase/firestore';
 import { ReactionType, UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
+import { UserType } from '../../../users/enums/user-type.enum';
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
@@ -92,6 +93,7 @@ describe('ChatMessagesService', () => {
       content: 'Test Message 1',
       senderId: 'user1',
       senderName: 'User 1',
+      isEditable: false,
       reactions: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -102,6 +104,7 @@ describe('ChatMessagesService', () => {
       content: 'Test Message 2',
       senderId: 'user2',
       senderName: 'User 2',
+      isEditable: false,
       reactions: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -141,8 +144,12 @@ describe('ChatMessagesService', () => {
   describe('findAll', () => {
     it('should return all messages for a chatroom', async () => {
       mockChatMessageRepository.findAll.mockResolvedValue(mockMessages);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
 
-      const result = await service.findAll('chatroom1');
+      const result = await service.findAll('chatroom1', 50, 'user1');
 
       expect(result).toBeDefined();
       expect(result).toHaveLength(2);
@@ -151,10 +158,65 @@ describe('ChatMessagesService', () => {
       expect(mockChatMessageRepository.findAll).toHaveBeenCalledWith('chatroom1', 50);
     });
 
+    it('should set isEditable to true for own messages', async () => {
+      const ownMessage = ChatMessage.fromProps({
+        ...mockMessages[0],
+        senderId: 'user1',
+      });
+      mockChatMessageRepository.findAll.mockResolvedValue([ownMessage]);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
+
+      const result = await service.findAll('chatroom1', 50, 'user1');
+
+      expect(result).toBeDefined();
+      expect(result[0].isEditable).toBe(true);
+    });
+
+    it('should set isEditable to false for other users messages', async () => {
+      const otherMessage = ChatMessage.fromProps({
+        ...mockMessages[0],
+        senderId: 'user2',
+      });
+      mockChatMessageRepository.findAll.mockResolvedValue([otherMessage]);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
+
+      const result = await service.findAll('chatroom1', 50, 'user1');
+
+      expect(result).toBeDefined();
+      expect(result[0].isEditable).toBe(false);
+    });
+
+    it('should set isEditable to true for super admin on all messages', async () => {
+      const otherMessage = ChatMessage.fromProps({
+        ...mockMessages[0],
+        senderId: 'user2',
+      });
+      mockChatMessageRepository.findAll.mockResolvedValue([otherMessage]);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'superAdmin1',
+        userType: UserType.SUPER_ADMIN,
+      });
+
+      const result = await service.findAll('chatroom1', 50, 'superAdmin1');
+
+      expect(result).toBeDefined();
+      expect(result[0].isEditable).toBe(true);
+    });
+
     it('should return limited messages when limit is provided', async () => {
       mockChatMessageRepository.findAll.mockResolvedValue([mockMessages[0]]);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
 
-      const result = await service.findAll('chatroom1', 1);
+      const result = await service.findAll('chatroom1', 1, 'user1');
 
       expect(result).toBeDefined();
       expect(result).toHaveLength(1);
@@ -165,13 +227,49 @@ describe('ChatMessagesService', () => {
   describe('findOne', () => {
     it('should return a message by id', async () => {
       mockChatMessageRepository.findById.mockResolvedValue(mockMessages[0]);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
 
-      const result = await service.findOne('chatroom1', 'message1');
+      const result = await service.findOne('chatroom1', 'message1', 'user1');
 
       expect(result).toBeDefined();
       expect(result.id).toBe('message1');
       expect(result.content).toBe('Test Message 1');
       expect(mockChatMessageRepository.findById).toHaveBeenCalledWith('chatroom1', 'message1');
+    });
+
+    it('should set isEditable to true for own message', async () => {
+      const ownMessage = ChatMessage.fromProps({
+        ...mockMessages[0],
+        senderId: 'user1',
+      });
+      mockChatMessageRepository.findById.mockResolvedValue(ownMessage);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
+
+      const result = await service.findOne('chatroom1', 'message1', 'user1');
+
+      expect(result.isEditable).toBe(true);
+    });
+
+    it('should set isEditable to true for super admin', async () => {
+      const otherMessage = ChatMessage.fromProps({
+        ...mockMessages[0],
+        senderId: 'user2',
+      });
+      mockChatMessageRepository.findById.mockResolvedValue(otherMessage);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'superAdmin1',
+        userType: UserType.SUPER_ADMIN,
+      });
+
+      const result = await service.findOne('chatroom1', 'message1', 'superAdmin1');
+
+      expect(result.isEditable).toBe(true);
     });
 
     it('should throw NotFoundException if message not found', async () => {
@@ -202,6 +300,10 @@ describe('ChatMessagesService', () => {
       });
 
       mockChatMessageRepository.create.mockResolvedValue(mockCreatedMessage);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
 
       const result = await service.create('chatroom1', 'user1', createDto);
 
@@ -209,6 +311,7 @@ describe('ChatMessagesService', () => {
       expect(result.content).toBe(createDto.content);
       expect(result.senderId).toBe('user1');
       expect(result.senderName).toBe('User 1');
+      expect(result.isEditable).toBe(true);
       expect(mockChatMessageRepository.create).toHaveBeenCalled();
     });
 
@@ -226,16 +329,25 @@ describe('ChatMessagesService', () => {
       content: 'Updated Message',
     };
 
-    it('should update an existing message', async () => {
-      const updatedMessage = ChatMessage.fromProps({
+    it('should update an existing message when user is owner', async () => {
+      const existingMessage = ChatMessage.fromProps({
         ...mockMessages[0],
+        senderId: 'user1',
+      });
+      const updatedMessage = ChatMessage.fromProps({
+        ...existingMessage,
         content: updateDto.content,
         updatedAt: new Date().toISOString(),
       });
 
+      mockChatMessageRepository.findById.mockResolvedValue(existingMessage);
       mockChatMessageRepository.update.mockResolvedValue(updatedMessage);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
 
-      const result = await service.update('chatroom1', 'message1', updateDto);
+      const result = await service.update('chatroom1', 'message1', updateDto, 'user1');
 
       expect(result).toBeDefined();
       expect(result.id).toBe('message1');
@@ -247,10 +359,52 @@ describe('ChatMessagesService', () => {
       );
     });
 
-    it('should throw NotFoundException if message not found', async () => {
-      mockChatMessageRepository.update.mockResolvedValue(null);
+    it('should update message when user is super admin', async () => {
+      const existingMessage = ChatMessage.fromProps({
+        ...mockMessages[0],
+        senderId: 'user2',
+      });
+      const updatedMessage = ChatMessage.fromProps({
+        ...existingMessage,
+        content: updateDto.content,
+        updatedAt: new Date().toISOString(),
+      });
 
-      await expect(service.update('chatroom1', 'nonexistent', updateDto)).rejects.toThrow(
+      mockChatMessageRepository.findById.mockResolvedValue(existingMessage);
+      mockChatMessageRepository.update.mockResolvedValue(updatedMessage);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'superAdmin1',
+        userType: UserType.SUPER_ADMIN,
+      });
+
+      const result = await service.update('chatroom1', 'message1', updateDto, 'superAdmin1');
+
+      expect(result).toBeDefined();
+      expect(result.content).toBe(updateDto.content);
+      expect(mockChatMessageRepository.update).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when user is not owner and not super admin', async () => {
+      const existingMessage = ChatMessage.fromProps({
+        ...mockMessages[0],
+        senderId: 'user2',
+      });
+
+      mockChatMessageRepository.findById.mockResolvedValue(existingMessage);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
+
+      await expect(
+        service.update('chatroom1', 'message1', updateDto, 'user1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if message not found', async () => {
+      mockChatMessageRepository.findById.mockResolvedValue(null);
+
+      await expect(service.update('chatroom1', 'nonexistent', updateDto, 'user1')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -268,8 +422,16 @@ describe('ChatMessagesService', () => {
 
   describe('remove', () => {
     it('should remove a message if user is sender', async () => {
-      mockChatMessageRepository.findById.mockResolvedValue(mockMessages[0]);
+      const ownMessage = ChatMessage.fromProps({
+        ...mockMessages[0],
+        senderId: 'user1',
+      });
+      mockChatMessageRepository.findById.mockResolvedValue(ownMessage);
       mockChatMessageRepository.delete.mockResolvedValue(undefined);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
 
       await service.remove('chatroom1', 'message1', 'user1');
 
@@ -277,10 +439,36 @@ describe('ChatMessagesService', () => {
       expect(mockChatMessageRepository.delete).toHaveBeenCalledWith('chatroom1', 'message1');
     });
 
-    it('should throw BadRequestException if user is not sender', async () => {
-      mockChatMessageRepository.findById.mockResolvedValue(mockMessages[0]);
+    it('should remove a message if user is super admin', async () => {
+      const otherMessage = ChatMessage.fromProps({
+        ...mockMessages[0],
+        senderId: 'user2',
+      });
+      mockChatMessageRepository.findById.mockResolvedValue(otherMessage);
+      mockChatMessageRepository.delete.mockResolvedValue(undefined);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'superAdmin1',
+        userType: UserType.SUPER_ADMIN,
+      });
 
-      await expect(service.remove('chatroom1', 'message1', 'user2')).rejects.toThrow(
+      await service.remove('chatroom1', 'message1', 'superAdmin1');
+
+      expect(mockChatMessageRepository.findById).toHaveBeenCalledWith('chatroom1', 'message1');
+      expect(mockChatMessageRepository.delete).toHaveBeenCalledWith('chatroom1', 'message1');
+    });
+
+    it('should throw BadRequestException if user is not sender and not super admin', async () => {
+      const otherMessage = ChatMessage.fromProps({
+        ...mockMessages[0],
+        senderId: 'user2',
+      });
+      mockChatMessageRepository.findById.mockResolvedValue(otherMessage);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
+
+      await expect(service.remove('chatroom1', 'message1', 'user1')).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -299,6 +487,10 @@ describe('ChatMessagesService', () => {
       });
 
       mockChatMessageRepository.addReaction.mockResolvedValue(updatedMessage);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
 
       const result = await service.addReaction('chatroom1', 'message1', 'user1', reactionDto);
 
@@ -332,6 +524,10 @@ describe('ChatMessagesService', () => {
       });
 
       mockChatMessageRepository.removeReaction.mockResolvedValue(updatedMessage);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        userType: UserType.USER,
+      });
 
       const result = await service.removeReaction('chatroom1', 'message1', 'user1');
 
@@ -368,6 +564,7 @@ describe('ChatMessagesService', () => {
       });
 
       mockChatMessageRepository.update.mockResolvedValue(updatedMessage);
+      mockUsersService.getById.mockResolvedValue(null);
 
       const result = await service.adminUpdate('chatroom1', 'message1', updateDto);
 

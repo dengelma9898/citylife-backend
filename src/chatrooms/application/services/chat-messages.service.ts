@@ -18,6 +18,7 @@ import { UpdateMessageDto } from '../dtos/update-message.dto';
 import { UsersService } from '../../../users/users.service';
 import { CHAT_MESSAGE_REPOSITORY } from '../../domain/repositories/chat-message.repository';
 import { ChatMessageRepository } from '../../domain/repositories/chat-message.repository';
+import { UserType } from '../../../users/enums/user-type.enum';
 
 interface ErrorDetails {
   operation: string;
@@ -56,10 +57,14 @@ export class ChatMessagesService {
     throw error;
   }
 
-  async findAll(chatroomId: string, limit: number = 50): Promise<ChatMessage[]> {
+  async findAll(chatroomId: string, limit: number = 50, currentUserId?: string): Promise<ChatMessage[]> {
     try {
       this.logger.log(`Getting all messages for chatroom: ${chatroomId}`);
-      return await this.chatMessageRepository.findAll(chatroomId, limit);
+      const messages = await this.chatMessageRepository.findAll(chatroomId, limit);
+      const enrichedMessages = await Promise.all(
+        messages.map(message => this.enrichWithIsEditable(message, currentUserId)),
+      );
+      return enrichedMessages;
     } catch (error) {
       this.handleError(error, {
         operation: 'findAll',
@@ -69,14 +74,14 @@ export class ChatMessagesService {
     }
   }
 
-  async findOne(chatroomId: string, id: string): Promise<ChatMessage> {
+  async findOne(chatroomId: string, id: string, currentUserId?: string): Promise<ChatMessage> {
     try {
       this.logger.log(`Getting message with id: ${id}`);
       const message = await this.chatMessageRepository.findById(chatroomId, id);
       if (!message) {
         throw new NotFoundException(`Nachricht mit ID ${id} nicht gefunden`);
       }
-      return message;
+      return await this.enrichWithIsEditable(message, currentUserId);
     } catch (error) {
       this.handleError(error, {
         operation: 'findOne',
@@ -103,7 +108,8 @@ export class ChatMessagesService {
         senderName: senderName,
         reactions: [],
       });
-      return await this.chatMessageRepository.create(chatroomId, messageData);
+      const message = await this.chatMessageRepository.create(chatroomId, messageData);
+      return await this.enrichWithIsEditable(message, userId);
     } catch (error) {
       this.handleError(error, {
         operation: 'create',
@@ -113,14 +119,27 @@ export class ChatMessagesService {
     }
   }
 
-  async update(chatroomId: string, id: string, data: UpdateMessageDto): Promise<ChatMessage> {
+  async update(chatroomId: string, id: string, data: UpdateMessageDto, currentUserId?: string): Promise<ChatMessage> {
     try {
       this.logger.log(`Updating message with id: ${id}`);
+      
+      if (currentUserId) {
+        const existingMessage = await this.chatMessageRepository.findById(chatroomId, id);
+        if (!existingMessage) {
+          throw new NotFoundException(`Nachricht mit ID ${id} nicht gefunden`);
+        }
+
+        const isSuperAdmin = await this.isSuperAdmin(currentUserId);
+        if (existingMessage.senderId !== currentUserId && !isSuperAdmin) {
+          throw new BadRequestException('Sie können nur Ihre eigenen Nachrichten bearbeiten');
+        }
+      }
+
       const message = await this.chatMessageRepository.update(chatroomId, id, data);
       if (!message) {
         throw new NotFoundException(`Nachricht mit ID ${id} nicht gefunden`);
       }
-      return message;
+      return this.enrichWithIsEditable(message, currentUserId);
     } catch (error) {
       this.handleError(error, {
         operation: 'update',
@@ -146,9 +165,10 @@ export class ChatMessagesService {
   async remove(chatroomId: string, messageId: string, userId: string): Promise<void> {
     try {
       this.logger.debug(`Deleting message ${messageId} from chatroom ${chatroomId}`);
-      const message = await this.findOne(chatroomId, messageId);
+      const message = await this.findOne(chatroomId, messageId, userId);
 
-      if (message.senderId !== userId) {
+      const isSuperAdmin = await this.isSuperAdmin(userId);
+      if (message.senderId !== userId && !isSuperAdmin) {
         throw new BadRequestException('Sie können nur Ihre eigenen Nachrichten löschen');
       }
 
@@ -180,7 +200,7 @@ export class ChatMessagesService {
       if (!message) {
         throw new NotFoundException(`Nachricht mit ID ${id} nicht gefunden`);
       }
-      return message;
+      return await this.enrichWithIsEditable(message, userId);
     } catch (error) {
       this.handleError(error, {
         operation: 'addReaction',
@@ -198,7 +218,7 @@ export class ChatMessagesService {
       if (!message) {
         throw new NotFoundException(`Nachricht mit ID ${id} nicht gefunden`);
       }
-      return message;
+      return await this.enrichWithIsEditable(message, userId);
     } catch (error) {
       this.handleError(error, {
         operation: 'removeReaction',
@@ -228,13 +248,47 @@ export class ChatMessagesService {
         throw new NotFoundException(`Nachricht mit ID ${messageId} nicht gefunden`);
       }
 
-      return message;
+      return await this.enrichWithIsEditable(message, undefined);
     } catch (error) {
       this.handleError(error, {
         operation: 'adminUpdate',
         chatroomId,
         messageId,
       });
+    }
+  }
+
+  private async enrichWithIsEditable(message: ChatMessage, currentUserId?: string): Promise<ChatMessage> {
+    if (currentUserId === undefined) {
+      return ChatMessage.fromProps({
+        ...message.toJSON(),
+        isEditable: false,
+      });
+    }
+
+    const isOwner = message.senderId === currentUserId;
+    const isSuperAdmin = await this.isSuperAdmin(currentUserId);
+    const isEditable = isOwner || isSuperAdmin;
+
+    return ChatMessage.fromProps({
+      ...message.toJSON(),
+      isEditable,
+    });
+  }
+
+  private async isSuperAdmin(userId: string): Promise<boolean> {
+    try {
+      const userData = await this.usersService.getById(userId);
+      if (!userData) {
+        return false;
+      }
+      if ('businessIds' in userData) {
+        return false;
+      }
+      return userData.userType === UserType.SUPER_ADMIN;
+    } catch (error) {
+      this.logger.error(`Error checking super admin status for user ${userId}: ${error.message}`);
+      return false;
     }
   }
 

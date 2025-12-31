@@ -4,7 +4,11 @@ export interface ChatroomProps {
   description: string;
   imageUrl?: string;
   createdBy: string;
+  /**
+   * @deprecated Use participantCount instead. This property will be removed in a future version.
+   */
   participants: string[];
+  participantCount: number;
   lastMessage?: {
     content: string;
     authorId: string;
@@ -20,7 +24,11 @@ export class Chatroom {
   readonly description: string;
   readonly imageUrl?: string;
   readonly createdBy: string;
+  /**
+   * @deprecated Use participantCount instead. This property will be removed in a future version.
+   */
   readonly participants: string[];
+  readonly participantCount: number;
   readonly lastMessage?: {
     content: string;
     authorId: string;
@@ -36,15 +44,18 @@ export class Chatroom {
     this.imageUrl = props.imageUrl;
     this.createdBy = props.createdBy;
     this.participants = props.participants;
+    this.participantCount = props.participantCount;
     this.lastMessage = props.lastMessage;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }
 
-  static create(props: Omit<ChatroomProps, 'id' | 'createdAt' | 'updatedAt'>): Chatroom {
+  static create(props: Omit<ChatroomProps, 'id' | 'createdAt' | 'updatedAt' | 'participantCount'>): Chatroom {
+    const participantCount = props.participants?.length || 0;
     return new Chatroom({
       id: crypto.randomUUID(),
       ...props,
+      participantCount,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -70,6 +81,7 @@ export class Chatroom {
       imageUrl: this.imageUrl,
       createdBy: this.createdBy,
       participants: this.participants,
+      participantCount: this.participantCount,
       lastMessage: this.lastMessage,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,

@@ -16,7 +16,8 @@ export class ChatroomsService {
 
   async getAll(): Promise<Chatroom[]> {
     this.logger.log('Getting all chatrooms');
-    return this.chatroomRepository.findAll();
+    const chatrooms = await this.chatroomRepository.findAll();
+    return chatrooms.map(chatroom => this.enrichWithParticipantCount(chatroom));
   }
 
   async getById(id: string): Promise<Chatroom> {
@@ -25,7 +26,15 @@ export class ChatroomsService {
     if (!chatroom) {
       throw new NotFoundException(`Chatroom with id ${id} not found`);
     }
-    return chatroom;
+    return this.enrichWithParticipantCount(chatroom);
+  }
+
+  private enrichWithParticipantCount(chatroom: Chatroom): Chatroom {
+    const participantCount = chatroom.participants?.length || 0;
+    return Chatroom.fromProps({
+      ...chatroom.toJSON(),
+      participantCount,
+    });
   }
 
   async create(data: CreateChatroomDto, userId: string): Promise<Chatroom> {
@@ -37,7 +46,8 @@ export class ChatroomsService {
       createdBy: userId,
       participants: [userId],
     });
-    return this.chatroomRepository.create(chatroomData);
+    const chatroom = await this.chatroomRepository.create(chatroomData);
+    return this.enrichWithParticipantCount(chatroom);
   }
 
   async update(
@@ -49,7 +59,7 @@ export class ChatroomsService {
     if (!chatroom) {
       throw new NotFoundException(`Chatroom with id ${id} not found`);
     }
-    return chatroom;
+    return this.enrichWithParticipantCount(chatroom);
   }
 
   async remove(id: string): Promise<void> {
@@ -59,7 +69,8 @@ export class ChatroomsService {
 
   async findByParticipant(userId: string): Promise<Chatroom[]> {
     this.logger.log(`Finding chatrooms for participant: ${userId}`);
-    return this.chatroomRepository.findByParticipant(userId);
+    const chatrooms = await this.chatroomRepository.findByParticipant(userId);
+    return chatrooms.map(chatroom => this.enrichWithParticipantCount(chatroom));
   }
 
   async updateImage(id: string, imageUrl: string): Promise<Chatroom> {
@@ -68,6 +79,6 @@ export class ChatroomsService {
     if (!chatroom) {
       throw new NotFoundException(`Chatroom with id ${id} not found`);
     }
-    return chatroom;
+    return this.enrichWithParticipantCount(chatroom);
   }
 }

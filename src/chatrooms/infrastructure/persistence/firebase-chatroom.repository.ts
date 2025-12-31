@@ -29,9 +29,13 @@ export class FirebaseChatroomRepository implements ChatroomRepository {
   }
 
   private toEntityProps(data: any, id: string): ChatroomProps {
+    const participants = data.participants || [];
+    const participantCount = data.participantCount !== undefined ? data.participantCount : participants.length;
     return {
       id,
       ...data,
+      participants,
+      participantCount,
       createdAt: data.createdAt || new Date().toISOString(),
       updatedAt: data.updatedAt || new Date().toISOString(),
     };

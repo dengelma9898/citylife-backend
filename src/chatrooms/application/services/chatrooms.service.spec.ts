@@ -60,7 +60,7 @@ describe('ChatroomsService', () => {
   });
 
   describe('getAll', () => {
-    it('should return all chatrooms', async () => {
+    it('should return all chatrooms with participantCount', async () => {
       mockChatroomRepository.findAll.mockResolvedValue(mockChatrooms);
 
       const result = await service.getAll();
@@ -68,13 +68,15 @@ describe('ChatroomsService', () => {
       expect(result).toBeDefined();
       expect(result).toHaveLength(2);
       expect(result[0].title).toBe('Test Chatroom 1');
+      expect(result[0].participantCount).toBe(2);
       expect(result[1].title).toBe('Test Chatroom 2');
+      expect(result[1].participantCount).toBe(2);
       expect(mockChatroomRepository.findAll).toHaveBeenCalled();
     });
   });
 
   describe('getById', () => {
-    it('should return a chatroom by id', async () => {
+    it('should return a chatroom by id with participantCount', async () => {
       mockChatroomRepository.findById.mockResolvedValue(mockChatrooms[0]);
 
       const result = await service.getById('chatroom1');
@@ -82,6 +84,7 @@ describe('ChatroomsService', () => {
       expect(result).toBeDefined();
       expect(result.id).toBe('chatroom1');
       expect(result.title).toBe('Test Chatroom 1');
+      expect(result.participantCount).toBe(2);
       expect(mockChatroomRepository.findById).toHaveBeenCalledWith('chatroom1');
     });
 
@@ -118,6 +121,7 @@ describe('ChatroomsService', () => {
       expect(result.imageUrl).toBe(createDto.image);
       expect(result.createdBy).toBe('user1');
       expect(result.participants).toContain('user1');
+      expect(result.participantCount).toBe(1);
       expect(mockChatroomRepository.create).toHaveBeenCalled();
     });
   });
@@ -143,6 +147,7 @@ describe('ChatroomsService', () => {
       expect(result.id).toBe('chatroom1');
       expect(result.title).toBe(updateDto.title);
       expect(result.description).toBe(updateDto.description);
+      expect(result.participantCount).toBe(2);
       expect(mockChatroomRepository.update).toHaveBeenCalledWith('chatroom1', updateDto);
     });
 
@@ -165,7 +170,7 @@ describe('ChatroomsService', () => {
   });
 
   describe('findByParticipant', () => {
-    it('should return chatrooms for a participant', async () => {
+    it('should return chatrooms for a participant with participantCount', async () => {
       mockChatroomRepository.findByParticipant.mockResolvedValue([mockChatrooms[0]]);
 
       const result = await service.findByParticipant('user1');
@@ -173,6 +178,7 @@ describe('ChatroomsService', () => {
       expect(result).toBeDefined();
       expect(result).toHaveLength(1);
       expect(result[0].participants).toContain('user1');
+      expect(result[0].participantCount).toBe(2);
       expect(mockChatroomRepository.findByParticipant).toHaveBeenCalledWith('user1');
     });
   });
@@ -192,6 +198,7 @@ describe('ChatroomsService', () => {
       expect(result).toBeDefined();
       expect(result.id).toBe('chatroom1');
       expect(result.imageUrl).toBe('new-image.jpg');
+      expect(result.participantCount).toBe(2);
       expect(mockChatroomRepository.update).toHaveBeenCalledWith('chatroom1', {
         imageUrl: 'new-image.jpg',
       });

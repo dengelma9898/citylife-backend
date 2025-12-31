@@ -26,7 +26,7 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
   }
 
   private toPlainObject(entity: ChatMessage) {
-    const { id, ...data } = entity.toJSON();
+    const { id, isEditable, ...data } = entity.toJSON();
     return this.removeUndefined(data);
   }
 
@@ -34,6 +34,7 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     return {
       id,
       ...data,
+      isEditable: data.isEditable !== undefined ? data.isEditable : false, // Will be set by service
       createdAt: data.createdAt || new Date().toISOString(),
       updatedAt: data.updatedAt || new Date().toISOString(),
     };

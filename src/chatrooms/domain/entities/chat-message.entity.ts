@@ -5,9 +5,13 @@ export interface Reaction {
 
 export interface ChatMessageProps {
   id: string;
+  /**
+   * @deprecated Use isEditable instead. This property will be removed in a future version.
+   */
   senderId: string;
   senderName: string;
   content: string;
+  isEditable: boolean;
   reactions?: Reaction[];
   createdAt: string;
   updatedAt: string;
@@ -17,9 +21,13 @@ export interface ChatMessageProps {
 
 export class ChatMessage {
   readonly id: string;
+  /**
+   * @deprecated Use isEditable instead. This property will be removed in a future version.
+   */
   readonly senderId: string;
   readonly senderName: string;
   readonly content: string;
+  readonly isEditable: boolean;
   readonly reactions?: Reaction[];
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -31,6 +39,7 @@ export class ChatMessage {
     this.senderId = props.senderId;
     this.senderName = props.senderName;
     this.content = props.content;
+    this.isEditable = props.isEditable;
     this.reactions = props.reactions;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
@@ -38,10 +47,11 @@ export class ChatMessage {
     this.editedByAdmin = props.editedByAdmin;
   }
 
-  static create(props: Omit<ChatMessageProps, 'id' | 'createdAt' | 'updatedAt'>): ChatMessage {
+  static create(props: Omit<ChatMessageProps, 'id' | 'createdAt' | 'updatedAt' | 'isEditable'>): ChatMessage {
     return new ChatMessage({
       id: crypto.randomUUID(),
       ...props,
+      isEditable: false, // Will be set by service based on current user
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -65,6 +75,7 @@ export class ChatMessage {
       senderId: this.senderId,
       senderName: this.senderName,
       content: this.content,
+      isEditable: this.isEditable,
       reactions: this.reactions,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
