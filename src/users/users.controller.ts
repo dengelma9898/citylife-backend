@@ -40,6 +40,18 @@ export class UsersController {
   ) {}
 
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  @ApiOperation({ summary: 'Gibt alle User zurück (nur für SUPER_ADMIN)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste aller User',
+    isArray: true,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen',
+  })
   public async getAll(): Promise<UserProfile[]> {
     this.logger.log('GET /users');
     return this.usersService.getAll();
