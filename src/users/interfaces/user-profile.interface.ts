@@ -20,4 +20,6 @@ export interface UserProfile {
   isBlocked?: boolean;
   blockedAt?: string;
   blockReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

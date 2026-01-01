@@ -225,6 +225,8 @@ export class UsersService {
         customerId: `NSP-${id}`,
         memberSince: `${new Date().getFullYear()}-${new Date().getMonth() + 1}`,
         businessHistory: [],
+        createdAt: DateTimeUtils.getBerlinTime(),
+        updatedAt: DateTimeUtils.getBerlinTime(),
       };
 
       const db = this.firebaseService.getFirestore();
@@ -247,7 +249,12 @@ export class UsersService {
         throw new NotFoundException('User not found');
       }
 
-      await db.collection(this.usersCollection).doc(id).update(this.removeUndefined(profile));
+      const updateData = {
+        ...profile,
+        updatedAt: DateTimeUtils.getBerlinTime(),
+      };
+
+      await db.collection(this.usersCollection).doc(id).update(this.removeUndefined(updateData));
 
       const updatedDoc = await db.collection(this.usersCollection).doc(id).get();
       return updatedDoc.data() as UserProfile;
