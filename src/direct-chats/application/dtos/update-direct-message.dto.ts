@@ -19,5 +19,3 @@ export class UpdateDirectMessageDto {
   @IsString()
   imageUrl?: string;
 }
-
-

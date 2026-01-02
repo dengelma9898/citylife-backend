@@ -19,5 +19,3 @@ export class CreateDirectMessageDto {
   @IsString()
   imageUrl?: string;
 }
-
-

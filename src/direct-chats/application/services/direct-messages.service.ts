@@ -6,7 +6,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DirectMessageRepository } from '../../domain/repositories/direct-message.repository';
-import { DirectMessage, DirectMessageProps, Reaction } from '../../domain/entities/direct-message.entity';
+import {
+  DirectMessage,
+  DirectMessageProps,
+  Reaction,
+} from '../../domain/entities/direct-message.entity';
 import { DirectChatsService } from './direct-chats.service';
 import { CreateDirectMessageDto } from '../dtos/create-direct-message.dto';
 import { UpdateDirectMessageDto } from '../dtos/update-direct-message.dto';
@@ -124,5 +128,3 @@ export class DirectMessagesService {
     return updatedMessage;
   }
 }
-
-

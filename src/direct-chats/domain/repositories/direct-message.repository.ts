@@ -8,5 +8,3 @@ export abstract class DirectMessageRepository {
   abstract delete(chatId: string, messageId: string): Promise<void>;
   abstract deleteAllByChatId(chatId: string): Promise<void>;
 }
-
-

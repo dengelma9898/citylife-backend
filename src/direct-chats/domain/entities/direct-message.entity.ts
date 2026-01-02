@@ -44,7 +44,9 @@ export class DirectMessage {
     this.editedAt = props.editedAt;
   }
 
-  static create(props: Omit<DirectMessageProps, 'id' | 'createdAt' | 'updatedAt' | 'isEditable'>): DirectMessage {
+  static create(
+    props: Omit<DirectMessageProps, 'id' | 'createdAt' | 'updatedAt' | 'isEditable'>,
+  ): DirectMessage {
     return new DirectMessage({
       id: crypto.randomUUID(),
       ...props,
@@ -58,7 +60,9 @@ export class DirectMessage {
     return new DirectMessage(props);
   }
 
-  update(props: Partial<Omit<DirectMessageProps, 'id' | 'createdAt' | 'chatId' | 'senderId'>>): DirectMessage {
+  update(
+    props: Partial<Omit<DirectMessageProps, 'id' | 'createdAt' | 'chatId' | 'senderId'>>,
+  ): DirectMessage {
     return new DirectMessage({
       ...this,
       ...props,
@@ -87,5 +91,3 @@ export class DirectMessage {
     };
   }
 }
-
-

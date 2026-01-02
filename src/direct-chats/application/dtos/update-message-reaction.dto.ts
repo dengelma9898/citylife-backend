@@ -10,5 +10,3 @@ export class UpdateMessageReactionDto {
   @IsString()
   type: string;
 }
-
-

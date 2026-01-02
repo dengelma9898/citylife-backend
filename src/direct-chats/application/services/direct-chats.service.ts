@@ -50,7 +50,10 @@ export class DirectChatsService {
     if (invitedBlockedUserIds.includes(userId)) {
       throw new ForbiddenException('You have been blocked by this user');
     }
-    const existingChat = await this.directChatRepository.findExistingChat(userId, dto.invitedUserId);
+    const existingChat = await this.directChatRepository.findExistingChat(
+      userId,
+      dto.invitedUserId,
+    );
     if (existingChat) {
       throw new BadRequestException('A chat with this user already exists');
     }
@@ -67,7 +70,9 @@ export class DirectChatsService {
   async getChatsForUser(userId: string): Promise<DirectChatWithParticipantInfo[]> {
     this.logger.debug(`Getting direct chats for user ${userId}`);
     const chats = await this.directChatRepository.findByUserId(userId);
-    const otherParticipantIds = chats.map(chat => chat.getOtherParticipantId(userId)).filter(Boolean) as string[];
+    const otherParticipantIds = chats
+      .map(chat => chat.getOtherParticipantId(userId))
+      .filter(Boolean) as string[];
     const userProfiles = await this.usersService.getUserProfilesByIds(otherParticipantIds);
     return chats.map(chat => {
       const otherParticipantId = chat.getOtherParticipantId(userId);
@@ -172,7 +177,11 @@ export class DirectChatsService {
     return chat;
   }
 
-  private async updateUserDirectChatIds(userId: string, chatId: string, action: 'add' | 'remove'): Promise<void> {
+  private async updateUserDirectChatIds(
+    userId: string,
+    chatId: string,
+    action: 'add' | 'remove',
+  ): Promise<void> {
     try {
       const userProfile = await this.usersService.getUserProfile(userId);
       if (!userProfile) return;
@@ -188,5 +197,3 @@ export class DirectChatsService {
     }
   }
 }
-
-

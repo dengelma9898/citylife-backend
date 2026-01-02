@@ -41,7 +41,12 @@ export class DirectChat {
     this.updatedAt = props.updatedAt;
   }
 
-  static create(props: Omit<DirectChatProps, 'id' | 'createdAt' | 'updatedAt' | 'creatorConfirmed' | 'invitedConfirmed' | 'status'>): DirectChat {
+  static create(
+    props: Omit<
+      DirectChatProps,
+      'id' | 'createdAt' | 'updatedAt' | 'creatorConfirmed' | 'invitedConfirmed' | 'status'
+    >,
+  ): DirectChat {
     return new DirectChat({
       id: crypto.randomUUID(),
       ...props,
@@ -98,5 +103,3 @@ export class DirectChat {
     };
   }
 }
-
-

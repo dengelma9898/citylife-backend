@@ -9,5 +9,3 @@ export abstract class DirectChatRepository {
   abstract update(chat: DirectChat): Promise<DirectChat>;
   abstract delete(id: string): Promise<void>;
 }
-
-

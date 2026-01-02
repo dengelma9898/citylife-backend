@@ -1,12 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DirectChatsController } from './direct-chats.controller';
 import { DirectChatsService } from '../services/direct-chats.service';
+import { DirectChatSettingsService } from '../services/direct-chat-settings.service';
 import { DirectChat } from '../../domain/entities/direct-chat.entity';
+import { DirectChatSettings } from '../../domain/entities/direct-chat-settings.entity';
 import { AuthGuard } from '../../../core/guards/auth.guard';
+import { DirectChatEnabledGuard } from '../guards/direct-chat-enabled.guard';
+import { RolesGuard } from '../../../core/guards/roles.guard';
 
 describe('DirectChatsController', () => {
   let controller: DirectChatsController;
   let directChatsService: jest.Mocked<DirectChatsService>;
+  let directChatSettingsService: jest.Mocked<DirectChatSettingsService>;
 
   const mockDirectChatsService = {
     createChat: jest.fn(),
@@ -17,6 +22,12 @@ describe('DirectChatsController', () => {
     deleteChat: jest.fn(),
   };
 
+  const mockDirectChatSettingsService = {
+    getSettings: jest.fn(),
+    isFeatureEnabled: jest.fn(),
+    updateSettings: jest.fn(),
+  };
+
   const mockChat = DirectChat.fromProps({
     id: 'chat-1',
     creatorId: 'user-1',
@@ -25,6 +36,12 @@ describe('DirectChatsController', () => {
     invitedConfirmed: false,
     status: 'pending',
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+
+  const mockSettings = DirectChatSettings.fromProps({
+    id: 'direct_chat_settings',
+    isEnabled: true,
     updatedAt: new Date().toISOString(),
   });
 
@@ -40,18 +57,55 @@ describe('DirectChatsController', () => {
           provide: DirectChatsService,
           useValue: mockDirectChatsService,
         },
+        {
+          provide: DirectChatSettingsService,
+          useValue: mockDirectChatSettingsService,
+        },
       ],
     })
       .overrideGuard(AuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(DirectChatEnabledGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
     controller = module.get<DirectChatsController>(DirectChatsController);
     directChatsService = module.get(DirectChatsService);
+    directChatSettingsService = module.get(DirectChatSettingsService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('getSettings', () => {
+    it('should return current settings', async () => {
+      mockDirectChatSettingsService.getSettings.mockResolvedValue(mockSettings);
+
+      const result = await controller.getSettings();
+
+      expect(result).toBeDefined();
+      expect(result.isEnabled).toBe(true);
+      expect(mockDirectChatSettingsService.getSettings).toHaveBeenCalled();
+    });
+  });
+
+  describe('updateSettings', () => {
+    it('should update settings', async () => {
+      const updatedSettings = DirectChatSettings.fromProps({
+        ...mockSettings.toJSON(),
+        isEnabled: false,
+        updatedBy: 'user-1',
+      });
+      mockDirectChatSettingsService.updateSettings.mockResolvedValue(updatedSettings);
+
+      const result = await controller.updateSettings(mockRequest, { isEnabled: false });
+
+      expect(result.isEnabled).toBe(false);
+      expect(mockDirectChatSettingsService.updateSettings).toHaveBeenCalledWith(false, 'user-1');
+    });
   });
 
   describe('createChat', () => {
@@ -146,4 +200,3 @@ describe('DirectChatsController', () => {
     });
   });
 });
-

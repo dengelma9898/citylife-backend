@@ -3,6 +3,7 @@ import { DirectMessagesController } from './direct-messages.controller';
 import { DirectMessagesService } from '../services/direct-messages.service';
 import { DirectMessage } from '../../domain/entities/direct-message.entity';
 import { AuthGuard } from '../../../core/guards/auth.guard';
+import { DirectChatEnabledGuard } from '../guards/direct-chat-enabled.guard';
 
 describe('DirectMessagesController', () => {
   let controller: DirectMessagesController;
@@ -42,6 +43,8 @@ describe('DirectMessagesController', () => {
       ],
     })
       .overrideGuard(AuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(DirectChatEnabledGuard)
       .useValue({ canActivate: () => true })
       .compile();
 

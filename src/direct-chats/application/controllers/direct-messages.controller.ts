@@ -19,6 +19,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { AuthGuard } from '../../../core/guards/auth.guard';
+import { DirectChatEnabledGuard } from '../guards/direct-chat-enabled.guard';
 import { DirectMessagesService } from '../services/direct-messages.service';
 import { CreateDirectMessageDto } from '../dtos/create-direct-message.dto';
 import { UpdateDirectMessageDto } from '../dtos/update-direct-message.dto';
@@ -26,7 +27,7 @@ import { UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
 
 @ApiTags('direct-chats')
 @ApiBearerAuth()
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, DirectChatEnabledGuard)
 @Controller('direct-chats/:chatId/messages')
 export class DirectMessagesController {
   constructor(private readonly directMessagesService: DirectMessagesService) {}
@@ -38,6 +39,7 @@ export class DirectMessagesController {
   @ApiResponse({ status: 400, description: 'Cannot send messages in pending chat' })
   @ApiResponse({ status: 403, description: 'Not a participant' })
   @ApiResponse({ status: 404, description: 'Chat not found' })
+  @ApiResponse({ status: 503, description: 'Feature is disabled' })
   async createMessage(
     @Request() req: any,
     @Param('chatId') chatId: string,
@@ -54,6 +56,7 @@ export class DirectMessagesController {
   @ApiResponse({ status: 200, description: 'List of messages' })
   @ApiResponse({ status: 403, description: 'Not a participant' })
   @ApiResponse({ status: 404, description: 'Chat not found' })
+  @ApiResponse({ status: 503, description: 'Feature is disabled' })
   async getMessages(@Request() req: any, @Param('chatId') chatId: string) {
     const userId = req.user.uid;
     return this.directMessagesService.getMessages(userId, chatId);
@@ -66,6 +69,7 @@ export class DirectMessagesController {
   @ApiResponse({ status: 200, description: 'Message updated successfully' })
   @ApiResponse({ status: 403, description: 'Can only edit own messages' })
   @ApiResponse({ status: 404, description: 'Message not found' })
+  @ApiResponse({ status: 503, description: 'Feature is disabled' })
   async updateMessage(
     @Request() req: any,
     @Param('chatId') chatId: string,
@@ -84,6 +88,7 @@ export class DirectMessagesController {
   @ApiResponse({ status: 204, description: 'Message deleted successfully' })
   @ApiResponse({ status: 403, description: 'Can only delete own messages' })
   @ApiResponse({ status: 404, description: 'Message not found' })
+  @ApiResponse({ status: 503, description: 'Feature is disabled' })
   async deleteMessage(
     @Request() req: any,
     @Param('chatId') chatId: string,
@@ -100,6 +105,7 @@ export class DirectMessagesController {
   @ApiResponse({ status: 200, description: 'Reaction updated successfully' })
   @ApiResponse({ status: 403, description: 'Not a participant' })
   @ApiResponse({ status: 404, description: 'Message not found' })
+  @ApiResponse({ status: 503, description: 'Feature is disabled' })
   async updateReaction(
     @Request() req: any,
     @Param('chatId') chatId: string,
@@ -110,5 +116,3 @@ export class DirectMessagesController {
     return this.directMessagesService.updateReaction(userId, chatId, messageId, dto);
   }
 }
-
-

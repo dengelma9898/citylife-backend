@@ -654,7 +654,9 @@ export class UsersService {
       const updatedBlockedUserIds = [...blockedUserIds, userIdToBlock];
       return this.update(userId, { blockedUserIds: updatedBlockedUserIds });
     } catch (error) {
-      this.logger.error(`Error blocking user ${userIdToBlock} for user ${userId}: ${error.message}`);
+      this.logger.error(
+        `Error blocking user ${userIdToBlock} for user ${userId}: ${error.message}`,
+      );
       throw error;
     }
   }
@@ -673,7 +675,9 @@ export class UsersService {
       const updatedBlockedUserIds = blockedUserIds.filter(id => id !== userIdToUnblock);
       return this.update(userId, { blockedUserIds: updatedBlockedUserIds });
     } catch (error) {
-      this.logger.error(`Error unblocking user ${userIdToUnblock} for user ${userId}: ${error.message}`);
+      this.logger.error(
+        `Error unblocking user ${userIdToUnblock} for user ${userId}: ${error.message}`,
+      );
       throw error;
     }
   }

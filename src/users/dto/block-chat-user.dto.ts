@@ -10,5 +10,3 @@ export class BlockChatUserDto {
   @IsString()
   userIdToBlock: string;
 }
-
-

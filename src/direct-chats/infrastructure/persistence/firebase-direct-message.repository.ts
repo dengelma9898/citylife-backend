@@ -49,7 +49,10 @@ export class FirebaseDirectMessageRepository extends DirectMessageRepository {
 
   private getMessagesCollection(chatId: string) {
     const db = this.firebaseService.getFirestore();
-    return db.collection(this.chatCollectionName).doc(chatId).collection(this.messagesSubCollectionName);
+    return db
+      .collection(this.chatCollectionName)
+      .doc(chatId)
+      .collection(this.messagesSubCollectionName);
   }
 
   async findById(chatId: string, messageId: string): Promise<DirectMessage | null> {
@@ -66,7 +69,9 @@ export class FirebaseDirectMessageRepository extends DirectMessageRepository {
   async findByChatId(chatId: string): Promise<DirectMessage[]> {
     try {
       const snapshot = await this.getMessagesCollection(chatId).orderBy('createdAt', 'asc').get();
-      return snapshot.docs.map(doc => DirectMessage.fromProps(this.toEntityProps(doc.data(), doc.id)));
+      return snapshot.docs.map(doc =>
+        DirectMessage.fromProps(this.toEntityProps(doc.data(), doc.id)),
+      );
     } catch (error) {
       this.logger.error(`Error finding messages for chat ${chatId}: ${error.message}`);
       throw error;
@@ -75,7 +80,9 @@ export class FirebaseDirectMessageRepository extends DirectMessageRepository {
 
   async save(message: DirectMessage): Promise<DirectMessage> {
     try {
-      await this.getMessagesCollection(message.chatId).doc(message.id).set(this.toPlainObject(message));
+      await this.getMessagesCollection(message.chatId)
+        .doc(message.id)
+        .set(this.toPlainObject(message));
       return message;
     } catch (error) {
       this.logger.error(`Error saving message: ${error.message}`);
@@ -85,7 +92,9 @@ export class FirebaseDirectMessageRepository extends DirectMessageRepository {
 
   async update(message: DirectMessage): Promise<DirectMessage> {
     try {
-      await this.getMessagesCollection(message.chatId).doc(message.id).update(this.toPlainObject(message));
+      await this.getMessagesCollection(message.chatId)
+        .doc(message.id)
+        .update(this.toPlainObject(message));
       return message;
     } catch (error) {
       this.logger.error(`Error updating message: ${error.message}`);
@@ -97,7 +106,9 @@ export class FirebaseDirectMessageRepository extends DirectMessageRepository {
     try {
       await this.getMessagesCollection(chatId).doc(messageId).delete();
     } catch (error) {
-      this.logger.error(`Error deleting message ${messageId} from chat ${chatId}: ${error.message}`);
+      this.logger.error(
+        `Error deleting message ${messageId} from chat ${chatId}: ${error.message}`,
+      );
       throw error;
     }
   }
@@ -119,5 +130,3 @@ export class FirebaseDirectMessageRepository extends DirectMessageRepository {
     }
   }
 }
-
-

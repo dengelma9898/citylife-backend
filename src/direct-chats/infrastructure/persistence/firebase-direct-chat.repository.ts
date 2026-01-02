@@ -72,7 +72,9 @@ export class FirebaseDirectChatRepository extends DirectChatRepository {
           chats.push(DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id)));
         }
       });
-      return chats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      return chats.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
     } catch (error) {
       this.logger.error(`Error finding direct chats by user id ${userId}: ${error.message}`);
       throw error;
@@ -121,7 +123,9 @@ export class FirebaseDirectChatRepository extends DirectChatRepository {
       }
       return null;
     } catch (error) {
-      this.logger.error(`Error finding existing chat between ${userId1} and ${userId2}: ${error.message}`);
+      this.logger.error(
+        `Error finding existing chat between ${userId1} and ${userId2}: ${error.message}`,
+      );
       throw error;
     }
   }
@@ -158,5 +162,3 @@ export class FirebaseDirectChatRepository extends DirectChatRepository {
     }
   }
 }
-
-
