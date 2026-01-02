@@ -17,6 +17,8 @@ export interface UserProfile {
   favoriteEventIds?: string[];
   favoriteBusinessIds?: string[];
   contactRequestIds?: string[];
+  directChatIds?: string[];
+  blockedUserIds?: string[];
   isBlocked?: boolean;
   blockedAt?: string;
   blockReason?: string;

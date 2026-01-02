@@ -636,4 +636,59 @@ export class UsersService {
     }
     return chunks;
   }
+
+  public async blockUserForChat(userId: string, userIdToBlock: string): Promise<UserProfile> {
+    try {
+      this.logger.debug(`User ${userId} blocking user ${userIdToBlock} for direct chats`);
+      if (userId === userIdToBlock) {
+        throw new BadRequestException('Cannot block yourself');
+      }
+      const userProfile = await this.getUserProfile(userId);
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found');
+      }
+      const blockedUserIds = userProfile.blockedUserIds || [];
+      if (blockedUserIds.includes(userIdToBlock)) {
+        throw new BadRequestException('User is already blocked');
+      }
+      const updatedBlockedUserIds = [...blockedUserIds, userIdToBlock];
+      return this.update(userId, { blockedUserIds: updatedBlockedUserIds });
+    } catch (error) {
+      this.logger.error(`Error blocking user ${userIdToBlock} for user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  public async unblockUserForChat(userId: string, userIdToUnblock: string): Promise<UserProfile> {
+    try {
+      this.logger.debug(`User ${userId} unblocking user ${userIdToUnblock} for direct chats`);
+      const userProfile = await this.getUserProfile(userId);
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found');
+      }
+      const blockedUserIds = userProfile.blockedUserIds || [];
+      if (!blockedUserIds.includes(userIdToUnblock)) {
+        throw new BadRequestException('User is not blocked');
+      }
+      const updatedBlockedUserIds = blockedUserIds.filter(id => id !== userIdToUnblock);
+      return this.update(userId, { blockedUserIds: updatedBlockedUserIds });
+    } catch (error) {
+      this.logger.error(`Error unblocking user ${userIdToUnblock} for user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  public async getBlockedUsers(userId: string): Promise<string[]> {
+    try {
+      this.logger.debug(`Getting blocked users for user ${userId}`);
+      const userProfile = await this.getUserProfile(userId);
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found');
+      }
+      return userProfile.blockedUserIds || [];
+    } catch (error) {
+      this.logger.error(`Error getting blocked users for user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
 }

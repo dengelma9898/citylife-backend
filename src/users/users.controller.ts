@@ -22,6 +22,7 @@ import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { BlockUserDto } from './dto/block-user.dto';
+import { BlockChatUserDto } from './dto/block-chat-user.dto';
 import { UserType } from './enums/user-type.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
@@ -352,5 +353,85 @@ export class UsersController {
       blockUserDto.isBlocked,
       blockUserDto.blockReason,
     );
+  }
+
+  @Post(':id/blocked-users')
+  @ApiOperation({ summary: 'Blockiert einen User für Direct Chats' })
+  @ApiResponse({
+    status: 201,
+    description: 'User wurde erfolgreich blockiert',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User ist bereits blockiert oder ungültige Anfrage',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User wurde nicht gefunden',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID des blockierenden Users',
+  })
+  @ApiBody({
+    type: BlockChatUserDto,
+    description: 'ID des zu blockierenden Users',
+  })
+  public async blockUserForChat(
+    @Param('id') userId: string,
+    @Body() dto: BlockChatUserDto,
+  ): Promise<UserProfile> {
+    this.logger.log(`POST /users/${userId}/blocked-users - Blocking user ${dto.userIdToBlock}`);
+    return this.usersService.blockUserForChat(userId, dto.userIdToBlock);
+  }
+
+  @Delete(':id/blocked-users/:blockedUserId')
+  @ApiOperation({ summary: 'Entblockiert einen User für Direct Chats' })
+  @ApiResponse({
+    status: 200,
+    description: 'User wurde erfolgreich entblockiert',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User ist nicht blockiert',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User wurde nicht gefunden',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID des entblockierenden Users',
+  })
+  @ApiParam({
+    name: 'blockedUserId',
+    description: 'ID des zu entblockierenden Users',
+  })
+  public async unblockUserForChat(
+    @Param('id') userId: string,
+    @Param('blockedUserId') blockedUserId: string,
+  ): Promise<UserProfile> {
+    this.logger.log(`DELETE /users/${userId}/blocked-users/${blockedUserId}`);
+    return this.usersService.unblockUserForChat(userId, blockedUserId);
+  }
+
+  @Get(':id/blocked-users')
+  @ApiOperation({ summary: 'Gibt alle blockierten Users zurück' })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste der blockierten User-IDs',
+    isArray: true,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User wurde nicht gefunden',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID des Users',
+  })
+  public async getBlockedUsers(@Param('id') userId: string): Promise<string[]> {
+    this.logger.log(`GET /users/${userId}/blocked-users`);
+    return this.usersService.getBlockedUsers(userId);
   }
 }

@@ -23,6 +23,7 @@ import { AccountManagementModule } from './account-management/account-management
 import { DowntimeModule } from './downtime/downtime.module';
 import { AdventCalendarModule } from './advent-calendar/advent-calendar.module';
 import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
+import { DirectChatsModule } from './direct-chats/direct-chats.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
     DowntimeModule,
     AdventCalendarModule,
     LegalDocumentsModule,
+    DirectChatsModule,
   ],
   providers: [
     {
