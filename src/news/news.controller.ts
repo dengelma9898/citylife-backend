@@ -26,7 +26,7 @@ import { CreatePollNewsDto } from './dto/create-poll-news.dto';
 import { VotePollDto } from './dto/vote-poll.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
-import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
+import { NewsFileValidationPipe } from './pipes/news-file-validation.pipe';
 import { CreateTextNewsDto } from './dto/create-text-news.dto';
 
 @Controller('news')
@@ -126,7 +126,7 @@ export class NewsController {
   @UseInterceptors(FilesInterceptor('images', 5))
   public async updateNewsImages(
     @Param('id') id: string,
-    @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[],
+    @UploadedFiles(new NewsFileValidationPipe({ optional: true })) files?: Express.Multer.File[],
   ): Promise<ImageNewsItem> {
     this.logger.log(`PATCH /news/${id}/images`);
 

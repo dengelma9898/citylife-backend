@@ -14,16 +14,19 @@ import { CreateTextNewsDto } from './dto/create-text-news.dto';
 import { CreateReactionDto } from './dto/create-reaction.dto';
 import { UsersService } from '../users/users.service';
 import { FirebaseService } from '../firebase/firebase.service';
+import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { DateTimeUtils } from '../utils/date-time.utils';
 
 @Injectable()
 export class NewsService {
   private readonly logger = new Logger(NewsService.name);
   private readonly collectionName = 'news';
+  private readonly MAX_NEWS_COUNT = 10;
 
   constructor(
     private readonly usersService: UsersService,
     private readonly firebaseService: FirebaseService,
+    private readonly firebaseStorageService: FirebaseStorageService,
   ) {}
 
   private removeUndefined(obj: any): any {
@@ -226,13 +229,61 @@ export class NewsService {
     try {
       const db = this.firebaseService.getFirestore();
       const docRef = await db.collection(this.collectionName).add(this.removeUndefined(newsItem));
-
-      return {
+      const savedNewsItem = {
         id: docRef.id,
         ...newsItem,
       } as NewsItem;
+      await this.enforceNewsLimit();
+      return savedNewsItem;
     } catch (error) {
       this.logger.error(`Error saving news item: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private async enforceNewsLimit(): Promise<void> {
+    try {
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db
+        .collection(this.collectionName)
+        .orderBy('createdAt', 'asc')
+        .get();
+      const newsCount = snapshot.docs.length;
+      if (newsCount <= this.MAX_NEWS_COUNT) {
+        return;
+      }
+      const itemsToDelete = newsCount - this.MAX_NEWS_COUNT;
+      this.logger.log(`News limit exceeded. Deleting ${itemsToDelete} oldest news item(s).`);
+      const oldestDocs = snapshot.docs.slice(0, itemsToDelete);
+      for (const doc of oldestDocs) {
+        const newsData = doc.data() as NewsItem;
+        await this.deleteNewsWithImages(doc.id, newsData);
+      }
+    } catch (error) {
+      this.logger.error(`Error enforcing news limit: ${error.message}`);
+    }
+  }
+
+  private async deleteNewsWithImages(newsId: string, newsData: NewsItem): Promise<void> {
+    try {
+      this.logger.debug(`Deleting news item ${newsId} with associated images`);
+      if (newsData.type === 'image') {
+        const imageNewsData = newsData as ImageNewsItem;
+        if (imageNewsData.imageUrls && imageNewsData.imageUrls.length > 0) {
+          const deletePromises = imageNewsData.imageUrls.map(url =>
+            this.firebaseStorageService.deleteFile(url).catch(error => {
+              this.logger.warn(`Failed to delete image ${url}: ${error.message}`);
+            }),
+          );
+          await Promise.all(deletePromises);
+          this.logger.debug(`Deleted ${imageNewsData.imageUrls.length} images for news ${newsId}`);
+        }
+      }
+      const db = this.firebaseService.getFirestore();
+      await db.collection(this.collectionName).doc(newsId).delete();
+      this.logger.log(`Deleted oldest news item ${newsId}`);
+    } catch (error) {
+      this.logger.error(`Error deleting news with images ${newsId}: ${error.message}`);
       throw error;
     }
   }
