@@ -38,7 +38,10 @@ export class DirectChatSettings {
     return new DirectChatSettings(props);
   }
 
-  update(props: Partial<Omit<DirectChatSettingsProps, 'id'>>, updatedBy?: string): DirectChatSettings {
+  update(
+    props: Partial<Omit<DirectChatSettingsProps, 'id'>>,
+    updatedBy?: string,
+  ): DirectChatSettings {
     return new DirectChatSettings({
       ...this,
       ...props,
@@ -56,4 +59,3 @@ export class DirectChatSettings {
     };
   }
 }
-

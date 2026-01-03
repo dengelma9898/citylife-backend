@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { DirectChatSettingsRepository } from '../../domain/repositories/direct-chat-settings.repository';
-import { DirectChatSettings, DirectChatSettingsProps } from '../../domain/entities/direct-chat-settings.entity';
+import {
+  DirectChatSettings,
+  DirectChatSettingsProps,
+} from '../../domain/entities/direct-chat-settings.entity';
 
 @Injectable()
 export class FirebaseDirectChatSettingsRepository extends DirectChatSettingsRepository {
@@ -59,7 +62,10 @@ export class FirebaseDirectChatSettingsRepository extends DirectChatSettingsRepo
   async save(settings: DirectChatSettings): Promise<DirectChatSettings> {
     try {
       const db = this.firebaseService.getFirestore();
-      await db.collection(this.collectionName).doc(this.documentId).set(this.toPlainObject(settings));
+      await db
+        .collection(this.collectionName)
+        .doc(this.documentId)
+        .set(this.toPlainObject(settings));
       return settings;
     } catch (error) {
       this.logger.error(`Error saving direct chat settings: ${error.message}`);
@@ -67,4 +73,3 @@ export class FirebaseDirectChatSettingsRepository extends DirectChatSettingsRepo
     }
   }
 }
-

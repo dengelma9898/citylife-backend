@@ -15,12 +15,12 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    
+
     // Allow OPTIONS requests (CORS preflight) to pass through
     if (request.method === 'OPTIONS') {
       return true;
     }
-    
+
     const authHeader = request.headers.authorization;
 
     if (!authHeader) {

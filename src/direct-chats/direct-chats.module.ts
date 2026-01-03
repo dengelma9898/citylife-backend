@@ -15,14 +15,8 @@ import { FirebaseModule } from '../firebase/firebase.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [
-    FirebaseModule,
-    forwardRef(() => UsersModule),
-  ],
-  controllers: [
-    DirectChatsController,
-    DirectMessagesController,
-  ],
+  imports: [FirebaseModule, forwardRef(() => UsersModule)],
+  controllers: [DirectChatsController, DirectMessagesController],
   providers: [
     DirectChatsService,
     DirectMessagesService,
@@ -41,10 +35,6 @@ import { UsersModule } from '../users/users.module';
       useClass: FirebaseDirectChatSettingsRepository,
     },
   ],
-  exports: [
-    DirectChatsService,
-    DirectMessagesService,
-    DirectChatSettingsService,
-  ],
+  exports: [DirectChatsService, DirectMessagesService, DirectChatSettingsService],
 })
 export class DirectChatsModule {}

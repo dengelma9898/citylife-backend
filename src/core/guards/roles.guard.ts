@@ -14,12 +14,12 @@ export class RolesGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    
+
     // Allow OPTIONS requests (CORS preflight) to pass through
     if (request.method === 'OPTIONS') {
       return true;
     }
-    
+
     const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),

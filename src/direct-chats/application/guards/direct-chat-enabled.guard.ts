@@ -8,9 +8,7 @@ import { DirectChatSettingsService } from '../services/direct-chat-settings.serv
 
 @Injectable()
 export class DirectChatEnabledGuard implements CanActivate {
-  constructor(
-    private readonly directChatSettingsService: DirectChatSettingsService,
-  ) {}
+  constructor(private readonly directChatSettingsService: DirectChatSettingsService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isEnabled = await this.directChatSettingsService.isFeatureEnabled();
@@ -20,4 +18,3 @@ export class DirectChatEnabledGuard implements CanActivate {
     return true;
   }
 }
-

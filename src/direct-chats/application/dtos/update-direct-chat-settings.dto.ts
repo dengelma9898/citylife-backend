@@ -10,4 +10,3 @@ export class UpdateDirectChatSettingsDto {
   @IsBoolean()
   isEnabled: boolean;
 }
-
