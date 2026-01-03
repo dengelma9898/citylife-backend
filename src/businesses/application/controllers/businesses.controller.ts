@@ -287,6 +287,33 @@ export class BusinessesController {
     return this.businessesService.update(businessId, { hasAccount });
   }
 
+  /**
+   * @deprecated Use PATCH /businesses/:id with { benefit: "..." } instead.
+   * This endpoint exists only for backwards compatibility with older clients.
+   */
+  @Patch(':id/benefit')
+  public async updateBenefit(
+    @Param('id') businessId: string,
+    @Body('benefit') benefit: string,
+  ): Promise<Business> {
+    this.logger.log(`PATCH /businesses/${businessId}/benefit`);
+    this.logger.warn('DEPRECATED: Use PATCH /businesses/:id with benefit field instead');
+
+    if (!benefit) {
+      throw new BadRequestException('benefit field is required');
+    }
+
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    return this.businessesService.update(businessId, {
+      benefit,
+      previousBenefits: [...(business.previousBenefits || []), business.benefit],
+    });
+  }
+
   @Post('users/:id')
   public async createBusinessForUser(
     @Param('id') userId: string,
