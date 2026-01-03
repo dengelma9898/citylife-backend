@@ -244,10 +244,7 @@ export class NewsService {
   private async enforceNewsLimit(): Promise<void> {
     try {
       const db = this.firebaseService.getFirestore();
-      const snapshot = await db
-        .collection(this.collectionName)
-        .orderBy('createdAt', 'asc')
-        .get();
+      const snapshot = await db.collection(this.collectionName).orderBy('createdAt', 'asc').get();
       const newsCount = snapshot.docs.length;
       if (newsCount <= this.MAX_NEWS_COUNT) {
         return;

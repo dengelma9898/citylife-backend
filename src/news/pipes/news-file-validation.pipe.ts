@@ -51,4 +51,3 @@ export class NewsFileValidationPipe implements PipeTransform {
     return file;
   }
 }
-

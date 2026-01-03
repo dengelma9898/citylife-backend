@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NewsService } from './news.service';
 import { UsersService } from '../users/users.service';
 import { FirebaseService } from '../firebase/firebase.service';
+import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import {
   getDocs,
   getDoc,
@@ -26,8 +27,9 @@ describe('NewsService', () => {
   let service: NewsService;
   let usersService: UsersService;
   let firebaseService: FirebaseService;
+  let firebaseStorageService: FirebaseStorageService;
 
-  const createFirestoreMock = (mockData: any = {}) => {
+  const createFirestoreMock = (mockData: any = {}, docsList: any[] = []) => {
     const mockDoc = {
       id: 'mock-id',
       exists: true,
@@ -45,8 +47,9 @@ describe('NewsService', () => {
       doc: jest.fn().mockReturnValue(mockDoc),
       add: jest.fn().mockResolvedValue({ id: 'mock-id' }),
       where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
       get: jest.fn().mockResolvedValue({
-        docs: [{ id: 'mock-id', data: () => mockData }],
+        docs: docsList.length > 0 ? docsList : [{ id: 'mock-id', data: () => mockData }],
       }),
     };
 
@@ -80,6 +83,10 @@ describe('NewsService', () => {
 
   const mockUsersService = {
     getUserProfile: jest.fn(),
+  };
+
+  const mockFirebaseStorageService = {
+    deleteFile: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockTextNewsItem: TextNewsItem = {
@@ -140,12 +147,17 @@ describe('NewsService', () => {
           provide: FirebaseService,
           useValue: mockFirebaseService,
         },
+        {
+          provide: FirebaseStorageService,
+          useValue: mockFirebaseStorageService,
+        },
       ],
     }).compile();
 
     service = module.get<NewsService>(NewsService);
     usersService = module.get<UsersService>(UsersService);
     firebaseService = module.get<FirebaseService>(FirebaseService);
+    firebaseStorageService = module.get<FirebaseStorageService>(FirebaseStorageService);
 
     jest.clearAllMocks();
   });
@@ -397,6 +409,146 @@ describe('NewsService', () => {
       await expect(service.incrementViewCount('nonexistent')).rejects.toThrow(
         new Error('updatedNewsDoc.data is not a function'),
       );
+    });
+  });
+
+  describe('enforceNewsLimit', () => {
+    it('should not delete any news when count is below limit', async () => {
+      const docsList = Array.from({ length: 5 }, (_, i) => ({
+        id: `news-${i}`,
+        data: () => ({ ...mockTextNewsItem, id: `news-${i}` }),
+      }));
+      const mockFirestore = createFirestoreMock(mockTextNewsItem, docsList);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const createDto: CreateTextNewsDto = {
+        content: 'New Text News',
+        authorId: 'user1',
+      };
+
+      await service.createTextNews(createDto);
+
+      expect(mockFirebaseStorageService.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('should not delete any news when count equals limit', async () => {
+      const docsList = Array.from({ length: 10 }, (_, i) => ({
+        id: `news-${i}`,
+        data: () => ({ ...mockTextNewsItem, id: `news-${i}` }),
+      }));
+      const mockFirestore = createFirestoreMock(mockTextNewsItem, docsList);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const createDto: CreateTextNewsDto = {
+        content: 'New Text News',
+        authorId: 'user1',
+      };
+
+      await service.createTextNews(createDto);
+
+      expect(mockFirebaseStorageService.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('should delete oldest news when count exceeds limit', async () => {
+      const docsList = Array.from({ length: 11 }, (_, i) => ({
+        id: `news-${i}`,
+        data: () => ({
+          ...mockTextNewsItem,
+          id: `news-${i}`,
+          createdAt: `2024-01-${String(i + 1).padStart(2, '0')}T00:00:00.000Z`,
+        }),
+      }));
+      const mockFirestore = createFirestoreMock(mockTextNewsItem, docsList);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const createDto: CreateTextNewsDto = {
+        content: 'New Text News',
+        authorId: 'user1',
+      };
+
+      await service.createTextNews(createDto);
+
+      expect(mockFirestore.collection().doc).toHaveBeenCalledWith('news-0');
+      expect(mockFirestore.collection().doc().delete).toHaveBeenCalled();
+    });
+
+    it('should delete multiple oldest news items when count exceeds limit by more than 1', async () => {
+      const docsList = Array.from({ length: 13 }, (_, i) => ({
+        id: `news-${i}`,
+        data: () => ({
+          ...mockTextNewsItem,
+          id: `news-${i}`,
+          createdAt: `2024-01-${String(i + 1).padStart(2, '0')}T00:00:00.000Z`,
+        }),
+      }));
+      const mockFirestore = createFirestoreMock(mockTextNewsItem, docsList);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const createDto: CreateTextNewsDto = {
+        content: 'New Text News',
+        authorId: 'user1',
+      };
+
+      await service.createTextNews(createDto);
+
+      expect(mockFirestore.collection().doc).toHaveBeenCalledWith('news-0');
+      expect(mockFirestore.collection().doc).toHaveBeenCalledWith('news-1');
+      expect(mockFirestore.collection().doc).toHaveBeenCalledWith('news-2');
+    });
+
+    it('should delete images from storage when deleting image news', async () => {
+      const imageNewsData: ImageNewsItem = {
+        ...mockImageNewsItem,
+        id: 'news-0',
+        imageUrls: ['https://storage.example.com/image1.jpg', 'https://storage.example.com/image2.jpg'],
+        createdAt: '2024-01-01T00:00:00.000Z',
+      };
+      const docsList = [
+        { id: 'news-0', data: () => imageNewsData },
+        ...Array.from({ length: 10 }, (_, i) => ({
+          id: `news-${i + 1}`,
+          data: () => ({
+            ...mockTextNewsItem,
+            id: `news-${i + 1}`,
+            createdAt: `2024-01-${String(i + 2).padStart(2, '0')}T00:00:00.000Z`,
+          }),
+        })),
+      ];
+      const mockFirestore = createFirestoreMock(mockTextNewsItem, docsList);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const createDto: CreateTextNewsDto = {
+        content: 'New Text News',
+        authorId: 'user1',
+      };
+
+      await service.createTextNews(createDto);
+
+      expect(mockFirebaseStorageService.deleteFile).toHaveBeenCalledWith('https://storage.example.com/image1.jpg');
+      expect(mockFirebaseStorageService.deleteFile).toHaveBeenCalledWith('https://storage.example.com/image2.jpg');
+      expect(mockFirebaseStorageService.deleteFile).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not call deleteFile for text news without images', async () => {
+      const docsList = Array.from({ length: 11 }, (_, i) => ({
+        id: `news-${i}`,
+        data: () => ({
+          ...mockTextNewsItem,
+          id: `news-${i}`,
+          createdAt: `2024-01-${String(i + 1).padStart(2, '0')}T00:00:00.000Z`,
+        }),
+      }));
+      const mockFirestore = createFirestoreMock(mockTextNewsItem, docsList);
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const createDto: CreateTextNewsDto = {
+        content: 'New Text News',
+        authorId: 'user1',
+      };
+
+      await service.createTextNews(createDto);
+
+      expect(mockFirebaseStorageService.deleteFile).not.toHaveBeenCalled();
     });
   });
 });
