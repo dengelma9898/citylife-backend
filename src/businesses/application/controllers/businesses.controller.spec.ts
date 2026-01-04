@@ -260,7 +260,7 @@ describe('BusinessesController', () => {
     it('should update an existing business', async () => {
       mockBusinessesService.update.mockResolvedValue(mockUpdatedBusiness);
 
-      const result = await controller.update('business1', updateDto);
+      const result = await controller.patchBusiness('business1', updateDto);
 
       expect(result).toBeDefined();
       expect(result.id).toBeDefined();
