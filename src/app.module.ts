@@ -24,6 +24,7 @@ import { DowntimeModule } from './downtime/downtime.module';
 import { AdventCalendarModule } from './advent-calendar/advent-calendar.module';
 import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
 import { DirectChatsModule } from './direct-chats/direct-chats.module';
+import { FeatureRequestsModule } from './feature-requests/feature-requests.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { DirectChatsModule } from './direct-chats/direct-chats.module';
     AdventCalendarModule,
     LegalDocumentsModule,
     DirectChatsModule,
+    FeatureRequestsModule,
   ],
   providers: [
     {
