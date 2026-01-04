@@ -65,7 +65,15 @@ export class BusinessesService {
     if (!existingBusiness) {
       throw new NotFoundException('Business not found');
     }
-
+    if (data.benefit !== undefined && data.benefit !== existingBusiness.benefit) {
+      const updatedPreviousBenefits = [...(existingBusiness.previousBenefits || []), existingBusiness.benefit];
+      const limitedPreviousBenefits = updatedPreviousBenefits.slice(-5);
+      const updatedBusiness = existingBusiness.update({
+        ...data,
+        previousBenefits: limitedPreviousBenefits,
+      });
+      return this.businessRepository.update(id, updatedBusiness);
+    }
     const updatedBusiness = existingBusiness.update(data);
     return this.businessRepository.update(id, updatedBusiness);
   }

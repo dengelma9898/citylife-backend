@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Put,
   Patch,
   Delete,
   Body,
@@ -55,15 +54,6 @@ export class BusinessesController {
   public async create(@Body() createBusinessDto: CreateBusinessDto): Promise<Business> {
     this.logger.log('POST /businesses');
     return this.businessesService.create(createBusinessDto);
-  }
-
-  @Put(':id')
-  public async update(
-    @Param('id') id: string,
-    @Body() updateBusinessDto: Partial<CreateBusinessDto>,
-  ): Promise<Business> {
-    this.logger.log(`PUT /businesses/${id}`);
-    return this.businessesService.update(id, updateBusinessDto as Partial<Business>);
   }
 
   @Patch(':id')

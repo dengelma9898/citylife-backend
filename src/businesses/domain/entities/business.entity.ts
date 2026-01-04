@@ -242,9 +242,11 @@ export class Business {
   }
 
   updateBenefit(benefit: string): Business {
+    const updatedPreviousBenefits = [...(this.previousBenefits || []), this.benefit];
+    const limitedPreviousBenefits = updatedPreviousBenefits.slice(-5);
     return this.update({
       benefit,
-      previousBenefits: [...(this.previousBenefits || []), this.benefit],
+      previousBenefits: limitedPreviousBenefits,
     });
   }
 
