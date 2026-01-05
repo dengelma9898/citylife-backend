@@ -12,4 +12,3 @@ export interface FeatureRequestRepository {
   update(id: string, featureRequest: FeatureRequest): Promise<FeatureRequest>;
   delete(id: string): Promise<void>;
 }
-

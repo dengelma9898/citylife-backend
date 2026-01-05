@@ -15,7 +15,10 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FeatureRequestsService } from '../services/feature-requests.service';
 import { CreateFeatureRequestDto } from '../../dto/create-feature-request.dto';
-import { CompleteFeatureRequestDto, CompletionAction } from '../../dto/complete-feature-request.dto';
+import {
+  CompleteFeatureRequestDto,
+  CompletionAction,
+} from '../../dto/complete-feature-request.dto';
 import { FeatureRequestDto } from '../../dto/feature-request.dto';
 import { FeatureRequestStatus } from '../../domain/enums/feature-request-status.enum';
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
@@ -165,4 +168,3 @@ export class FeatureRequestsController {
     return { success: true };
   }
 }
-

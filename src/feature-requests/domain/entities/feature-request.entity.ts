@@ -50,7 +50,10 @@ export class FeatureRequest {
   }
 
   static create(
-    props: Omit<FeatureRequestProps, 'id' | 'createdAt' | 'updatedAt' | 'votes' | 'completion' | 'status'>,
+    props: Omit<
+      FeatureRequestProps,
+      'id' | 'createdAt' | 'updatedAt' | 'votes' | 'completion' | 'status'
+    >,
   ): FeatureRequest {
     const now = new Date().toISOString();
     return new FeatureRequest({
@@ -148,4 +151,3 @@ export class FeatureRequest {
     };
   }
 }
-

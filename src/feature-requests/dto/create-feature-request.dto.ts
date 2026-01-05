@@ -13,4 +13,3 @@ export class CreateFeatureRequestDto {
   @MaxLength(2000)
   description: string;
 }
-

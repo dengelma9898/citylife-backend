@@ -15,4 +15,3 @@ export class CompleteFeatureRequestDto {
   @MaxLength(1000)
   comment: string;
 }
-
