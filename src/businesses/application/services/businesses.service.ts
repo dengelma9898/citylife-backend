@@ -54,6 +54,7 @@ export class BusinessesService {
       hasAccount: data.hasAccount,
       isPromoted: data.isPromoted || false,
       status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING,
+      logoUrl: '',
     });
 
     return this.businessRepository.create(business);

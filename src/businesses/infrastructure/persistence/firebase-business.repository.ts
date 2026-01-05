@@ -29,7 +29,11 @@ export class FirebaseBusinessRepository implements BusinessRepository {
 
   private toPlainObject(entity: Business): Omit<BusinessProps, 'id'> {
     const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    const plainObject = this.removeUndefined(data);
+    if (plainObject.logoUrl === null || plainObject.logoUrl === undefined) {
+      plainObject.logoUrl = '';
+    }
+    return plainObject;
   }
 
   private toBusinessProps(data: any, id: string): BusinessProps {
@@ -42,7 +46,7 @@ export class FirebaseBusinessRepository implements BusinessRepository {
       keywordIds: data.keywordIds || [],
       eventIds: data.eventIds,
       description: data.description,
-      logoUrl: data.logoUrl,
+      logoUrl: data.logoUrl === null || data.logoUrl === undefined ? '' : data.logoUrl,
       imageUrls: data.imageUrls,
       openingHours: data.openingHours,
       detailedOpeningHours: data.detailedOpeningHours,

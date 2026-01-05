@@ -359,6 +359,7 @@ export class UsersService {
         const businessRef = db.collection('businesses').doc(businessId);
         batch.update(businessRef, {
           status: BusinessStatus.INACTIVE,
+          hasAccount: false,
           updatedAt: DateTimeUtils.getBerlinTime(),
         });
       }
