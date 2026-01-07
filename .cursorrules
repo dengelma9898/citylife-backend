@@ -120,6 +120,13 @@ export class Entity {
 - There are no public endpoints without authentication - all endpoints require a valid Firebase token
 - Anonymous users are automatically created by the client apps and have valid Firebase tokens
 
+## Authorization (RolesGuard)
+- **IMPORTANT**: Modules that use `@UseGuards(RolesGuard)` in their controllers MUST import `UsersModule`
+- The `RolesGuard` requires `UsersService` as a dependency to check user roles
+- If a module uses `RolesGuard` but doesn't import `UsersModule`, the endpoints will return 404 errors
+- Example: If `AppVersionsAdminController` uses `@UseGuards(RolesGuard)`, then `AppVersionsModule` must import `UsersModule`
+- Always check if controllers use `RolesGuard` and ensure the module imports `UsersModule`
+
 ## Testing
 - Use Jest framework
 - Write tests for controllers and services
