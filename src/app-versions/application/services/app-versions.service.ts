@@ -1,5 +1,8 @@
-import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
-import { AppVersionRepository, APP_VERSION_REPOSITORY } from '../../domain/repositories/app-version.repository';
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import {
+  AppVersionRepository,
+  APP_VERSION_REPOSITORY,
+} from '../../domain/repositories/app-version.repository';
 import { AppVersion } from '../../domain/entities/app-version.entity';
 
 @Injectable()
@@ -26,7 +29,8 @@ export class AppVersionsService {
     }
 
     const cleanedClientVersion = this.extractVersion(clientVersion);
-    const requiresUpdate = this.compareVersions(cleanedClientVersion, currentMinimumVersion.minimumVersion) < 0;
+    const requiresUpdate =
+      this.compareVersions(cleanedClientVersion, currentMinimumVersion.minimumVersion) < 0;
 
     this.logger.log(
       `Version check: client=${cleanedClientVersion}, minimum=${currentMinimumVersion.minimumVersion}, requiresUpdate=${requiresUpdate}`,
@@ -71,7 +75,9 @@ export class AppVersionsService {
   private extractVersion(versionString: string): string {
     const match = versionString.match(/^(\d+\.\d+\.\d+)/);
     if (!match) {
-      throw new Error(`Invalid version format: ${versionString}. Expected format: X.Y.Z or X.Y.Z (Build Nummer)`);
+      throw new Error(
+        `Invalid version format: ${versionString}. Expected format: X.Y.Z or X.Y.Z (Build Nummer)`,
+      );
     }
     return match[1];
   }
@@ -109,4 +115,3 @@ export class AppVersionsService {
     return 0;
   }
 }
-
