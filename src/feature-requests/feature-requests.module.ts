@@ -21,4 +21,3 @@ import { UsersModule } from '../users/users.module';
   exports: [FeatureRequestsService],
 })
 export class FeatureRequestsModule {}
-

@@ -6,4 +6,3 @@ export interface AppVersionRepository {
   findCurrent(): Promise<AppVersion | null>;
   save(appVersion: AppVersion): Promise<AppVersion>;
 }
-

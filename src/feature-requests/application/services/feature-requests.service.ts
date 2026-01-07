@@ -30,7 +30,10 @@ export class FeatureRequestsService {
     return this.toDto(featureRequest, currentUserId);
   }
 
-  async getByStatus(status: FeatureRequestStatus, currentUserId: string): Promise<FeatureRequestDto[]> {
+  async getByStatus(
+    status: FeatureRequestStatus,
+    currentUserId: string,
+  ): Promise<FeatureRequestDto[]> {
     const featureRequests = await this.featureRequestRepository.findByStatus(status);
     return featureRequests.map(fr => this.toDto(fr, currentUserId));
   }
@@ -52,7 +55,11 @@ export class FeatureRequestsService {
     return this.toDto(created, authorId);
   }
 
-  async addImages(id: string, imageUrls: string[], currentUserId: string): Promise<FeatureRequestDto> {
+  async addImages(
+    id: string,
+    imageUrls: string[],
+    currentUserId: string,
+  ): Promise<FeatureRequestDto> {
     const featureRequest = await this.featureRequestRepository.findById(id);
     if (!featureRequest) {
       throw new NotFoundException('Feature request not found');
@@ -71,7 +78,11 @@ export class FeatureRequestsService {
     return this.toDto(saved, currentUserId);
   }
 
-  async removeImage(id: string, imageUrl: string, currentUserId: string): Promise<FeatureRequestDto> {
+  async removeImage(
+    id: string,
+    imageUrl: string,
+    currentUserId: string,
+  ): Promise<FeatureRequestDto> {
     const featureRequest = await this.featureRequestRepository.findById(id);
     if (!featureRequest) {
       throw new NotFoundException('Feature request not found');
@@ -186,4 +197,3 @@ export class FeatureRequestsService {
     };
   }
 }
-

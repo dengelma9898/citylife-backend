@@ -24,4 +24,3 @@ export class FeatureRequestDto {
   createdAt: string;
   updatedAt: string;
 }
-
