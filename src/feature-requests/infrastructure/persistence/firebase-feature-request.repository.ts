@@ -1,9 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import {
-  FeatureRequest,
-  FeatureRequestProps,
-} from '../../domain/entities/feature-request.entity';
+import { FeatureRequest, FeatureRequestProps } from '../../domain/entities/feature-request.entity';
 import { FeatureRequestRepository } from '../../domain/repositories/feature-request.repository';
 import { FeatureRequestStatus } from '../../domain/enums/feature-request-status.enum';
 
@@ -48,10 +45,7 @@ export class FirebaseFeatureRequestRepository implements FeatureRequestRepositor
 
   async findAll(): Promise<FeatureRequest[]> {
     const db = this.firebaseService.getFirestore();
-    const snapshot = await db
-      .collection(this.COLLECTION_NAME)
-      .orderBy('createdAt', 'desc')
-      .get();
+    const snapshot = await db.collection(this.COLLECTION_NAME).orderBy('createdAt', 'desc').get();
     return snapshot.docs.map(doc =>
       FeatureRequest.fromProps(this.toFeatureRequestProps(doc.data(), doc.id)),
     );
@@ -124,4 +118,3 @@ export class FirebaseFeatureRequestRepository implements FeatureRequestRepositor
     await docRef.delete();
   }
 }
-

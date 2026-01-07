@@ -4,4 +4,3 @@ export enum FeatureRequestStatus {
   COMPLETED = 'completed',
   REJECTED = 'rejected',
 }
-
