@@ -113,6 +113,13 @@ export class Entity {
 - Core module for NestJS artifacts
 - Shared module for shared services
 
+## Authentication
+- **IMPORTANT**: All users are always authenticated (at minimum anonymously)
+- The AuthGuard expects an Authorization header on all requests
+- Users authenticate via Firebase Auth, including anonymous authentication
+- There are no public endpoints without authentication - all endpoints require a valid Firebase token
+- Anonymous users are automatically created by the client apps and have valid Firebase tokens
+
 ## Testing
 - Use Jest framework
 - Write tests for controllers and services
