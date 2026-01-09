@@ -191,6 +191,8 @@ Statt hartcodierter CSS-Selektoren nutzen wir LLMs zur semantischen Extraktion v
 
 ```typescript
 // src/events/infrastructure/llm/mistral-extractor.service.ts
+// Hinweis: Wir nutzen das 'openai' npm-Package, weil Mistral eine OpenAI-kompatible API hat
+// Wir verwenden NICHT die OpenAI-API selbst, sondern nur das Package für Mistral
 import OpenAI from 'openai';
 
 @Injectable()
@@ -199,7 +201,8 @@ export class MistralExtractorService {
   private readonly logger = new Logger(MistralExtractorService.name);
 
   constructor() {
-    // Mistral AI API (oder DeepInfra als Alternative)
+    // Mistral AI API nutzt OpenAI-kompatibles Format
+    // baseURL zeigt auf Mistral, nicht auf OpenAI
     this.client = new OpenAI({
       baseURL: process.env.MISTRAL_BASE_URL || 'https://api.mistral.ai/v1',
       apiKey: process.env.MISTRAL_API_KEY,
@@ -240,12 +243,15 @@ export class MistralExtractorService {
 
 ```typescript
 // Via DeepInfra (kann günstiger sein)
+// Auch hier: openai-Package, aber baseURL zeigt auf DeepInfra
 this.client = new OpenAI({
   baseURL: 'https://api.deepinfra.com/v1/openai',
   apiKey: process.env.DEEPINFRA_API_KEY,
 });
 // Modell: 'mistralai/Mistral-Small-2409'
 ```
+
+**Wichtig:** Das `openai` npm-Package wird nur verwendet, weil Mistral und DeepInfra OpenAI-kompatible APIs haben. Wir nutzen **nicht** die OpenAI-API selbst, sondern nur das Package als Client-Bibliothek für Mistral/DeepInfra.
 
 **JSON Schema für Events:**
 
@@ -522,11 +528,21 @@ const MODEL_PRICING = {
 
 ### Phase 1: LLM-Infrastruktur (1 Woche)
 
-- [ ] `openai` Package installieren (für Mistral API)
+**Benötigte npm-Packages:**
+- `openai` - Für Mistral API (OpenAI-kompatible API, **nicht** die OpenAI-API selbst)
+- `@google/generative-ai` - Optional, nur wenn Gemini als Fallback verwendet wird
+
+**Aufgaben:**
+- [ ] `openai` npm-Package installieren (als Client für Mistral API)
 - [ ] `MistralExtractorService` implementieren
 - [ ] HTML-Cleaner entwickeln
 - [ ] JSON-Schema für Events definieren
 - [ ] Unit-Tests schreiben
+
+**Wichtig:** 
+- Das `openai` Package wird benötigt, weil Mistral eine OpenAI-kompatible API hat
+- Wir verwenden **nicht** die OpenAI-API selbst, sondern nur das Package als Client-Bibliothek für Mistral
+- Für Gemini (optionaler Fallback) wird ein separates Package (`@google/generative-ai`) benötigt
 
 ### Phase 2: Integration & Fallback (1 Woche)
 
