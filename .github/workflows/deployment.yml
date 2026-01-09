@@ -95,6 +95,9 @@ jobs:
           username: ${{ env.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # Speichere aktuelle Image-ID vor dem Pull (falls vorhanden)
+            OLD_IMAGE_ID=$(docker images -q ${{ env.IMAGE_NAME_DEV }}:latest 2>/dev/null || true)
+            
             # Stoppe und entferne alten Container
             docker stop nuernbergspots-test || true
             docker rm nuernbergspots-test || true
@@ -115,6 +118,16 @@ jobs:
               -e GOOGLE_APPLICATION_CREDENTIALS=/app/certificates/service_account.json \
               -v /app/certificates:/app/certificates \
               ${{ env.IMAGE_NAME_DEV }}:latest
+            
+            # Cleanup: Lösche altes Image falls es sich geändert hat
+            NEW_IMAGE_ID=$(docker images -q ${{ env.IMAGE_NAME_DEV }}:latest)
+            if [ -n "$OLD_IMAGE_ID" ] && [ "$OLD_IMAGE_ID" != "$NEW_IMAGE_ID" ]; then
+              echo "Lösche altes Image: $OLD_IMAGE_ID"
+              docker rmi $OLD_IMAGE_ID || true
+            fi
+            
+            # Cleanup: Entferne alle ungenutzten Images (dangling und ungetaggte)
+            docker image prune -f || true
 
   build-and-push-prd:
     needs: [test, build-and-push-dev]
@@ -173,6 +186,9 @@ jobs:
           username: ${{ env.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # Speichere aktuelle Image-ID vor dem Pull (falls vorhanden)
+            OLD_IMAGE_ID=$(docker images -q ${{ env.IMAGE_NAME_PRD }}:latest 2>/dev/null || true)
+            
             # Stoppe und entferne alten Container
             docker stop nuernbergspots || true
             docker rm nuernbergspots || true
@@ -193,3 +209,13 @@ jobs:
               -e GOOGLE_APPLICATION_CREDENTIALS=/app/certificates/service_account.json \
               -v /app/certificates:/app/certificates \
               ${{ env.IMAGE_NAME_PRD }}:latest
+            
+            # Cleanup: Lösche altes Image falls es sich geändert hat
+            NEW_IMAGE_ID=$(docker images -q ${{ env.IMAGE_NAME_PRD }}:latest)
+            if [ -n "$OLD_IMAGE_ID" ] && [ "$OLD_IMAGE_ID" != "$NEW_IMAGE_ID" ]; then
+              echo "Lösche altes Image: $OLD_IMAGE_ID"
+              docker rmi $OLD_IMAGE_ID || true
+            fi
+            
+            # Cleanup: Entferne alle ungenutzten Images (dangling und ungetaggte)
+            docker image prune -f || true
