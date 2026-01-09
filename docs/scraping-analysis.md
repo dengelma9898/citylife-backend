@@ -22,12 +22,12 @@
 
 Die aktuelle Scraping-Implementierung basiert auf **Puppeteer** mit hartcodierten CSS-Selektoren für 5 Event-Quellen. Dieser Ansatz ist **fragil und wartungsintensiv**, da HTML-Strukturänderungen der Zielseiten sofortige Code-Anpassungen erfordern.
 
-**Empfehlung:** LLM-basierte Extraktion mit gestaffeltem Modell-Ansatz:
+**Empfehlung:** LLM-basierte Extraktion mit Mistral Small 3.2 (europäisches Modell):
 
-1. **Primär:** LLM-basierte Extraktion (Gemini Flash 2.0 / DeepSeek-V3 / lokales Modell)
+1. **Primär:** Mistral Small 3.2 (europäisches Modell, sehr günstig)
 2. **Fallback:** Bestehende Puppeteer-Scraper als Backup
 
-**Geschätzte Kosten:** €0-10/Monat (je nach Modellwahl)
+**Geschätzte Kosten:** ~€0.75/Monat (bei 50 Seiten/Woche)
 
 ---
 
@@ -152,82 +152,99 @@ Statt hartcodierter CSS-Selektoren nutzen wir LLMs zur semantischen Extraktion v
 
 ### LLM-Modell-Vergleich
 
-| Modell | Input-Preis | Output-Preis | Structured Output | Empfehlung |
-|--------|-------------|--------------|-------------------|------------|
-| **Gemini Flash 2.0** | $0.10/1M | $0.40/1M | ✅ Ja | ⭐ **Beste Wahl** |
-| **DeepSeek-V3** | $0.07-0.27/1M | $1.10/1M | ✅ Ja | ⭐ Sehr günstig |
-| **Mistral Small 3.2** | $0.075/1M | $0.20/1M | ✅ JSON Mode | ⭐ Günstig |
-| **GPT-4o-mini** | $0.15/1M | $0.60/1M | ❌ Nein | ⚠️ Kein Structured Output |
-| **GPT-4o** | $2.50/1M | $10/1M | ✅ Ja | 💰 Teuer |
-| **Ollama (lokal)** | Kostenlos | Kostenlos | ✅ Ja | 🖥️ Eigene Hardware |
-| **Claude Haiku** | $1.00/1M | $5.00/1M | ✅ Ja | 💰 Mittlere Kosten |
+| Modell | Input-Preis | Output-Preis | Structured Output | Herkunft | Empfehlung |
+|--------|-------------|--------------|-------------------|----------|------------|
+| **Mistral Small 3.2** | $0.075/1M | $0.20/1M | ✅ JSON Mode | 🇪🇺 Europa | ⭐ **Empfohlen** |
+| **Gemini Flash 2.0** | $0.10/1M | $0.40/1M | ✅ Ja | 🇺🇸 USA | ⭐ Alternative |
+| **DeepSeek-V3** | $0.27/1M | $1.10/1M | ✅ Ja | 🇨🇳 China | ⚠️ Teurer |
+| **GPT-4o-mini** | $0.15/1M | $0.60/1M | ❌ Nein | 🇺🇸 USA | ⚠️ Kein Structured Output |
+| **GPT-4o** | $2.50/1M | $10/1M | ✅ Ja | 🇺🇸 USA | 💰 Zu teuer |
+| **Claude Haiku** | $1.00/1M | $5.00/1M | ✅ Ja | 🇺🇸 USA | 💰 Teuer |
 
-#### Kostenberechnung (100 Seiten/Tag, ~30 Tage)
+#### Kostenberechnung (50 Seiten/Woche = ~200 Seiten/Monat)
 
-Annahmen: ~50.000 Input-Tokens pro Seite (bereinigtes HTML), ~2.000 Output-Tokens
+**Annahmen:** 
+- ~50.000 Input-Tokens pro Seite (bereinigtes HTML)
+- ~2.000 Output-Tokens pro Seite
+- **Monatlich:** 200 Seiten × 50.000 = 10M Input-Tokens, 200 × 2.000 = 0.4M Output-Tokens
 
-| Modell | Input-Kosten/Monat | Output-Kosten/Monat | **Gesamt/Monat** |
-|--------|-------------------|---------------------|------------------|
-| **Gemini Flash 2.0** | $15.00 | $2.40 | **~$17** |
-| **DeepSeek-V3** | $4.05-13.50 | $6.60 | **~$11-20** |
-| **Mistral Small 3.2** | $11.25 | $1.20 | **~$12** |
-| **Ollama (lokal)** | $0 | $0 | **$0** |
-| **GPT-4o** | $375 | $60 | **$435** ❌ |
+| Modell | Input-Kosten/Monat | Output-Kosten/Monat | **Gesamt/Monat** | **Gesamt/Jahr** |
+|--------|-------------------|---------------------|------------------|-----------------|
+| **Mistral Small 3.2** | $0.75 | $0.08 | **~$0.83** | **~$10** |
+| **Gemini Flash 2.0** | $1.00 | $0.16 | **~$1.16** | **~$14** |
+| **DeepSeek-V3** | $2.70 | $0.44 | **~$3.14** | **~$38** |
+| **GPT-4o** | $25.00 | $4.00 | **~$29** ❌ | **~$348** ❌ |
 
 ---
 
-### Ansatz 1: Cloud-LLM mit Gemini Flash 2.0 (Empfohlen)
+### Ansatz 1: Mistral Small 3.2 (Empfohlen - Europäisches Modell)
 
-**Warum Gemini Flash 2.0?**
-- ✅ **Kostenloser Tier verfügbar** (1.500 Requests/Tag, 1M Tokens/Minute)
-- ✅ Natives Structured Output (JSON Schema)
-- ✅ 1M Token Context Window
-- ✅ Sehr schnelle Inferenz
+**Warum Mistral Small 3.2?**
+- ✅ **Europäisches Modell** (DSGVO-konform, Datenschutz)
+- ✅ **Sehr günstig** (~$0.83/Monat bei 50 Seiten/Woche)
+- ✅ JSON Mode für strukturierte Ausgaben
+- ✅ OpenAI-kompatible API (einfache Integration)
+- ✅ Gute Qualität für strukturierte Extraktion
+- ✅ Verfügbar via DeepInfra oder direkt von Mistral AI
 
 **Implementierung:**
 
 ```typescript
-// src/events/infrastructure/llm/gemini-extractor.service.ts
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// src/events/infrastructure/llm/mistral-extractor.service.ts
+import OpenAI from 'openai';
 
 @Injectable()
-export class GeminiExtractorService {
-  private readonly genAI: GoogleGenerativeAI;
-  private readonly model;
+export class MistralExtractorService {
+  private readonly client: OpenAI;
+  private readonly logger = new Logger(MistralExtractorService.name);
 
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    this.model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: EVENT_ARRAY_SCHEMA,
-      },
+    // Mistral AI API (oder DeepInfra als Alternative)
+    this.client = new OpenAI({
+      baseURL: process.env.MISTRAL_BASE_URL || 'https://api.mistral.ai/v1',
+      apiKey: process.env.MISTRAL_API_KEY,
     });
   }
 
   async extractEvents(html: string): Promise<ExtractedEvent[]> {
-    const cleanedHtml = this.cleanHtml(html);
+    const cleanedHtml = HtmlCleaner.extractMainContent(html);
     
-    const result = await this.model.generateContent([
-      EVENT_EXTRACTION_PROMPT,
-      cleanedHtml,
-    ]);
+    const response = await this.client.chat.completions.create({
+      model: 'mistral-small-latest', // oder 'mistral-small-2409'
+      messages: [
+        {
+          role: 'system',
+          content: EVENT_EXTRACTION_SYSTEM_PROMPT,
+        },
+        {
+          role: 'user',
+          content: `Extrahiere alle Events aus folgendem HTML:\n\n${cleanedHtml}`,
+        },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0, // Deterministisch für strukturierte Daten
+    });
 
-    return JSON.parse(result.response.text());
-  }
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('Keine Antwort von Mistral API erhalten');
+    }
 
-  private cleanHtml(html: string): string {
-    // Entferne Scripts, Styles, Kommentare
-    return html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-      .replace(/<!--[\s\S]*?-->/g, '')
-      .replace(/<(header|footer|nav|aside)[^>]*>[\s\S]*?<\/\1>/gi, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const parsed = JSON.parse(content);
+    return Array.isArray(parsed.events) ? parsed.events : parsed;
   }
 }
+```
+
+**Alternative: DeepInfra (oft günstiger):**
+
+```typescript
+// Via DeepInfra (kann günstiger sein)
+this.client = new OpenAI({
+  baseURL: 'https://api.deepinfra.com/v1/openai',
+  apiKey: process.env.DEEPINFRA_API_KEY,
+});
+// Modell: 'mistralai/Mistral-Small-2409'
 ```
 
 **JSON Schema für Events:**
@@ -263,143 +280,52 @@ const EVENT_ARRAY_SCHEMA = {
 
 ---
 
-### Ansatz 2: DeepSeek-V3 (Günstigste Cloud-Option)
+### Ansatz 2: Gemini Flash 2.0 (Alternative mit Free Tier)
 
 **Vorteile:**
-- ✅ Extrem günstig ($0.07-0.27/1M Input)
-- ✅ Gute Qualität für strukturierte Extraktion
-- ✅ OpenAI-kompatible API
+- ✅ **Kostenloser Tier verfügbar** (1.500 Requests/Tag, 1M Tokens/Minute)
+- ✅ Natives Structured Output (JSON Schema)
+- ✅ 1M Token Context Window
+- ✅ Sehr schnelle Inferenz
 
 **Implementierung:**
 
 ```typescript
-// src/events/infrastructure/llm/deepseek-extractor.service.ts
-import OpenAI from 'openai';
+// src/events/infrastructure/llm/gemini-extractor.service.ts
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 @Injectable()
-export class DeepSeekExtractorService {
-  private readonly client: OpenAI;
+export class GeminiExtractorService {
+  private readonly genAI: GoogleGenerativeAI;
+  private readonly model;
 
   constructor() {
-    this.client = new OpenAI({
-      baseURL: 'https://api.deepseek.com',
-      apiKey: process.env.DEEPSEEK_API_KEY,
-    });
-  }
-
-  async extractEvents(html: string): Promise<ExtractedEvent[]> {
-    const response = await this.client.chat.completions.create({
-      model: 'deepseek-chat',
-      messages: [
-        {
-          role: 'system',
-          content: EVENT_EXTRACTION_SYSTEM_PROMPT,
-        },
-        {
-          role: 'user',
-          content: `Extrahiere alle Events aus folgendem HTML:\n\n${this.cleanHtml(html)}`,
-        },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0,
-    });
-
-    const content = response.choices[0].message.content;
-    return JSON.parse(content).events;
-  }
-}
-```
-
----
-
-### Ansatz 3: Lokales LLM mit Ollama (Kostenlos)
-
-**Vorteile:**
-- ✅ **Komplett kostenlos** (keine API-Kosten)
-- ✅ Datenschutz (Daten verlassen Server nicht)
-- ✅ Keine Rate-Limits
-- ✅ Structured Output seit Dezember 2024
-
-**Nachteile:**
-- ❌ Erfordert GPU-Server (8-16GB VRAM empfohlen)
-- ❌ Langsamere Inferenz als Cloud
-- ❌ Selbst-Hosting erforderlich
-
-**Empfohlene lokale Modelle:**
-
-| Modell | VRAM | Qualität | Geschwindigkeit |
-|--------|------|----------|-----------------|
-| **Llama 3.2 3B** | 4GB | ⭐⭐ | Schnell |
-| **Mistral 7B** | 8GB | ⭐⭐⭐ | Mittel |
-| **Llama 3.1 8B** | 8GB | ⭐⭐⭐⭐ | Mittel |
-| **Mixtral 8x7B** | 24GB | ⭐⭐⭐⭐⭐ | Langsam |
-
-**Implementierung:**
-
-```typescript
-// src/events/infrastructure/llm/ollama-extractor.service.ts
-import { Ollama } from 'ollama';
-
-@Injectable()
-export class OllamaExtractorService {
-  private readonly ollama: Ollama;
-
-  constructor() {
-    this.ollama = new Ollama({
-      host: process.env.OLLAMA_HOST || 'http://localhost:11434',
-    });
-  }
-
-  async extractEvents(html: string): Promise<ExtractedEvent[]> {
-    const response = await this.ollama.chat({
-      model: 'llama3.1:8b',
-      messages: [
-        {
-          role: 'system',
-          content: EVENT_EXTRACTION_SYSTEM_PROMPT,
-        },
-        {
-          role: 'user',
-          content: `Extrahiere alle Events:\n\n${this.cleanHtml(html)}`,
-        },
-      ],
-      format: EVENT_ARRAY_SCHEMA,
-      options: {
-        temperature: 0,
+    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    this.model = this.genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: EVENT_ARRAY_SCHEMA,
       },
     });
+  }
 
-    return JSON.parse(response.message.content);
+  async extractEvents(html: string): Promise<ExtractedEvent[]> {
+    const cleanedHtml = HtmlCleaner.extractMainContent(html);
+    
+    const result = await this.model.generateContent([
+      EVENT_EXTRACTION_PROMPT,
+      cleanedHtml,
+    ]);
+
+    return JSON.parse(result.response.text());
   }
 }
 ```
 
-**Docker-Setup für Ollama:**
-
-```yaml
-# docker-compose.ollama.yml
-services:
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-
-volumes:
-  ollama_data:
-```
-
 ---
 
-### Ansatz 4: Hybrid-Strategie (Empfohlen für Produktion)
+### Ansatz 3: Hybrid-Strategie (Empfohlen für Produktion)
 
 Kombiniere mehrere Ansätze für optimale Kosten und Zuverlässigkeit:
 
@@ -408,16 +334,17 @@ Kombiniere mehrere Ansätze für optimale Kosten und Zuverlässigkeit:
 @Injectable()
 export class HybridExtractorService {
   private readonly extractors: LlmExtractor[];
+  private readonly logger = new Logger(HybridExtractorService.name);
 
   constructor(
+    private readonly mistralExtractor: MistralExtractorService,
     private readonly geminiExtractor: GeminiExtractorService,
-    private readonly ollamaExtractor: OllamaExtractorService,
     private readonly puppeteerFallback: ScraperService,
   ) {
-    // Priorisierte Reihenfolge
+    // Priorisierte Reihenfolge: Mistral (europäisch, günstig) → Gemini (Free Tier) → Puppeteer
     this.extractors = [
+      { name: 'mistral', service: mistralExtractor },
       { name: 'gemini', service: geminiExtractor },
-      { name: 'ollama', service: ollamaExtractor },
     ];
   }
 
@@ -428,7 +355,7 @@ export class HybridExtractorService {
     for (const extractor of this.extractors) {
       try {
         const events = await extractor.service.extractEvents(html);
-        if (events.length > 0) {
+        if (events && events.length > 0) {
           this.logger.log(`${extractor.name} erfolgreich: ${events.length} Events`);
           return events;
         }
@@ -439,7 +366,18 @@ export class HybridExtractorService {
 
     // Fallback zu klassischem Scraper
     this.logger.log('Fallback zu Puppeteer-Scraper');
-    return this.puppeteerFallback.scrapeEventsFromUrl(url);
+    const result = await this.puppeteerFallback.scrapeEventsFromUrl(url);
+    return result.events;
+  }
+
+  private async fetchHtml(url: string): Promise<string> {
+    // Nutze Puppeteer für JS-gerenderte Seiten
+    const puppeteerManager = PuppeteerManager.getInstance();
+    const page = await puppeteerManager.getPage();
+    await page.goto(url, { waitUntil: 'networkidle0' });
+    const html = await page.content();
+    await page.close();
+    return html;
   }
 }
 ```
@@ -448,9 +386,9 @@ export class HybridExtractorService {
 
 | Szenario | Primär | Fallback 1 | Fallback 2 |
 |----------|--------|------------|------------|
-| **Kostenoptimiert** | Ollama (lokal) | Gemini Free Tier | Puppeteer |
-| **Qualitätsoptimiert** | Gemini Flash | DeepSeek | Puppeteer |
-| **Maximal günstig** | Ollama (lokal) | Puppeteer | - |
+| **Empfohlen** | Mistral Small 3.2 | Gemini Flash (Free Tier) | Puppeteer |
+| **Kostenoptimiert** | Mistral Small 3.2 | Puppeteer | - |
+| **Qualitätsoptimiert** | Mistral Small 3.2 | Gemini Flash | Puppeteer |
 
 ---
 
@@ -572,10 +510,9 @@ export class CostTrackerService {
 }
 
 const MODEL_PRICING = {
+  'mistral-small-latest': { input: 0.075, output: 0.20 },
   'gemini-2.0-flash': { input: 0.10, output: 0.40 },
   'deepseek-chat': { input: 0.27, output: 1.10 },
-  'mistral-small': { input: 0.075, output: 0.20 },
-  'ollama': { input: 0, output: 0 },
 };
 ```
 
@@ -585,8 +522,8 @@ const MODEL_PRICING = {
 
 ### Phase 1: LLM-Infrastruktur (1 Woche)
 
-- [ ] `@google/generative-ai` Package installieren
-- [ ] `GeminiExtractorService` implementieren
+- [ ] `openai` Package installieren (für Mistral API)
+- [ ] `MistralExtractorService` implementieren
 - [ ] HTML-Cleaner entwickeln
 - [ ] JSON-Schema für Events definieren
 - [ ] Unit-Tests schreiben
@@ -594,7 +531,8 @@ const MODEL_PRICING = {
 ### Phase 2: Integration & Fallback (1 Woche)
 
 - [ ] `HybridExtractorService` implementieren
-- [ ] Fallback zu bestehenden Scrapern einbauen
+- [ ] Gemini als Fallback integrieren (optional)
+- [ ] Fallback zu bestehenden Puppeteer-Scrapern einbauen
 - [ ] Error-Handling und Retry-Logik
 - [ ] Kosten-Tracking
 
@@ -609,8 +547,8 @@ const MODEL_PRICING = {
 
 - [ ] Caching für wiederkehrende URLs
 - [ ] Prompt-Optimierung basierend auf Ergebnissen
-- [ ] Ollama-Setup als kostenfreie Alternative
 - [ ] Monitoring-Dashboard
+- [ ] Kosten-Analyse und Optimierung
 
 ---
 
@@ -655,12 +593,17 @@ const MODEL_PRICING = {
 
 ## 📝 Fazit
 
-Der **LLM-basierte Ansatz mit Gemini Flash 2.0** (oder Ollama für Kosten=0) bietet:
+Der **LLM-basierte Ansatz mit Mistral Small 3.2** bietet:
 
 1. **Robustheit** gegen HTML-Strukturänderungen
 2. **Einheitliche Implementierung** für alle Quellen
-3. **Geringe Kosten** (~€10-15/Monat oder kostenlos mit Ollama)
-4. **Zukunftssicher** durch semantisches Verständnis
+3. **Sehr geringe Kosten** (~€0.75/Monat bei 50 Seiten/Woche)
+4. **Europäisches Modell** (DSGVO-konform, Datenschutz)
+5. **Zukunftssicher** durch semantisches Verständnis
+
+**Kostenübersicht bei realistischer Nutzung (50 Seiten/Woche):**
+- Mistral Small 3.2: **~€0.75/Monat** (~€10/Jahr)
+- Gemini Flash 2.0: **~€1.16/Monat** (~€14/Jahr) - mit Free Tier möglicherweise kostenlos
 
 Der bestehende Puppeteer-Ansatz bleibt als **Fallback** erhalten und wird nur aktiviert, wenn die LLM-Extraktion fehlschlägt.
 
@@ -668,8 +611,9 @@ Der bestehende Puppeteer-Ansatz bleibt als **Fallback** erhalten und wird nur ak
 
 ## 🔗 Referenzen
 
+- [Mistral AI API Dokumentation](https://docs.mistral.ai/)
+- [Mistral JSON Mode](https://docs.mistral.ai/capabilities/structured_output/json_mode)
+- [Mistral Pricing](https://mistral.ai/pricing/)
+- [DeepInfra Mistral](https://deepinfra.com/mistralai/Mistral-Small-2409) (Alternative Hosting)
 - [Gemini API Dokumentation](https://ai.google.dev/gemini-api/docs)
 - [Gemini Structured Output](https://ai.google.dev/gemini-api/docs/structured-output)
-- [DeepSeek API](https://api-docs.deepseek.com/)
-- [Ollama Structured Outputs](https://ollama.com/blog/structured-outputs)
-- [Mistral JSON Mode](https://docs.mistral.ai/capabilities/structured_output/json_mode)
