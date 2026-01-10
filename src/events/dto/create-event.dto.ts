@@ -13,6 +13,7 @@ import {
 } from 'class-validator';
 import { DailyTimeSlot } from '../interfaces/event.interface';
 import { DailyTimeSlotDTO } from './daily-time-slot.dto';
+import { IsValidCategory } from './validators/is-valid-category.validator';
 
 export class CreateEventDto {
   @IsString()
@@ -47,6 +48,7 @@ export class CreateEventDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsValidCategory()
   public readonly categoryId: string;
 
   @IsOptional()

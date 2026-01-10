@@ -23,4 +23,7 @@ services:
       - FIREBASE_APP_ID=${FIREBASE_APP_ID}
       # HERE Maps API Credentials
       - HERE_APP_ID=${HERE_APP_ID}
-      - HERE_API_KEY=${HERE_API_KEY} 
+      - HERE_API_KEY=${HERE_API_KEY}
+      # Mistral AI API
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - MISTRAL_BASE_URL=${MISTRAL_BASE_URL:-https://api.mistral.ai/v1} 

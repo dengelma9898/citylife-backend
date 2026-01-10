@@ -12,9 +12,20 @@ import { ScraperFactory } from './infrastructure/scraping/scraper-factory';
 import { RausgegangenScraper } from './infrastructure/scraping/rausgegangen-scraper';
 import { ParksScraper } from './infrastructure/scraping/parks-scraper';
 import { EventbriteScraper } from './infrastructure/scraping/eventbrite-scraper';
+import { MistralExtractorService } from './infrastructure/llm/mistral-extractor.service';
+import { EventNormalizerService } from './infrastructure/llm/event-normalizer.service';
+import { HybridExtractorService } from './infrastructure/llm/hybrid-extractor.service';
+import { CostTrackerService } from './infrastructure/llm/cost-tracker.service';
+import { EventCategoriesModule } from '../event-categories/event-categories.module';
+import { IsValidCategoryConstraint } from './dto/validators/is-valid-category.validator';
 
 @Module({
-  imports: [FirebaseModule, forwardRef(() => UsersModule), forwardRef(() => BusinessesModule)],
+  imports: [
+    FirebaseModule,
+    forwardRef(() => UsersModule),
+    forwardRef(() => BusinessesModule),
+    EventCategoriesModule,
+  ],
   controllers: [EventsController],
   providers: [
     EventsService,
@@ -26,6 +37,11 @@ import { EventbriteScraper } from './infrastructure/scraping/eventbrite-scraper'
     RausgegangenScraper,
     ParksScraper,
     EventbriteScraper,
+    MistralExtractorService,
+    EventNormalizerService,
+    HybridExtractorService,
+    CostTrackerService,
+    IsValidCategoryConstraint,
   ],
   exports: [EventsService],
 })

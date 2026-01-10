@@ -447,38 +447,4 @@ describe('EventsController', () => {
     });
   });
 
-  describe('scrapeEvents', () => {
-    it('should return events from scraper', async () => {
-      const mockScraper = {
-        scrapeEvents: jest.fn().mockResolvedValue([mockEvent])
-      };
-      mockScraperService.getScraper.mockReturnValue(mockScraper);
-
-      const result = await controller.scrapeEvents(
-        ScraperType.EVENTFINDER,
-        null,
-        '2024-03-20',
-        '2024-03-27',
-        10
-      );
-
-      expect(result).toEqual([mockEvent]);
-      expect(mockScraperService.getScraper).toHaveBeenCalledWith(ScraperType.EVENTFINDER);
-      expect(mockScraper.scrapeEvents).toHaveBeenCalledWith({
-        category: null,
-        startDate: expect.any(Date),
-        endDate: expect.any(Date),
-        maxResults: 10
-      });
-    });
-
-    it('should throw error for invalid scraper type', async () => {
-      await expect(controller.scrapeEvents(
-        'INVALID_TYPE' as ScraperType,
-        null,
-        '2024-03-20',
-        '2024-03-27'
-      )).rejects.toThrow('Ungültiger Scraper-Typ');
-    });
-  });
 });

@@ -27,6 +27,14 @@ WALLET_SIGNER_CERT=...
 WALLET_KEY_PASSPHRASE=...
 ```
 
+### Mistral AI API (für LLM-basierte Event-Extraktion)
+```
+MISTRAL_API_KEY=your_mistral_api_key_here
+MISTRAL_BASE_URL=https://api.mistral.ai/v1  # Optional, Standard: Mistral API
+# Alternative: DeepInfra
+# MISTRAL_BASE_URL=https://api.deepinfra.com/v1/openai
+```
+
 ### Umgebungskonfiguration
 ```
 NODE_ENV=development|test|production
@@ -98,6 +106,8 @@ docker buildx build --platform linux/amd64 \
     -e PORT=3000 \
     -e NODE_ENV=dev \
     -e BASE_URL=/dev \
+    -e MISTRAL_API_KEY=${MISTRAL_API_KEY} \
+    -e MISTRAL_BASE_URL=https://api.mistral.ai/v1 \
     dengelma/nuernbergspots-test`
 
 ### Produktionsumgebung (nuernbergspots.de/prd)
@@ -109,6 +119,8 @@ docker buildx build --platform linux/amd64 \
     -e PORT=3100 \
     -e NODE_ENV=prd \
     -e BASE_URL=/prd \
+    -e MISTRAL_API_KEY=${MISTRAL_API_KEY} \
+    -e MISTRAL_BASE_URL=https://api.mistral.ai/v1 \
     dengelma/nuernbergspots`
 
 ## Umgebungsvariablen in Docker
@@ -119,8 +131,12 @@ Die folgenden Umgebungsvariablen können beim Start des Containers übergeben we
 - `PORT`: Der Port, auf dem die Anwendung läuft (3000 für Test, 3100 für Produktion)
 - `ENV_FILE`: Die zu verwendende .env-Datei (.env für Test, .env.prod für Produktion)
 - `BASE_URL`: Der Base-Path der API (/dev für Test, /prd für Produktion)
+- `MISTRAL_API_KEY`: Mistral API Key für LLM-basierte Event-Extraktion (erforderlich)
+- `MISTRAL_BASE_URL`: Mistral API Base URL (optional, Standard: https://api.mistral.ai/v1)
 
 Alle anderen Umgebungsvariablen werden aus der angegebenen .env-Datei geladen.
+
+**WICHTIG:** Für Details zur Mistral API Token-Integration siehe [docs/mistral-api-setup.md](docs/mistral-api-setup.md)
 
 ## Check container logs
 
