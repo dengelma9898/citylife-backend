@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { TimezoneInterceptor } from './core/interceptors/timezone.interceptor';
+import { useContainer } from 'class-validator';
 
 async function bootstrap() {
   // Log-Level basierend auf Umgebung konfigurieren
@@ -27,6 +28,9 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
+
+  // Enable class-validator to use NestJS's dependency injection container
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   // Enable CORS
   const allowedOrigins: string[] = ['http://localhost:5173']; // Local Frontend Development

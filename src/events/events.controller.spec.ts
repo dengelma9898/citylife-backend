@@ -5,6 +5,8 @@ import { ScraperService } from './infrastructure/scraping/scraper.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
+import { HybridExtractorService } from './infrastructure/llm/hybrid-extractor.service';
+import { CostTrackerService } from './infrastructure/llm/cost-tracker.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { NotFoundException } from '@nestjs/common';
 import { Event } from './interfaces/event.interface';
@@ -49,6 +51,16 @@ describe('EventsController', () => {
     addEventToBusiness: jest.fn(),
   };
 
+  const mockHybridExtractorService = {
+    scrapeEventsFromUrl: jest.fn(),
+  };
+
+  const mockCostTrackerService = {
+    getMonthlyCosts: jest.fn().mockReturnValue({ costs: {}, total: 0, currency: 'USD' }),
+    getTokenUsage: jest.fn().mockReturnValue({ usage: {}, totals: { input: 0, output: 0, total: 0 } }),
+    trackUsage: jest.fn(),
+  };
+
   const mockEvent: Event = {
     id: '1',
     title: 'Test Event',
@@ -88,6 +100,14 @@ describe('EventsController', () => {
         {
           provide: BusinessesService,
           useValue: mockBusinessesService,
+        },
+        {
+          provide: HybridExtractorService,
+          useValue: mockHybridExtractorService,
+        },
+        {
+          provide: CostTrackerService,
+          useValue: mockCostTrackerService,
         },
       ],
     }).compile();
@@ -447,38 +467,4 @@ describe('EventsController', () => {
     });
   });
 
-  describe('scrapeEvents', () => {
-    it('should return events from scraper', async () => {
-      const mockScraper = {
-        scrapeEvents: jest.fn().mockResolvedValue([mockEvent])
-      };
-      mockScraperService.getScraper.mockReturnValue(mockScraper);
-
-      const result = await controller.scrapeEvents(
-        ScraperType.EVENTFINDER,
-        null,
-        '2024-03-20',
-        '2024-03-27',
-        10
-      );
-
-      expect(result).toEqual([mockEvent]);
-      expect(mockScraperService.getScraper).toHaveBeenCalledWith(ScraperType.EVENTFINDER);
-      expect(mockScraper.scrapeEvents).toHaveBeenCalledWith({
-        category: null,
-        startDate: expect.any(Date),
-        endDate: expect.any(Date),
-        maxResults: 10
-      });
-    });
-
-    it('should throw error for invalid scraper type', async () => {
-      await expect(controller.scrapeEvents(
-        'INVALID_TYPE' as ScraperType,
-        null,
-        '2024-03-20',
-        '2024-03-27'
-      )).rejects.toThrow('Ungültiger Scraper-Typ');
-    });
-  });
 });

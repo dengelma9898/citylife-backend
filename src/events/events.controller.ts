@@ -16,6 +16,7 @@ import {
   Query,
   ParseEnumPipe,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { EventsService } from './events.service';
 import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -24,9 +25,15 @@ import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
-import { EventCategory } from './enums/event-category.enum';
 import { ScraperService } from './infrastructure/scraping/scraper.service';
-import { ScraperOptions, ScraperType } from './infrastructure/scraping/base-scraper.interface';
+import {
+  ScraperOptions,
+  ScraperType,
+  ScraperResult,
+} from './infrastructure/scraping/base-scraper.interface';
+import { HybridExtractorService } from './infrastructure/llm/hybrid-extractor.service';
+import { CostTrackerService } from './infrastructure/llm/cost-tracker.service';
+import { LlmScrapeDto } from './dto/llm-scrape.dto';
 
 @Controller('events')
 export class EventsController {
@@ -39,6 +46,8 @@ export class EventsController {
     private readonly usersService: UsersService,
     private readonly businessesService: BusinessesService,
     private readonly scraperService: ScraperService,
+    private readonly hybridExtractor: HybridExtractorService,
+    private readonly costTracker: CostTrackerService,
   ) {
     this.logger.log('EventsController initialized');
   }
@@ -47,70 +56,6 @@ export class EventsController {
   public async getAll(): Promise<Event[]> {
     this.logger.log('GET /events');
     return this.eventsService.getAll();
-  }
-
-  /**
-   * Generischer Endpunkt zum Scrapen von Events
-   *
-   * @param type - Der Scraper-Typ (EVENTFINDER, CURT)
-   * @param category - Die Event-Kategorie
-   * @param startDate - Startdatum (YYYY-MM-DD)
-   * @param endDate - Enddatum (YYYY-MM-DD)
-   * @param maxResults - Maximale Anzahl der Ergebnisse
-   * @returns Array von Events
-   */
-  @Get('scrape')
-  public async scrapeEvents(
-    @Query('type') type: string,
-    @Query('category') category?: string,
-    @Query('startDate') startDateString?: string,
-    @Query('endDate') endDateString?: string,
-    @Query('maxResults') maxResults?: number,
-  ): Promise<Event[]> {
-    this.logger.log(
-      `GET /events/scrape?type=${type}&category=${category}&startDate=${startDateString}&endDate=${endDateString}&maxResults=${maxResults}`,
-    );
-
-    // Validiere den Scraper-Typ
-    const normalizedType = type?.toLowerCase();
-    if (!normalizedType || !Object.values(ScraperType).includes(normalizedType as ScraperType)) {
-      throw new Error('Ungültiger Scraper-Typ');
-    }
-
-    const scraperType = normalizedType as ScraperType;
-
-    // Validiere und parse Datumsangaben
-    const startDate = startDateString ? new Date(startDateString) : new Date();
-    const endDate = endDateString
-      ? new Date(endDateString)
-      : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 Tage
-
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      throw new Error('Ungültiges Datum');
-    }
-
-    if (endDate < startDate) {
-      throw new Error('Enddatum muss nach dem Startdatum liegen');
-    }
-
-    // Konvertiere category von 'null' zu null
-    const parsedCategory = category === 'null' ? null : (category as EventCategory);
-
-    // Erstelle Scraper-Optionen
-    const options: ScraperOptions = {
-      category: parsedCategory,
-      startDate,
-      endDate,
-      maxResults: maxResults || 10,
-    };
-
-    // Führe das Scraping durch
-    const scraper = this.scraperService.getScraper(scraperType);
-    if (!scraper) {
-      throw new Error(`Scraper ${scraperType} nicht gefunden`);
-    }
-
-    return scraper.scrapeEvents(options);
   }
 
   @Get(':id')
@@ -416,5 +361,186 @@ export class EventsController {
   public async getActiveScrapers(): Promise<ScraperType[]> {
     this.logger.log('GET /events/scrape/active');
     return this.scraperService.getActiveScrapers();
+  }
+
+  /**
+   * LLM-basierte Event-Extraktion von einer URL
+   * Nutzt Mistral Small 3.2 für semantische Extraktion mit Fallback zu Puppeteer
+   *
+   * @param dto - DTO mit URL und Fallback-Option
+   * @returns ScraperResult mit extrahierten Events
+   */
+  @Post('scrape/llm')
+  @ApiOperation({
+    summary: 'Extrahiert Events von einer URL mit LLM-basierter Extraktion',
+    description:
+      'Nutzt Mistral Small 3.2 für semantische Event-Extraktion. Bei Fehlern erfolgt automatisch Fallback zu Puppeteer-Scrapers.',
+  })
+  @ApiBody({ type: LlmScrapeDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Events erfolgreich extrahiert',
+    schema: {
+      type: 'object',
+      properties: {
+        events: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/Event' },
+        },
+        hasMorePages: { type: 'boolean' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Ungültige URL' })
+  @ApiResponse({ status: 500, description: 'Fehler bei der Extraktion' })
+  public async scrapeEventsWithLlm(@Body() dto: LlmScrapeDto): Promise<ScraperResult> {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'events.controller.ts:467',
+        message: 'scrapeEventsWithLlm entry',
+        data: { url: dto.url, useFallback: dto.useFallback },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
+    // #endregion
+    this.logger.log(
+      `POST /events/scrape/llm - URL: ${dto.url}, Fallback: ${dto.useFallback ?? true}`,
+    );
+
+    if (!dto.url) {
+      throw new Error('URL ist erforderlich');
+    }
+
+    const result = await this.hybridExtractor.scrapeEventsFromUrl(dto.url, {
+      useFallback: dto.useFallback ?? true,
+    } as any);
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'events.controller.ts:477',
+        message: 'scrapeEventsWithLlm exit',
+        data: { eventsCount: result.events.length, hasMorePages: result.hasMorePages },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
+    // #endregion
+    this.logger.log(`LLM-Scraping abgeschlossen: ${result.events.length} Events gefunden`);
+
+    return result;
+  }
+
+  /**
+   * Gibt monatliche Kosten-Statistiken für LLM-Extraktion zurück
+   */
+  @Get('scrape/llm/costs')
+  @ApiOperation({
+    summary: 'Gibt monatliche Kosten-Statistiken für LLM-Extraktion zurück',
+    description:
+      'Gibt die Kosten pro Modell und die Gesamtsumme zurück. Daten werden im Memory gespeichert und gehen bei Neustart verloren.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Kosten-Statistiken',
+    schema: {
+      type: 'object',
+      properties: {
+        costs: {
+          type: 'object',
+          additionalProperties: { type: 'number' },
+          description: 'Kosten pro Modell in USD',
+          example: { 'mistral-small-latest': 0.15 },
+        },
+        total: {
+          type: 'number',
+          description: 'Gesamtkosten aller Modelle in USD',
+          example: 0.15,
+        },
+        currency: {
+          type: 'string',
+          description: 'Währung',
+          example: 'USD',
+        },
+      },
+      example: {
+        costs: { 'mistral-small-latest': 0.15 },
+        total: 0.15,
+        currency: 'USD',
+      },
+    },
+  })
+  public async getLlmCosts(): Promise<{
+    costs: Record<string, number>;
+    total: number;
+    currency: string;
+  }> {
+    this.logger.log('GET /events/scrape/llm/costs');
+    return this.costTracker.getMonthlyCosts();
+  }
+
+  /**
+   * Gibt Token-Verbrauch für LLM-Extraktion zurück
+   */
+  @Get('scrape/llm/tokens')
+  @ApiOperation({
+    summary: 'Gibt Token-Verbrauch für LLM-Extraktion zurück',
+    description:
+      'Gibt den Token-Verbrauch pro Modell und Gesamtsummen zurück. Daten werden im Memory gespeichert und gehen bei Neustart verloren.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token-Verbrauch',
+    schema: {
+      type: 'object',
+      properties: {
+        usage: {
+          type: 'object',
+          additionalProperties: {
+            type: 'object',
+            properties: {
+              input: { type: 'number', description: 'Input-Tokens' },
+              output: { type: 'number', description: 'Output-Tokens' },
+              total: { type: 'number', description: 'Gesamt-Tokens' },
+            },
+          },
+          example: {
+            'mistral-small-latest': { input: 500000, output: 100000, total: 600000 },
+          },
+        },
+        totals: {
+          type: 'object',
+          properties: {
+            input: { type: 'number', description: 'Gesamt Input-Tokens aller Modelle' },
+            output: { type: 'number', description: 'Gesamt Output-Tokens aller Modelle' },
+            total: { type: 'number', description: 'Gesamt-Tokens aller Modelle' },
+          },
+          example: { input: 500000, output: 100000, total: 600000 },
+        },
+      },
+      example: {
+        usage: {
+          'mistral-small-latest': { input: 500000, output: 100000, total: 600000 },
+        },
+        totals: { input: 500000, output: 100000, total: 600000 },
+      },
+    },
+  })
+  public async getLlmTokenUsage(): Promise<{
+    usage: Record<string, { input: number; output: number; total: number }>;
+    totals: { input: number; output: number; total: number };
+  }> {
+    this.logger.log('GET /events/scrape/llm/tokens');
+    return this.costTracker.getTokenUsage();
   }
 }
