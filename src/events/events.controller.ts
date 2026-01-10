@@ -58,7 +58,6 @@ export class EventsController {
     return this.eventsService.getAll();
   }
 
-
   @Get(':id')
   public async getById(@Param('id') id: string): Promise<Event> {
     this.logger.log(`GET /events/${id}`);
@@ -396,7 +395,19 @@ export class EventsController {
   @ApiResponse({ status: 500, description: 'Fehler bei der Extraktion' })
   public async scrapeEventsWithLlm(@Body() dto: LlmScrapeDto): Promise<ScraperResult> {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'events.controller.ts:467',message:'scrapeEventsWithLlm entry',data:{url:dto.url,useFallback:dto.useFallback},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'events.controller.ts:467',
+        message: 'scrapeEventsWithLlm entry',
+        data: { url: dto.url, useFallback: dto.useFallback },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
     // #endregion
     this.logger.log(
       `POST /events/scrape/llm - URL: ${dto.url}, Fallback: ${dto.useFallback ?? true}`,
@@ -406,10 +417,24 @@ export class EventsController {
       throw new Error('URL ist erforderlich');
     }
 
-    const result = await this.hybridExtractor.scrapeEventsFromUrl(dto.url, { useFallback: dto.useFallback ?? true } as any);
+    const result = await this.hybridExtractor.scrapeEventsFromUrl(dto.url, {
+      useFallback: dto.useFallback ?? true,
+    } as any);
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'events.controller.ts:477',message:'scrapeEventsWithLlm exit',data:{eventsCount:result.events.length,hasMorePages:result.hasMorePages},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'events.controller.ts:477',
+        message: 'scrapeEventsWithLlm exit',
+        data: { eventsCount: result.events.length, hasMorePages: result.hasMorePages },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
     // #endregion
     this.logger.log(`LLM-Scraping abgeschlossen: ${result.events.length} Events gefunden`);
 
@@ -422,17 +447,44 @@ export class EventsController {
   @Get('scrape/llm/costs')
   @ApiOperation({
     summary: 'Gibt monatliche Kosten-Statistiken für LLM-Extraktion zurück',
+    description:
+      'Gibt die Kosten pro Modell und die Gesamtsumme zurück. Daten werden im Memory gespeichert und gehen bei Neustart verloren.',
   })
   @ApiResponse({
     status: 200,
     description: 'Kosten-Statistiken',
     schema: {
       type: 'object',
-      additionalProperties: { type: 'number' },
-      example: { 'mistral-small-latest': 0.15 },
+      properties: {
+        costs: {
+          type: 'object',
+          additionalProperties: { type: 'number' },
+          description: 'Kosten pro Modell in USD',
+          example: { 'mistral-small-latest': 0.15 },
+        },
+        total: {
+          type: 'number',
+          description: 'Gesamtkosten aller Modelle in USD',
+          example: 0.15,
+        },
+        currency: {
+          type: 'string',
+          description: 'Währung',
+          example: 'USD',
+        },
+      },
+      example: {
+        costs: { 'mistral-small-latest': 0.15 },
+        total: 0.15,
+        currency: 'USD',
+      },
     },
   })
-  public async getLlmCosts(): Promise<Record<string, number>> {
+  public async getLlmCosts(): Promise<{
+    costs: Record<string, number>;
+    total: number;
+    currency: string;
+  }> {
     this.logger.log('GET /events/scrape/llm/costs');
     return this.costTracker.getMonthlyCosts();
   }
@@ -443,23 +495,51 @@ export class EventsController {
   @Get('scrape/llm/tokens')
   @ApiOperation({
     summary: 'Gibt Token-Verbrauch für LLM-Extraktion zurück',
+    description:
+      'Gibt den Token-Verbrauch pro Modell und Gesamtsummen zurück. Daten werden im Memory gespeichert und gehen bei Neustart verloren.',
   })
   @ApiResponse({
     status: 200,
     description: 'Token-Verbrauch',
     schema: {
       type: 'object',
-      additionalProperties: {
-        type: 'object',
-        properties: {
-          input: { type: 'number' },
-          output: { type: 'number' },
+      properties: {
+        usage: {
+          type: 'object',
+          additionalProperties: {
+            type: 'object',
+            properties: {
+              input: { type: 'number', description: 'Input-Tokens' },
+              output: { type: 'number', description: 'Output-Tokens' },
+              total: { type: 'number', description: 'Gesamt-Tokens' },
+            },
+          },
+          example: {
+            'mistral-small-latest': { input: 500000, output: 100000, total: 600000 },
+          },
+        },
+        totals: {
+          type: 'object',
+          properties: {
+            input: { type: 'number', description: 'Gesamt Input-Tokens aller Modelle' },
+            output: { type: 'number', description: 'Gesamt Output-Tokens aller Modelle' },
+            total: { type: 'number', description: 'Gesamt-Tokens aller Modelle' },
+          },
+          example: { input: 500000, output: 100000, total: 600000 },
         },
       },
-      example: { 'mistral-small-latest': { input: 500000, output: 100000 } },
+      example: {
+        usage: {
+          'mistral-small-latest': { input: 500000, output: 100000, total: 600000 },
+        },
+        totals: { input: 500000, output: 100000, total: 600000 },
+      },
     },
   })
-  public async getLlmTokenUsage(): Promise<Record<string, { input: number; output: number }>> {
+  public async getLlmTokenUsage(): Promise<{
+    usage: Record<string, { input: number; output: number; total: number }>;
+    totals: { input: number; output: number; total: number };
+  }> {
     this.logger.log('GET /events/scrape/llm/tokens');
     return this.costTracker.getTokenUsage();
   }

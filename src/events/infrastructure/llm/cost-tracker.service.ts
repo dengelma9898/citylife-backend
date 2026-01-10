@@ -49,18 +49,55 @@ export class CostTrackerService {
 
   /**
    * Gibt monatliche Kosten zurück
-   * @returns Kosten pro Modell
+   * @returns Kosten pro Modell mit Gesamtsumme
    */
-  getMonthlyCosts(): Record<string, number> {
-    return Object.fromEntries(this.costs);
+  getMonthlyCosts(): {
+    costs: Record<string, number>;
+    total: number;
+    currency: string;
+  } {
+    const costs = Object.fromEntries(this.costs);
+    const total = Array.from(this.costs.values()).reduce((sum, cost) => sum + cost, 0);
+
+    return {
+      costs,
+      total: Number(total.toFixed(4)),
+      currency: 'USD',
+    };
   }
 
   /**
    * Gibt Token-Verbrauch zurück
-   * @returns Token-Verbrauch pro Modell
+   * @returns Token-Verbrauch pro Modell mit Gesamtsummen
    */
-  getTokenUsage(): Record<string, { input: number; output: number }> {
-    return Object.fromEntries(this.tokenUsage);
+  getTokenUsage(): {
+    usage: Record<string, { input: number; output: number; total: number }>;
+    totals: { input: number; output: number; total: number };
+  } {
+    const usage: Record<string, { input: number; output: number; total: number }> = {};
+
+    let totalInput = 0;
+    let totalOutput = 0;
+
+    for (const [model, tokens] of this.tokenUsage.entries()) {
+      const total = tokens.input + tokens.output;
+      usage[model] = {
+        input: tokens.input,
+        output: tokens.output,
+        total,
+      };
+      totalInput += tokens.input;
+      totalOutput += tokens.output;
+    }
+
+    return {
+      usage,
+      totals: {
+        input: totalInput,
+        output: totalOutput,
+        total: totalInput + totalOutput,
+      },
+    };
   }
 
   /**

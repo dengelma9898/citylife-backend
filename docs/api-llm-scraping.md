@@ -88,13 +88,29 @@ Gibt die monatlichen Kosten für LLM-Extraktion zurück.
 
 ```json
 {
-  "mistral-small-latest": 0.15
+  "costs": {
+    "mistral-small-latest": 0.15
+  },
+  "total": 0.15,
+  "currency": "USD"
 }
 ```
 
 **Response-Felder:**
-- Schlüssel: Modell-Name (z.B. `mistral-small-latest`)
-- Wert: Gesamtkosten in USD für den aktuellen Monat
+- `costs` (object): Kosten pro Modell in USD
+  - Schlüssel: Modell-Name (z.B. `mistral-small-latest`)
+  - Wert: Gesamtkosten in USD für den aktuellen Monat
+- `total` (number): Gesamtkosten aller Modelle in USD
+- `currency` (string): Währung (immer "USD")
+
+**Hinweis:** Daten werden im Memory gespeichert und gehen bei Neustart des Servers verloren. Bei leerem Zustand:
+```json
+{
+  "costs": {},
+  "total": 0,
+  "currency": "USD"
+}
+```
 
 ### 3. Token-Verbrauch abrufen
 
@@ -106,17 +122,43 @@ Gibt den Token-Verbrauch für LLM-Extraktion zurück.
 
 ```json
 {
-  "mistral-small-latest": {
+  "usage": {
+    "mistral-small-latest": {
+      "input": 500000,
+      "output": 100000,
+      "total": 600000
+    }
+  },
+  "totals": {
     "input": 500000,
-    "output": 100000
+    "output": 100000,
+    "total": 600000
   }
 }
 ```
 
 **Response-Felder:**
-- Schlüssel: Modell-Name
-- `input`: Anzahl der Input-Tokens
-- `output`: Anzahl der Output-Tokens
+- `usage` (object): Token-Verbrauch pro Modell
+  - Schlüssel: Modell-Name
+  - `input`: Anzahl der Input-Tokens
+  - `output`: Anzahl der Output-Tokens
+  - `total`: Gesamt-Tokens (input + output)
+- `totals` (object): Gesamtsummen aller Modelle
+  - `input`: Gesamt Input-Tokens
+  - `output`: Gesamt Output-Tokens
+  - `total`: Gesamt-Tokens
+
+**Hinweis:** Daten werden im Memory gespeichert und gehen bei Neustart des Servers verloren. Bei leerem Zustand:
+```json
+{
+  "usage": {},
+  "totals": {
+    "input": 0,
+    "output": 0,
+    "total": 0
+  }
+}
+```
 
 ## Beispiel-Integrationen
 

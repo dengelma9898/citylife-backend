@@ -50,27 +50,99 @@ export class HybridExtractorService implements BaseScraper {
    */
   async scrapeEventsFromUrl(url: string, options?: ScraperOptions): Promise<ScraperResult> {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:51',message:'scrapeEventsFromUrl entry',data:{url,useFallback:(options as any)?.useFallback},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'hybrid-extractor.service.ts:51',
+        message: 'scrapeEventsFromUrl entry',
+        data: { url, useFallback: (options as any)?.useFallback },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
     // #endregion
     const useFallback = (options as any)?.useFallback !== false;
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:53',message:'useFallback determined',data:{useFallback},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'hybrid-extractor.service.ts:53',
+        message: 'useFallback determined',
+        data: { useFallback },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
     // #endregion
     try {
       // Versuche Mistral-Extraktion
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:56',message:'before fetchHtml',data:{url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:56',
+          message: 'before fetchHtml',
+          data: { url },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H2',
+        }),
+      }).catch(() => {});
       // #endregion
       const html = await this.fetchHtml(url);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:58',message:'after fetchHtml',data:{htmlLength:html.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:58',
+          message: 'after fetchHtml',
+          data: { htmlLength: html.length },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H2',
+        }),
+      }).catch(() => {});
       // #endregion
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:60',message:'before tryMistralExtraction',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:60',
+          message: 'before tryMistralExtraction',
+          data: {},
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H3',
+        }),
+      }).catch(() => {});
       // #endregion
       const events = await this.tryMistralExtraction(html);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:62',message:'after tryMistralExtraction',data:{eventsCount:events?.length||0,eventsIsNull:events===null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H4'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:62',
+          message: 'after tryMistralExtraction',
+          data: { eventsCount: events?.length || 0, eventsIsNull: events === null },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H3,H4',
+        }),
+      }).catch(() => {});
       // #endregion
 
       if (events && events.length > 0) {
@@ -81,11 +153,35 @@ export class HybridExtractorService implements BaseScraper {
         };
       }
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:70',message:'empty events, checking fallback',data:{useFallback},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:70',
+          message: 'empty events, checking fallback',
+          data: { useFallback },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H4',
+        }),
+      }).catch(() => {});
       // #endregion
     } catch (error) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:72',message:'catch block',data:{errorMessage:error.message,useFallback},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3,H5'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:72',
+          message: 'catch block',
+          data: { errorMessage: error.message, useFallback },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H3,H5',
+        }),
+      }).catch(() => {});
       // #endregion
       this.logger.warn(`Mistral-Extraktion fehlgeschlagen: ${error.message}`);
     }
@@ -93,7 +189,19 @@ export class HybridExtractorService implements BaseScraper {
     // Fallback zu Puppeteer-Scraper nur wenn erlaubt
     if (!useFallback) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:78',message:'useFallback=false, returning empty',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:78',
+          message: 'useFallback=false, returning empty',
+          data: {},
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H1',
+        }),
+      }).catch(() => {});
       // #endregion
       return {
         events: [],
@@ -102,7 +210,19 @@ export class HybridExtractorService implements BaseScraper {
     }
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:85',message:'calling fallbackToPuppeteer',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'hybrid-extractor.service.ts:85',
+        message: 'calling fallbackToPuppeteer',
+        data: {},
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
     // #endregion
     this.logger.log('Fallback zu Puppeteer-Scraper');
     return this.fallbackToPuppeteer(url);
@@ -115,34 +235,118 @@ export class HybridExtractorService implements BaseScraper {
    */
   private async tryMistralExtraction(html: string): Promise<Event[] | null> {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:95',message:'tryMistralExtraction entry',data:{htmlLength:html.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'hybrid-extractor.service.ts:95',
+        message: 'tryMistralExtraction entry',
+        data: { htmlLength: html.length },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H3',
+      }),
+    }).catch(() => {});
     // #endregion
     try {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:98',message:'before mistralExtractor.extractEvents',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:98',
+          message: 'before mistralExtractor.extractEvents',
+          data: {},
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H3',
+        }),
+      }).catch(() => {});
       // #endregion
       const partialEvents = await this.mistralExtractor.extractEvents(html);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:100',message:'after mistralExtractor.extractEvents',data:{partialEventsCount:partialEvents?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:100',
+          message: 'after mistralExtractor.extractEvents',
+          data: { partialEventsCount: partialEvents?.length || 0 },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H3',
+        }),
+      }).catch(() => {});
       // #endregion
       if (!partialEvents || partialEvents.length === 0) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:102',message:'empty partialEvents, returning null',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H4'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: 'hybrid-extractor.service.ts:102',
+            message: 'empty partialEvents, returning null',
+            data: {},
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'H4',
+          }),
+        }).catch(() => {});
         // #endregion
         return null;
       }
 
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:107',message:'before eventNormalizer.normalize',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:107',
+          message: 'before eventNormalizer.normalize',
+          data: {},
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H3',
+        }),
+      }).catch(() => {});
       // #endregion
       const normalizedEvents = await this.eventNormalizer.normalize(partialEvents);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:109',message:'after eventNormalizer.normalize',data:{normalizedEventsCount:normalizedEvents?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:109',
+          message: 'after eventNormalizer.normalize',
+          data: { normalizedEventsCount: normalizedEvents?.length || 0 },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H3',
+        }),
+      }).catch(() => {});
       // #endregion
       return normalizedEvents;
     } catch (error) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:112',message:'tryMistralExtraction catch',data:{errorMessage:error.message,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:112',
+          message: 'tryMistralExtraction catch',
+          data: { errorMessage: error.message, errorStack: error.stack },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H3',
+        }),
+      }).catch(() => {});
       // #endregion
       this.logger.error(`Fehler bei Mistral-Extraktion: ${error.message}`);
       return null;
@@ -193,15 +397,51 @@ export class HybridExtractorService implements BaseScraper {
    */
   private async fetchHtml(url: string): Promise<string> {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:152',message:'fetchHtml entry - using Puppeteer',data:{url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'hybrid-extractor.service.ts:152',
+        message: 'fetchHtml entry - using Puppeteer',
+        data: { url },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H2',
+      }),
+    }).catch(() => {});
     // #endregion
     const puppeteerManager = PuppeteerManager.getInstance();
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:155',message:'before getPage',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2,H5'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'hybrid-extractor.service.ts:155',
+        message: 'before getPage',
+        data: {},
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H2,H5',
+      }),
+    }).catch(() => {});
     // #endregion
     const page = await puppeteerManager.getPage();
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:157',message:'after getPage, before goto',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2,H5'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        location: 'hybrid-extractor.service.ts:157',
+        message: 'after getPage, before goto',
+        data: {},
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'H2,H5',
+      }),
+    }).catch(() => {});
     // #endregion
 
     try {
@@ -210,12 +450,36 @@ export class HybridExtractorService implements BaseScraper {
         timeout: puppeteerManager.getConfig().timeout,
       });
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:164',message:'after goto, before content',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2,H5'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:164',
+          message: 'after goto, before content',
+          data: {},
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H2,H5',
+        }),
+      }).catch(() => {});
       // #endregion
 
       const html = await page.content();
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'hybrid-extractor.service.ts:168',message:'after content',data:{htmlLength:html.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2,H5'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'hybrid-extractor.service.ts:168',
+          message: 'after content',
+          data: { htmlLength: html.length },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H2,H5',
+        }),
+      }).catch(() => {});
       // #endregion
       return html;
     } finally {
