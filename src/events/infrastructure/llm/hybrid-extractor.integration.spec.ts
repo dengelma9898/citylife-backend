@@ -2,7 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HybridExtractorService } from './hybrid-extractor.service';
 import { MistralExtractorService } from './mistral-extractor.service';
 import { EventNormalizerService } from './event-normalizer.service';
+import { CostTrackerService } from './cost-tracker.service';
 import { ScraperService } from '../scraping/scraper.service';
+import { EventFinderScraper } from '../scraping/eventfinder-scraper';
+import { CurtScraper } from '../scraping/curt-scraper';
+import { RausgegangenScraper } from '../scraping/rausgegangen-scraper';
+import { ParksScraper } from '../scraping/parks-scraper';
+import { EventbriteScraper } from '../scraping/eventbrite-scraper';
 import { PuppeteerManager } from '../scraping/puppeteer.config';
 import { Event } from '../../interfaces/event.interface';
 
@@ -14,13 +20,40 @@ describe('HybridExtractorService Integration', () => {
   let eventNormalizer: EventNormalizerService;
   let scraperService: ScraperService;
 
+  const mockScraper = {
+    scrapeEventsForDate: jest.fn(),
+    scrapeEventsForDateRange: jest.fn(),
+    scrapeEventsFromUrl: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         HybridExtractorService,
         MistralExtractorService,
         EventNormalizerService,
+        CostTrackerService,
         ScraperService,
+        {
+          provide: EventFinderScraper,
+          useValue: mockScraper,
+        },
+        {
+          provide: CurtScraper,
+          useValue: mockScraper,
+        },
+        {
+          provide: RausgegangenScraper,
+          useValue: mockScraper,
+        },
+        {
+          provide: ParksScraper,
+          useValue: mockScraper,
+        },
+        {
+          provide: EventbriteScraper,
+          useValue: mockScraper,
+        },
       ],
     }).compile();
 

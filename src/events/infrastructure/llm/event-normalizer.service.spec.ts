@@ -100,7 +100,8 @@ describe('EventNormalizerService', () => {
           price: 10,
           priceString: '10,00€',
           website: 'https://example.com',
-          titleImageUrl: 'https://example.com/image.jpg',
+          contactEmail: 'test@example.com',
+          contactPhone: '+49 123 456789',
         },
       ];
 
@@ -109,7 +110,10 @@ describe('EventNormalizerService', () => {
       expect(result[0].price).toBe(10);
       expect(result[0].priceString).toBe('10,00€');
       expect(result[0].website).toBe('https://example.com');
-      expect(result[0].titleImageUrl).toBe('https://example.com/image.jpg');
+      expect(result[0].contactEmail).toBe('test@example.com');
+      expect(result[0].contactPhone).toBe('+49 123 456789');
+      // titleImageUrl wird NICHT vom LLM extrahiert - Bilder werden vom System bereitgestellt
+      expect(result[0].titleImageUrl).toBeUndefined();
     });
   });
 });

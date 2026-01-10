@@ -5,6 +5,8 @@ import { ScraperService } from './infrastructure/scraping/scraper.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
+import { HybridExtractorService } from './infrastructure/llm/hybrid-extractor.service';
+import { CostTrackerService } from './infrastructure/llm/cost-tracker.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { NotFoundException } from '@nestjs/common';
 import { Event } from './interfaces/event.interface';
@@ -49,6 +51,16 @@ describe('EventsController', () => {
     addEventToBusiness: jest.fn(),
   };
 
+  const mockHybridExtractorService = {
+    scrapeEventsFromUrl: jest.fn(),
+  };
+
+  const mockCostTrackerService = {
+    getMonthlyCosts: jest.fn().mockReturnValue({ costs: {}, total: 0, currency: 'USD' }),
+    getTokenUsage: jest.fn().mockReturnValue({ usage: {}, totals: { input: 0, output: 0, total: 0 } }),
+    trackUsage: jest.fn(),
+  };
+
   const mockEvent: Event = {
     id: '1',
     title: 'Test Event',
@@ -88,6 +100,14 @@ describe('EventsController', () => {
         {
           provide: BusinessesService,
           useValue: mockBusinessesService,
+        },
+        {
+          provide: HybridExtractorService,
+          useValue: mockHybridExtractorService,
+        },
+        {
+          provide: CostTrackerService,
+          useValue: mockCostTrackerService,
         },
       ],
     }).compile();
