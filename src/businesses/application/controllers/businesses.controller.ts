@@ -315,7 +315,9 @@ export class BusinessesController {
     @Body() openingHoursData: UpdateOpeningHoursDto,
   ): Promise<Business> {
     this.logger.log(`PATCH /businesses/${businessId}/opening-hours`);
-    this.logger.warn('DEPRECATED: Use PATCH /businesses/:id with openingHours/detailedOpeningHours fields instead');
+    this.logger.warn(
+      'DEPRECATED: Use PATCH /businesses/:id with openingHours/detailedOpeningHours fields instead',
+    );
 
     const business = await this.businessesService.getById(businessId);
     if (!business) {
@@ -323,8 +325,12 @@ export class BusinessesController {
     }
 
     const updateData: Partial<Business> = {
-      ...(openingHoursData.openingHours !== undefined && { openingHours: openingHoursData.openingHours }),
-      ...(openingHoursData.detailedOpeningHours !== undefined && { detailedOpeningHours: openingHoursData.detailedOpeningHours }),
+      ...(openingHoursData.openingHours !== undefined && {
+        openingHours: openingHoursData.openingHours,
+      }),
+      ...(openingHoursData.detailedOpeningHours !== undefined && {
+        detailedOpeningHours: openingHoursData.detailedOpeningHours,
+      }),
     };
 
     return this.businessesService.update(businessId, updateData);
