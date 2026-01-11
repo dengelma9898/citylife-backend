@@ -319,17 +319,62 @@ export class BusinessesController {
       'DEPRECATED: Use PATCH /businesses/:id with openingHours/detailedOpeningHours fields instead',
     );
 
+    // Transform incoming data if it's in the wrong format
+    // Client might send: { "Montag": { "09:00": "18:00" } } directly
+    // We need: { "detailedOpeningHours": { "Montag": [{ "from": "09:00", "to": "18:00" }] } }
+    let transformedDetailedOpeningHours = openingHoursData.detailedOpeningHours;
+    if (!transformedDetailedOpeningHours && openingHoursData) {
+      const rawData = openingHoursData as any;
+      // Check if data is in the format { "Montag": { "09:00": "18:00" } }
+      const dayNames = [
+        'Montag',
+        'Dienstag',
+        'Mittwoch',
+        'Donnerstag',
+        'Freitag',
+        'Samstag',
+        'Sonntag',
+      ];
+      const hasDayKeys = dayNames.some(day => rawData[day] !== undefined);
+
+      if (hasDayKeys) {
+        transformedDetailedOpeningHours = {};
+        for (const [day, timeSlots] of Object.entries(rawData)) {
+          if (dayNames.includes(day) && typeof timeSlots === 'object' && timeSlots !== null) {
+            const intervals: { from: string; to: string }[] = [];
+            for (const [from, to] of Object.entries(timeSlots as Record<string, string>)) {
+              intervals.push({ from, to });
+            }
+            transformedDetailedOpeningHours[day] = intervals;
+          }
+        }
+      }
+    }
+
     const business = await this.businessesService.getById(businessId);
     if (!business) {
       throw new NotFoundException('Business not found');
+    }
+
+    let mergedDetailedOpeningHours: Record<string, { from: string; to: string }[]> | undefined;
+    if (transformedDetailedOpeningHours !== undefined) {
+      const existing = business.detailedOpeningHours || {};
+      mergedDetailedOpeningHours = { ...existing };
+      for (const [day, intervals] of Object.entries(transformedDetailedOpeningHours)) {
+        if (mergedDetailedOpeningHours[day]) {
+          mergedDetailedOpeningHours[day] = [...mergedDetailedOpeningHours[day], ...intervals];
+        } else {
+          mergedDetailedOpeningHours[day] = intervals;
+        }
+      }
     }
 
     const updateData: Partial<Business> = {
       ...(openingHoursData.openingHours !== undefined && {
         openingHours: openingHoursData.openingHours,
       }),
-      ...(openingHoursData.detailedOpeningHours !== undefined && {
-        detailedOpeningHours: openingHoursData.detailedOpeningHours,
+      ...(mergedDetailedOpeningHours !== undefined && {
+        detailedOpeningHours: mergedDetailedOpeningHours,
       }),
     };
 

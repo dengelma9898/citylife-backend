@@ -1,4 +1,4 @@
-import { ContactMessage } from './contact-message.entity';
+import { ContactMessage, ContactMessageProps } from './contact-message.entity';
 
 export enum ContactRequestType {
   GENERAL = 'GENERAL',
@@ -17,6 +17,18 @@ export interface ContactRequestProps {
   updatedAt: string;
   isProcessed: boolean;
   responded: boolean; // Gibt an, ob ein Admin bereits auf die Anfrage reagiert hat
+}
+
+export interface ContactRequestJSON {
+  id: string;
+  type: ContactRequestType;
+  businessId?: string;
+  userId?: string;
+  messages: ContactMessageProps[];
+  createdAt: string;
+  updatedAt: string;
+  isProcessed: boolean;
+  responded: boolean;
 }
 
 export class ContactRequest {
@@ -71,13 +83,13 @@ export class ContactRequest {
     });
   }
 
-  toJSON(): ContactRequestProps {
+  toJSON(): ContactRequestJSON {
     return {
       id: this.id,
       type: this.type,
       userId: this.userId,
       businessId: this.businessId,
-      messages: this.messages,
+      messages: this.messages.map(msg => msg.toJSON()),
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       isProcessed: this.isProcessed,
