@@ -51,7 +51,15 @@ export class DirectMessagesService {
     await this.directChatsService.updateLastMessage(chatId, dto.content, userId);
     const recipientId = chat.getOtherParticipantId(userId);
     if (recipientId) {
-      await this.sendMessageNotification(recipientId, userName, dto.content, chatId, message.id, userId, chat);
+      await this.sendMessageNotification(
+        recipientId,
+        userName,
+        dto.content,
+        chatId,
+        message.id,
+        userId,
+        chat,
+      );
     }
     return message;
   }
