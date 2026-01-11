@@ -23,6 +23,7 @@ import { FirebaseStorageService } from '../../../firebase/firebase-storage.servi
 import { UsersService } from '../../../users/users.service';
 import { NuernbergspotsReviewDto } from '../../dto/nuernbergspots-review.dto';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
+import { UpdateOpeningHoursDto } from '../../dto/update-opening-hours.dto';
 
 @Controller('businesses')
 export class BusinessesController {
@@ -302,6 +303,31 @@ export class BusinessesController {
       benefit,
       previousBenefits: [...(business.previousBenefits || []), business.benefit],
     });
+  }
+
+  /**
+   * @deprecated Use PATCH /businesses/:id with { openingHours: {...}, detailedOpeningHours: {...} } instead.
+   * This endpoint exists only for backwards compatibility with older clients.
+   */
+  @Patch(':id/opening-hours')
+  public async updateOpeningHours(
+    @Param('id') businessId: string,
+    @Body() openingHoursData: UpdateOpeningHoursDto,
+  ): Promise<Business> {
+    this.logger.log(`PATCH /businesses/${businessId}/opening-hours`);
+    this.logger.warn('DEPRECATED: Use PATCH /businesses/:id with openingHours/detailedOpeningHours fields instead');
+
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const updateData: Partial<Business> = {
+      ...(openingHoursData.openingHours !== undefined && { openingHours: openingHoursData.openingHours }),
+      ...(openingHoursData.detailedOpeningHours !== undefined && { detailedOpeningHours: openingHoursData.detailedOpeningHours }),
+    };
+
+    return this.businessesService.update(businessId, updateData);
   }
 
   @Post('users/:id')
