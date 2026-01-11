@@ -133,6 +133,24 @@ export class Entity {
 - Write end-to-end tests for API modules
 - Add admin/test method to controllers
 
+# Feature Development Guidelines
+
+## Notifications
+- **IMPORTANT**: When implementing a new feature that involves user interactions or events, always ask:
+  "Should this feature send push notifications to users?"
+- If notifications are needed:
+  - Use the existing `NotificationService` from `NotificationsModule`
+  - Follow the notification payload structure defined in `NotificationPayload` interface
+  - Add notification type to `DirectChatNotificationData` or create new notification data interface
+  - Consider notification preferences and mute functionality
+  - Document notification behavior in feature documentation
+- Examples of features that might need notifications:
+  - New messages in chats
+  - Event invitations
+  - Business offers
+  - Job applications
+  - Comments/reactions on posts
+
 # Firebase Persistence Guidelines
 
 ## Data Conversion Rules

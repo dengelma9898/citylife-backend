@@ -18,9 +18,10 @@ import {
   where,
   runTransaction,
 } from 'firebase/firestore';
-import { UserProfile } from './interfaces/user-profile.interface';
+import { UserProfile, FcmToken } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
+import { RegisterFcmTokenDto } from './dto/register-fcm-token.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { UserType } from './enums/user-type.enum';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
@@ -693,6 +694,77 @@ export class UsersService {
       return userProfile.blockedUserIds || [];
     } catch (error) {
       this.logger.error(`Error getting blocked users for user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  public async registerFcmToken(userId: string, dto: RegisterFcmTokenDto): Promise<void> {
+    try {
+      this.logger.debug(`Registering FCM token for user ${userId}, device ${dto.deviceId}`);
+      const userProfile = await this.getUserProfile(userId);
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found');
+      }
+      const existingTokens = userProfile.fcmTokens || [];
+      const existingTokenIndex = existingTokens.findIndex(token => token.deviceId === dto.deviceId);
+      const now = new Date().toISOString();
+      let updatedTokens: FcmToken[];
+      if (existingTokenIndex >= 0) {
+        updatedTokens = existingTokens.map((token, index) =>
+          index === existingTokenIndex
+            ? {
+                ...token,
+                token: dto.token,
+                platform: dto.platform,
+                lastUsedAt: now,
+              }
+            : token,
+        );
+      } else {
+        updatedTokens = [
+          ...existingTokens,
+          {
+            token: dto.token,
+            deviceId: dto.deviceId,
+            platform: dto.platform,
+            createdAt: now,
+            lastUsedAt: now,
+          },
+        ];
+      }
+      await this.update(userId, { fcmTokens: updatedTokens });
+    } catch (error) {
+      this.logger.error(`Error registering FCM token for user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  public async removeFcmToken(userId: string, deviceId: string): Promise<void> {
+    try {
+      this.logger.debug(`Removing FCM token for user ${userId}, device ${deviceId}`);
+      const userProfile = await this.getUserProfile(userId);
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found');
+      }
+      const existingTokens = userProfile.fcmTokens || [];
+      const updatedTokens = existingTokens.filter(token => token.deviceId !== deviceId);
+      await this.update(userId, { fcmTokens: updatedTokens });
+    } catch (error) {
+      this.logger.error(`Error removing FCM token for user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  public async getFcmTokens(userId: string): Promise<FcmToken[]> {
+    try {
+      this.logger.debug(`Getting FCM tokens for user ${userId}`);
+      const userProfile = await this.getUserProfile(userId);
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found');
+      }
+      return userProfile.fcmTokens || [];
+    } catch (error) {
+      this.logger.error(`Error getting FCM tokens for user ${userId}: ${error.message}`);
       throw error;
     }
   }

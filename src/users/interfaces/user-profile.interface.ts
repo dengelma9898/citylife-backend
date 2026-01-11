@@ -1,6 +1,18 @@
 import { UserType } from '../enums/user-type.enum';
 import { BusinessHistory } from './business-history.interface';
 
+export interface FcmToken {
+  token: string;
+  deviceId: string;
+  platform: 'ios' | 'android' | 'web';
+  createdAt: string;
+  lastUsedAt: string;
+}
+
+export interface NotificationPreferences {
+  directMessages: boolean;
+}
+
 export interface UserProfile {
   email: string;
   userType: UserType;
@@ -22,6 +34,8 @@ export interface UserProfile {
   isBlocked?: boolean;
   blockedAt?: string;
   blockReason?: string;
+  fcmTokens?: FcmToken[];
+  notificationPreferences?: NotificationPreferences;
   createdAt?: string;
   updatedAt?: string;
 }

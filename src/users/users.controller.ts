@@ -14,6 +14,9 @@ import {
   BadRequestException,
   UnauthorizedException,
   UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserProfile } from './interfaces/user-profile.interface';
@@ -23,13 +26,15 @@ import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { BlockUserDto } from './dto/block-user.dto';
 import { BlockChatUserDto } from './dto/block-chat-user.dto';
+import { RegisterFcmTokenDto } from './dto/register-fcm-token.dto';
 import { UserType } from './enums/user-type.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
-import { ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from '../core/decorators/roles.decorator';
 import { RolesGuard } from '../core/guards/roles.guard';
+import { AuthGuard } from '../core/guards/auth.guard';
 
 @Controller('users')
 export class UsersController {
@@ -433,5 +438,80 @@ export class UsersController {
   public async getBlockedUsers(@Param('id') userId: string): Promise<string[]> {
     this.logger.log(`GET /users/${userId}/blocked-users`);
     return this.usersService.getBlockedUsers(userId);
+  }
+
+  @Post(':id/fcm-token')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Register or update FCM token for push notifications' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID des Users',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'FCM token successfully registered',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - User ID does not match authenticated user',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  public async registerFcmToken(
+    @Request() req: any,
+    @Param('id') userId: string,
+    @Body() dto: RegisterFcmTokenDto,
+  ): Promise<void> {
+    this.logger.log(`POST /users/${userId}/fcm-token`);
+    const authenticatedUserId = req.user.uid;
+    if (authenticatedUserId !== userId) {
+      throw new UnauthorizedException('User ID does not match authenticated user');
+    }
+    return this.usersService.registerFcmToken(userId, dto);
+  }
+
+  @Delete(':id/fcm-token/:deviceId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Remove FCM token for a specific device' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID des Users',
+  })
+  @ApiParam({
+    name: 'deviceId',
+    description: 'ID des Geräts',
+  })
+  @ApiResponse({
+    status: 204,
+    description: 'FCM token successfully removed',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - User ID does not match authenticated user',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  public async removeFcmToken(
+    @Request() req: any,
+    @Param('id') userId: string,
+    @Param('deviceId') deviceId: string,
+  ): Promise<void> {
+    this.logger.log(`DELETE /users/${userId}/fcm-token/${deviceId}`);
+    const authenticatedUserId = req.user.uid;
+    if (authenticatedUserId !== userId) {
+      throw new UnauthorizedException('User ID does not match authenticated user');
+    }
+    return this.usersService.removeFcmToken(userId, deviceId);
   }
 }
