@@ -4,6 +4,7 @@ import { DirectChatRepository } from '../../domain/repositories/direct-chat.repo
 import { DirectMessageRepository } from '../../domain/repositories/direct-message.repository';
 import { DirectChat } from '../../domain/entities/direct-chat.entity';
 import { UsersService } from '../../../users/users.service';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 
 describe('DirectChatsService', () => {
@@ -11,6 +12,7 @@ describe('DirectChatsService', () => {
   let directChatRepository: jest.Mocked<DirectChatRepository>;
   let directMessageRepository: jest.Mocked<DirectMessageRepository>;
   let usersService: jest.Mocked<UsersService>;
+  let notificationService: jest.Mocked<NotificationService>;
 
   const mockDirectChatRepository = {
     findById: jest.fn(),
@@ -35,6 +37,11 @@ describe('DirectChatsService', () => {
     getUserProfile: jest.fn(),
     getUserProfilesByIds: jest.fn(),
     update: jest.fn(),
+  };
+
+  const mockNotificationService = {
+    sendToUser: jest.fn(),
+    sendToUsers: jest.fn(),
   };
 
   const mockUserProfile = {
@@ -83,6 +90,10 @@ describe('DirectChatsService', () => {
           provide: UsersService,
           useValue: mockUsersService,
         },
+        {
+          provide: NotificationService,
+          useValue: mockNotificationService,
+        },
       ],
     }).compile();
 
@@ -90,6 +101,7 @@ describe('DirectChatsService', () => {
     directChatRepository = module.get(DirectChatRepository);
     directMessageRepository = module.get(DirectMessageRepository);
     usersService = module.get(UsersService);
+    notificationService = module.get(NotificationService);
   });
 
   afterEach(() => {
@@ -97,12 +109,22 @@ describe('DirectChatsService', () => {
   });
 
   describe('createChat', () => {
-    it('should create a new direct chat', async () => {
+    it('should create a new direct chat and send notification when preference is enabled', async () => {
+      const senderProfile = { ...mockUserProfile, name: 'Sender User' };
+      const invitedProfile = {
+        ...mockUserProfile,
+        notificationPreferences: { directChatRequests: true },
+      };
       mockUsersService.getUserProfile
-        .mockResolvedValueOnce(mockUserProfile)
-        .mockResolvedValueOnce(mockUserProfile);
+        .mockResolvedValueOnce(senderProfile) // First call: get sender profile in createChat
+        .mockResolvedValueOnce(invitedProfile) // Second call: get invited profile for block check in createChat
+        .mockResolvedValueOnce(senderProfile) // Third call: get sender profile in updateUserDirectChatIds
+        .mockResolvedValueOnce(invitedProfile) // Fourth call: get invited profile in updateUserDirectChatIds
+        .mockResolvedValueOnce(invitedProfile); // Fifth call: get invited profile for notification check
       mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
       mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
+      mockUsersService.update.mockResolvedValue(mockUserProfile);
+      mockNotificationService.sendToUser.mockResolvedValue(undefined);
 
       const result = await service.createChat('user-1', { invitedUserId: 'user-2' });
 
@@ -113,6 +135,117 @@ describe('DirectChatsService', () => {
       expect(result.invitedConfirmed).toBe(false);
       expect(result.status).toBe('pending');
       expect(mockDirectChatRepository.save).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user-2', {
+        title: 'Neue Chat-Anfrage',
+        body: 'Sender User möchte mit dir chatten',
+        data: {
+          type: 'DIRECT_CHAT_REQUEST',
+          chatId: result.id,
+          senderId: 'user-1',
+          senderName: 'Sender User',
+        },
+      });
+    });
+
+    it('should create a new direct chat but not send notification when preference is disabled', async () => {
+      const senderProfile = { ...mockUserProfile, name: 'Sender User' };
+      const invitedProfile = {
+        ...mockUserProfile,
+        notificationPreferences: { directChatRequests: false },
+      };
+      mockUsersService.getUserProfile
+        .mockResolvedValueOnce(senderProfile) // First call: get sender profile in createChat
+        .mockResolvedValueOnce(invitedProfile) // Second call: get invited profile for block check in createChat
+        .mockResolvedValueOnce(senderProfile) // Third call: get sender profile in updateUserDirectChatIds
+        .mockResolvedValueOnce(invitedProfile) // Fourth call: get invited profile in updateUserDirectChatIds
+        .mockResolvedValueOnce(invitedProfile); // Fifth call: get invited profile for notification check
+      mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
+      mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
+      mockUsersService.update.mockResolvedValue(mockUserProfile);
+
+      const result = await service.createChat('user-1', { invitedUserId: 'user-2' });
+
+      expect(result).toBeDefined();
+      expect(mockDirectChatRepository.save).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should create a new direct chat but not send notification when preference is undefined (default: false)', async () => {
+      const senderProfile = { ...mockUserProfile, name: 'Sender User' };
+      const invitedProfile = {
+        ...mockUserProfile,
+        notificationPreferences: {},
+      };
+      mockUsersService.getUserProfile
+        .mockResolvedValueOnce(senderProfile) // First call: get sender profile in createChat
+        .mockResolvedValueOnce(invitedProfile) // Second call: get invited profile for block check in createChat
+        .mockResolvedValueOnce(senderProfile) // Third call: get sender profile in updateUserDirectChatIds
+        .mockResolvedValueOnce(invitedProfile) // Fourth call: get invited profile in updateUserDirectChatIds
+        .mockResolvedValueOnce(invitedProfile); // Fifth call: get invited profile for notification check
+      mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
+      mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
+      mockUsersService.update.mockResolvedValue(mockUserProfile);
+
+      const result = await service.createChat('user-1', { invitedUserId: 'user-2' });
+
+      expect(result).toBeDefined();
+      expect(mockDirectChatRepository.save).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should create a new direct chat even if notification sending fails', async () => {
+      const senderProfile = { ...mockUserProfile, name: 'Sender User' };
+      const invitedProfile = {
+        ...mockUserProfile,
+        notificationPreferences: { directChatRequests: true },
+      };
+      mockUsersService.getUserProfile
+        .mockResolvedValueOnce(senderProfile) // First call: get sender profile in createChat
+        .mockResolvedValueOnce(invitedProfile) // Second call: get invited profile for block check in createChat
+        .mockResolvedValueOnce(senderProfile) // Third call: get sender profile in updateUserDirectChatIds
+        .mockResolvedValueOnce(invitedProfile) // Fourth call: get invited profile in updateUserDirectChatIds
+        .mockResolvedValueOnce(invitedProfile); // Fifth call: get invited profile for notification check
+      mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
+      mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
+      mockUsersService.update.mockResolvedValue(mockUserProfile);
+      mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification failed'));
+
+      const result = await service.createChat('user-1', { invitedUserId: 'user-2' });
+
+      expect(result).toBeDefined();
+      expect(mockDirectChatRepository.save).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).toHaveBeenCalled();
+    });
+
+    it('should use fallback name when sender name is not available', async () => {
+      const senderProfile = { ...mockUserProfile, name: undefined };
+      const invitedProfile = {
+        ...mockUserProfile,
+        notificationPreferences: { directChatRequests: true },
+      };
+      mockUsersService.getUserProfile
+        .mockResolvedValueOnce(senderProfile) // First call: get sender profile in createChat
+        .mockResolvedValueOnce(invitedProfile) // Second call: get invited profile for block check in createChat
+        .mockResolvedValueOnce(senderProfile) // Third call: get sender profile in updateUserDirectChatIds
+        .mockResolvedValueOnce(invitedProfile) // Fourth call: get invited profile in updateUserDirectChatIds
+        .mockResolvedValueOnce(invitedProfile); // Fifth call: get invited profile for notification check
+      mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
+      mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
+      mockUsersService.update.mockResolvedValue(mockUserProfile);
+      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+
+      const result = await service.createChat('user-1', { invitedUserId: 'user-2' });
+
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user-2', {
+        title: 'Neue Chat-Anfrage',
+        body: 'Jemand möchte mit dir chatten',
+        data: {
+          type: 'DIRECT_CHAT_REQUEST',
+          chatId: result.id,
+          senderId: 'user-1',
+          senderName: 'Jemand',
+        },
+      });
     });
 
     it('should throw BadRequestException when creating chat with yourself', async () => {

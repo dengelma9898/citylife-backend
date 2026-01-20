@@ -150,8 +150,8 @@ export class Entity {
   - `NEW_BUSINESS`: Sent when a new business becomes active (created with ACTIVE status or changed from PENDING to ACTIVE)
 - **Notification Preferences**:
   - Stored in `UserProfile.notificationPreferences` (Firebase Firestore `users` collection)
-  - Structure: `{ directMessages?: boolean, newBusinesses?: boolean }`
-  - Default: `true` if preference is undefined
+  - Structure: `{ directMessages?: boolean, newBusinesses?: boolean, directChatRequests?: boolean }`
+  - Default: `false` if preference is undefined (Notifications werden nur gesendet, wenn Präferenz explizit auf `true` gesetzt ist)
   - Update endpoint: `PATCH /users/:id/profile` with `notificationPreferences` in body
 - **Module Dependencies**:
   - `NotificationsModule` imports `UsersModule` with `forwardRef()` due to circular dependencies

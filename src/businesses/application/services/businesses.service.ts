@@ -223,7 +223,7 @@ export class BusinessesService {
         const newBusinessesEnabled =
           notificationPreferences?.newBusinesses !== undefined
             ? notificationPreferences.newBusinesses
-            : true;
+            : false;
         if (!newBusinessesEnabled) {
           this.logger.debug(`[NOTIFICATION] User ${id} has newBusinesses disabled`);
         }

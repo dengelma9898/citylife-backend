@@ -8,4 +8,8 @@ export class NotificationPreferencesDto {
   @IsBoolean()
   @IsOptional()
   public readonly newBusinesses?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  public readonly directChatRequests?: boolean;
 }

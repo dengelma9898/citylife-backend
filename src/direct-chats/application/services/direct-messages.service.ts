@@ -83,7 +83,7 @@ export class DirectMessagesService {
       const directMessagesEnabled =
         notificationPreferences?.directMessages !== undefined
           ? notificationPreferences.directMessages
-          : true;
+          : false;
       if (!directMessagesEnabled) {
         this.logger.debug(`Direct messages notifications disabled for user ${recipientId}`);
         return;
