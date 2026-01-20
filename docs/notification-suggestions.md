@@ -8,6 +8,7 @@ Dieses Dokument beschreibt vorgeschlagene Notification-Typen, die noch implement
 - `DIRECT_CHAT_MESSAGE`: Sent when a new message is received in a direct chat
 - `NEW_BUSINESS`: Sent when a new business becomes active
 - `DIRECT_CHAT_REQUEST`: Sent when a user receives a direct chat request
+- `CONTACT_REQUEST_RESPONSE`: Sent when an admin responds to a contact request
 
 ---
 
@@ -91,13 +92,15 @@ Notification wird gesendet, wenn ein Admin auf eine Contact Request antwortet.
 - Default: `true`
 
 **Implementierung:**
-- Service: `ContactService.addMessage()` oder ähnliche Methode
-- Notification Interface: `ContactRequestResponseNotificationData`
-- Module: `ContactModule` muss `NotificationsModule` importieren
+- ✅ Service: `ContactService.addAdminResponse()` und `ContactService.addMessage()`
+- ✅ Notification Interface: `ContactRequestResponseNotificationData`
+- ✅ Module: `ContactModule` importiert `NotificationsModule`
 
 **Besonderheiten:**
-- Nur senden, wenn Admin antwortet (`isAdminResponse: true`)
-- Nicht senden für eigene Nachrichten des Users
+- ✅ Nur senden, wenn Admin antwortet (`isAdminResponse: true`)
+- ✅ Nicht senden für eigene Nachrichten des Users
+- ✅ Notification wird nur gesendet, wenn `responded` Status von `false` zu `true` wechselt
+- ✅ Default: `true` (wenn `undefined`)
 
 ---
 
@@ -381,7 +384,7 @@ Notification wird gesendet als Erinnerung vor einem favorisierten Event.
 
 ### Phase 1 (Sofort umsetzbar)
 1. ✅ **DIRECT_CHAT_REQUEST** - Hoher Nutzen, einfache Implementierung
-2. ✅ **NEW_EVENT** - Analog zu NEW_BUSINESS, konsistentes Pattern
+2. ⏳ **NEW_EVENT** - Analog zu NEW_BUSINESS, konsistentes Pattern
 3. ✅ **CONTACT_REQUEST_RESPONSE** - Wichtig für Support-Erlebnis
 
 ### Phase 2 (Mittelfristig)
@@ -455,7 +458,7 @@ export interface NotificationPreferences {
   directMessages?: boolean;           // ✅ Implementiert
   newBusinesses?: boolean;            // ✅ Implementiert
   directChatRequests?: boolean;       // ✅ Implementiert
-  contactRequestResponses?: boolean;   // 🔴 Phase 1
+  contactRequestResponses?: boolean;   // ✅ Implementiert
   newEvents?: boolean;                // 🔴 Phase 1
   eventReminders?: boolean;           // 🟡 Phase 2
   eventUpdates?: boolean;             // 🟡 Phase 2

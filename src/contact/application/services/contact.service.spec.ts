@@ -8,16 +8,19 @@ import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { UserType } from '../../../users/enums/user-type.enum';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 
 describe('ContactService', () => {
   let service: ContactService;
   let usersService: UsersService;
   let contactRequestRepository: any;
+  let notificationService: NotificationService;
 
   const mockUsersService = {
     getById: jest.fn(),
     update: jest.fn(),
     updateBusinessUser: jest.fn(),
+    getUserProfile: jest.fn(),
   };
 
   const mockContactRequestRepository = {
@@ -28,6 +31,11 @@ describe('ContactService', () => {
     delete: jest.fn(),
     findByUserId: jest.fn(),
     findByBusinessId: jest.fn(),
+  };
+
+  const mockNotificationService = {
+    sendToUser: jest.fn(),
+    sendToUsers: jest.fn(),
   };
 
   const mockConfigService = {
@@ -53,6 +61,10 @@ describe('ContactService', () => {
           useValue: mockContactRequestRepository,
         },
         {
+          provide: NotificationService,
+          useValue: mockNotificationService,
+        },
+        {
           provide: ConfigService,
           useValue: mockConfigService,
         },
@@ -66,6 +78,7 @@ describe('ContactService', () => {
     service = module.get<ContactService>(ContactService);
     usersService = module.get<UsersService>(UsersService);
     contactRequestRepository = module.get(CONTACT_REQUEST_REPOSITORY);
+    notificationService = module.get<NotificationService>(NotificationService);
   });
 
   afterEach(() => {
@@ -220,6 +233,312 @@ describe('ContactService', () => {
       await expect(
         service.addMessage(mockRequestId, mockUserId, { message: mockMessage }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('addAdminResponse', () => {
+    const mockRequestId = 'request123';
+    const mockAdminId = 'admin123';
+    const mockUserId = 'user123';
+    const mockContactRequest = ContactRequest.create({
+      type: ContactRequestType.GENERAL,
+      userId: mockUserId,
+      messages: [
+        ContactMessage.create({
+          message: 'User message',
+          userId: mockUserId,
+          isAdminResponse: false,
+        }),
+      ],
+    });
+
+    const mockUserProfile = {
+      notificationPreferences: {
+        contactRequestResponses: true,
+      },
+    };
+
+    it('should add admin response and send notification when preference is enabled', async () => {
+      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      const updatedRequest = ContactRequest.fromProps({
+        ...mockContactRequest.toJSON(),
+        responded: true,
+        messages: [
+          ...mockContactRequest.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
+      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.responded).toBe(true);
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(mockUserId, {
+        title: 'Antwort auf deine Anfrage',
+        body: 'Du hast eine Antwort auf deine Allgemeine Anfrage erhalten',
+        data: {
+          type: 'CONTACT_REQUEST_RESPONSE',
+          contactRequestId: result.id,
+          requestType: ContactRequestType.GENERAL.toString(),
+        },
+      });
+    });
+
+    it('should add admin response but not send notification when preference is disabled', async () => {
+      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      const updatedRequest = ContactRequest.fromProps({
+        ...mockContactRequest.toJSON(),
+        responded: true,
+        messages: [
+          ...mockContactRequest.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockUsersService.getUserProfile.mockResolvedValue({
+        notificationPreferences: {
+          contactRequestResponses: false,
+        },
+      });
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.responded).toBe(true);
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should add admin response and send notification when preference is undefined (default: true)', async () => {
+      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      const updatedRequest = ContactRequest.fromProps({
+        ...mockContactRequest.toJSON(),
+        responded: true,
+        messages: [
+          ...mockContactRequest.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockUsersService.getUserProfile.mockResolvedValue({
+        notificationPreferences: {},
+      });
+      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.responded).toBe(true);
+      expect(mockNotificationService.sendToUser).toHaveBeenCalled();
+    });
+
+    it('should not send notification if contact request was already responded', async () => {
+      const alreadyRespondedRequest = ContactRequest.fromProps({
+        ...mockContactRequest.toJSON(),
+        responded: true,
+      });
+      mockContactRequestRepository.findById.mockResolvedValue(alreadyRespondedRequest);
+      const updatedRequest = ContactRequest.fromProps({
+        ...alreadyRespondedRequest.toJSON(),
+        messages: [
+          ...alreadyRespondedRequest.messages,
+          ContactMessage.create({
+            message: 'Second admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Second admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should not send notification if contact request has no userId', async () => {
+      const requestWithoutUserId = ContactRequest.create({
+        type: ContactRequestType.GENERAL,
+        messages: [
+          ContactMessage.create({
+            message: 'User message',
+            userId: undefined,
+            isAdminResponse: false,
+          }),
+        ],
+      });
+      mockContactRequestRepository.findById.mockResolvedValue(requestWithoutUserId);
+      const updatedRequest = ContactRequest.fromProps({
+        ...requestWithoutUserId.toJSON(),
+        responded: true,
+        messages: [
+          ...requestWithoutUserId.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should handle notification sending errors gracefully', async () => {
+      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      const updatedRequest = ContactRequest.fromProps({
+        ...mockContactRequest.toJSON(),
+        responded: true,
+        messages: [
+          ...mockContactRequest.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
+      mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification error'));
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.responded).toBe(true);
+    });
+  });
+
+  describe('addMessage with admin response', () => {
+    const mockRequestId = 'request123';
+    const mockAdminId = 'admin123';
+    const mockUserId = 'user123';
+    const mockContactRequest = ContactRequest.create({
+      type: ContactRequestType.FEEDBACK,
+      userId: mockUserId,
+      messages: [
+        ContactMessage.create({
+          message: 'User message',
+          userId: mockUserId,
+          isAdminResponse: false,
+        }),
+      ],
+    });
+
+    const mockAdminUser = {
+      id: mockAdminId,
+      userType: UserType.SUPER_ADMIN,
+      contactRequestIds: [mockRequestId],
+    };
+
+    const mockUserProfile = {
+      notificationPreferences: {
+        contactRequestResponses: true,
+      },
+    };
+
+    it('should add admin message and send notification when admin responds', async () => {
+      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      mockUsersService.getById.mockResolvedValue(mockAdminUser);
+      const updatedRequest = ContactRequest.fromProps({
+        ...mockContactRequest.toJSON(),
+        responded: true,
+        messages: [
+          ...mockContactRequest.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
+      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+
+      const result = await service.addMessage(mockRequestId, mockAdminId, {
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.responded).toBe(true);
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(mockUserId, {
+        title: 'Antwort auf deine Anfrage',
+        body: 'Du hast eine Antwort auf deine Feedback Anfrage erhalten',
+        data: {
+          type: 'CONTACT_REQUEST_RESPONSE',
+          contactRequestId: result.id,
+          requestType: ContactRequestType.FEEDBACK.toString(),
+        },
+      });
+    });
+
+    it('should add user message but not send notification when user responds', async () => {
+      const mockRegularUser = {
+        id: mockUserId,
+        userType: UserType.USER,
+        contactRequestIds: [mockRequestId],
+      };
+      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      mockUsersService.getById.mockResolvedValue(mockRegularUser);
+      const updatedRequest = ContactRequest.fromProps({
+        ...mockContactRequest.toJSON(),
+        responded: false,
+        messages: [
+          ...mockContactRequest.messages,
+          ContactMessage.create({
+            message: 'User follow-up',
+            userId: mockUserId,
+            isAdminResponse: false,
+          }),
+        ],
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+
+      const result = await service.addMessage(mockRequestId, mockUserId, {
+        message: 'User follow-up',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.responded).toBe(false);
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
   });
 });

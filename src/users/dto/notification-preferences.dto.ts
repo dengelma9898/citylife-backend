@@ -12,4 +12,8 @@ export class NotificationPreferencesDto {
   @IsBoolean()
   @IsOptional()
   public readonly directChatRequests?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  public readonly contactRequestResponses?: boolean;
 }

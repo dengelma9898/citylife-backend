@@ -13,6 +13,7 @@ export interface NotificationPreferences {
   directMessages?: boolean;
   newBusinesses?: boolean;
   directChatRequests?: boolean;
+  contactRequestResponses?: boolean;
 }
 
 export interface UserProfile {
