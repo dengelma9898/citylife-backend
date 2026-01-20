@@ -14,15 +14,19 @@ export class FcmNotificationService extends NotificationService {
 
   async sendToUser(userId: string, payload: NotificationPayload): Promise<void> {
     try {
-      this.logger.debug(`Sending notification to user ${userId}`);
+      this.logger.log(`[FCM] Sending notification to user ${userId}`);
+      this.logger.debug(`[FCM] Payload: ${JSON.stringify(payload)}`);
       const fcmTokens = await this.usersService.getFcmTokens(userId);
       if (!fcmTokens || fcmTokens.length === 0) {
-        this.logger.debug(`No FCM tokens found for user ${userId}`);
+        this.logger.warn(`[FCM] No FCM tokens found for user ${userId}`);
         return;
       }
+      this.logger.debug(`[FCM] Found ${fcmTokens.length} FCM tokens for user ${userId}`);
       const invalidTokens: string[] = [];
+      let successCount = 0;
       const sendPromises = fcmTokens.map(async token => {
         try {
+          this.logger.debug(`[FCM] Sending to device ${token.deviceId} (token: ${token.token.substring(0, 20)}...)`);
           await admin.messaging().send({
             token: token.token,
             notification: {
@@ -46,10 +50,12 @@ export class FcmNotificationService extends NotificationService {
               },
             },
           });
-          this.logger.debug(`Notification sent successfully to device ${token.deviceId}`);
+          successCount++;
+          this.logger.debug(`[FCM] Notification sent successfully to device ${token.deviceId}`);
         } catch (error: any) {
           this.logger.error(
-            `Error sending notification to device ${token.deviceId}: ${error.message}`,
+            `[FCM] Error sending notification to device ${token.deviceId}: ${error.message}`,
+            error.stack,
           );
           if (
             error.code === 'messaging/invalid-registration-token' ||
@@ -60,18 +66,25 @@ export class FcmNotificationService extends NotificationService {
         }
       });
       await Promise.all(sendPromises);
+      this.logger.log(
+        `[FCM] Completed sending to user ${userId}: ${successCount} successful, ${invalidTokens.length} invalid tokens`,
+      );
       if (invalidTokens.length > 0) {
-        this.logger.debug(`Removing ${invalidTokens.length} invalid tokens for user ${userId}`);
+        this.logger.debug(`[FCM] Removing ${invalidTokens.length} invalid tokens for user ${userId}`);
         for (const deviceId of invalidTokens) {
           try {
             await this.usersService.removeFcmToken(userId, deviceId);
+            this.logger.debug(`[FCM] Removed invalid token ${deviceId} for user ${userId}`);
           } catch (error: any) {
-            this.logger.error(`Error removing invalid token ${deviceId}: ${error.message}`);
+            this.logger.error(`[FCM] Error removing invalid token ${deviceId}: ${error.message}`);
           }
         }
       }
     } catch (error: any) {
-      this.logger.error(`Error sending notification to user ${userId}: ${error.message}`);
+      this.logger.error(
+        `[FCM] Error sending notification to user ${userId}: ${error.message}`,
+        error.stack,
+      );
     }
   }
 

@@ -1,5 +1,17 @@
-import { IsString, IsEmail, IsEnum, IsOptional, IsArray, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsArray,
+  IsInt,
+  Min,
+  Max,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 import { UserType } from '../enums/user-type.enum';
+import { NotificationPreferencesDto } from './notification-preferences.dto';
 
 export class UserProfileDto {
   @IsEmail()
@@ -41,4 +53,9 @@ export class UserProfileDto {
   @IsString()
   @IsOptional()
   public readonly customerId?: string;
+
+  @ValidateNested()
+  @Type(() => NotificationPreferencesDto)
+  @IsOptional()
+  public readonly notificationPreferences?: NotificationPreferencesDto;
 }

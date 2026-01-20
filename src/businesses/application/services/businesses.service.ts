@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, Logger, NotFoundException, forwardRef } from '@nestjs/common';
 import {
   Business,
   BusinessAddress,
@@ -16,6 +16,8 @@ import { BusinessCategoriesService } from '../../../business-categories/applicat
 import { KeywordsService } from '../../../keywords/keywords.service';
 import { EventsService } from '../../../events/events.service';
 import { DateTimeUtils } from '../../../utils/date-time.utils';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
+import { UsersService } from '../../../users/users.service';
 
 @Injectable()
 export class BusinessesService {
@@ -27,6 +29,9 @@ export class BusinessesService {
     private readonly businessCategoriesService: BusinessCategoriesService,
     private readonly keywordsService: KeywordsService,
     private readonly eventsService: EventsService,
+    private readonly notificationService: NotificationService,
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService,
   ) {}
 
   public async getAll(): Promise<Business[]> {
@@ -41,6 +46,8 @@ export class BusinessesService {
 
   public async create(data: CreateBusinessDto): Promise<Business> {
     this.logger.debug('Creating new business');
+    const initialStatus = data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING;
+    this.logger.debug(`Initial status will be: ${initialStatus} (isAdmin: ${data.isAdmin})`);
     const business = Business.create({
       name: data.name,
       contact: BusinessContact.create(data.contact),
@@ -53,20 +60,42 @@ export class BusinessesService {
       benefit: data.benefit,
       hasAccount: data.hasAccount,
       isPromoted: data.isPromoted || false,
-      status: data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING,
+      status: initialStatus,
       logoUrl: '',
     });
 
-    return this.businessRepository.create(business);
+    const createdBusiness = await this.businessRepository.create(business);
+    this.logger.debug(`Created business ${createdBusiness.id} with status ${createdBusiness.status}`);
+    if (createdBusiness.status === BusinessStatus.ACTIVE) {
+      this.logger.log(`Business ${createdBusiness.id} created with ACTIVE status. Sending notification.`);
+      await this.sendNewBusinessNotification(createdBusiness);
+    } else {
+      this.logger.debug(`Business ${createdBusiness.id} created with status ${createdBusiness.status}. No notification sent.`);
+    }
+    return createdBusiness;
   }
 
   public async update(id: string, data: Partial<Business>): Promise<Business> {
-    this.logger.debug(`Updating business ${id}`);
+    this.logger.debug(`Updating business ${id} with data: ${JSON.stringify(data)}`);
     const existingBusiness = await this.businessRepository.findById(id);
     if (!existingBusiness) {
+      this.logger.warn(`Business ${id} not found`);
       throw new NotFoundException('Business not found');
     }
+    this.logger.debug(
+      `Existing business ${id} status: ${existingBusiness.status}, new status: ${data.status}`,
+    );
+    const previousStatus = existingBusiness.status;
+    const newStatus = data.status;
+    const isStatusChangeToActive =
+      previousStatus === BusinessStatus.PENDING && newStatus === BusinessStatus.ACTIVE;
+    if (isStatusChangeToActive) {
+      this.logger.log(
+        `Status change detected: PENDING -> ACTIVE for business ${id}. Will send notification after update.`,
+      );
+    }
     if (data.benefit !== undefined && data.benefit !== existingBusiness.benefit) {
+      this.logger.debug(`Updating benefit for business ${id}`);
       const updatedPreviousBenefits = [
         ...(existingBusiness.previousBenefits || []),
         existingBusiness.benefit,
@@ -76,10 +105,20 @@ export class BusinessesService {
         ...data,
         previousBenefits: limitedPreviousBenefits,
       });
-      return this.businessRepository.update(id, updatedBusiness);
+      const savedBusiness = await this.businessRepository.update(id, updatedBusiness);
+      if (isStatusChangeToActive) {
+        this.logger.log(`Sending notification for business ${id} after status change`);
+        await this.sendNewBusinessNotification(savedBusiness);
+      }
+      return savedBusiness;
     }
     const updatedBusiness = existingBusiness.update(data);
-    return this.businessRepository.update(id, updatedBusiness);
+    const savedBusiness = await this.businessRepository.update(id, updatedBusiness);
+    if (isStatusChangeToActive) {
+      this.logger.log(`Sending notification for business ${id} after status change`);
+      await this.sendNewBusinessNotification(savedBusiness);
+    }
+    return savedBusiness;
   }
 
   public async delete(id: string): Promise<void> {
@@ -91,11 +130,21 @@ export class BusinessesService {
     this.logger.debug(`Updating business status ${id} to ${status}`);
     const existingBusiness = await this.businessRepository.findById(id);
     if (!existingBusiness) {
+      this.logger.warn(`Business ${id} not found`);
       throw new NotFoundException('Business not found');
     }
 
+    const previousStatus = existingBusiness.status;
+    this.logger.debug(`Previous status: ${previousStatus}, new status: ${status}`);
     const updatedBusiness = existingBusiness.updateStatus(status);
-    return this.businessRepository.update(id, updatedBusiness);
+    const savedBusiness = await this.businessRepository.update(id, updatedBusiness);
+    if (previousStatus === BusinessStatus.PENDING && status === BusinessStatus.ACTIVE) {
+      this.logger.log(`Status change detected: PENDING -> ACTIVE for business ${id}. Sending notification.`);
+      await this.sendNewBusinessNotification(savedBusiness);
+    } else {
+      this.logger.debug(`Status change from ${previousStatus} to ${status} does not trigger notification.`);
+    }
+    return savedBusiness;
   }
 
   public async addCustomerScan(
@@ -151,5 +200,63 @@ export class BusinessesService {
 
     const updatedBusiness = existingBusiness.update({ hasAccount });
     return this.businessRepository.update(id, updatedBusiness);
+  }
+
+  private async sendNewBusinessNotification(business: Business): Promise<void> {
+    try {
+      this.logger.log(`[NOTIFICATION] Starting notification process for business ${business.id}`);
+      this.logger.debug(`[NOTIFICATION] Business name: ${business.name}`);
+      const allUsers = await this.usersService.getAllUserProfilesWithIds();
+      this.logger.debug(`[NOTIFICATION] Found ${allUsers.length} total users`);
+      const usersToNotify = allUsers.filter(({ id, profile }) => {
+        const notificationPreferences = profile.notificationPreferences;
+        const newBusinessesEnabled =
+          notificationPreferences?.newBusinesses !== undefined
+            ? notificationPreferences.newBusinesses
+            : true;
+        if (!newBusinessesEnabled) {
+          this.logger.debug(
+            `[NOTIFICATION] User ${id} has newBusinesses disabled`,
+          );
+        }
+        return newBusinessesEnabled;
+      });
+      this.logger.log(
+        `[NOTIFICATION] Filtered to ${usersToNotify.length} users with newBusinesses enabled`,
+      );
+      if (usersToNotify.length === 0) {
+        this.logger.warn(`[NOTIFICATION] No users to notify for business ${business.id}`);
+        return;
+      }
+      const sendPromises = usersToNotify.map(async ({ id, profile }) => {
+        try {
+          this.logger.debug(`[NOTIFICATION] Sending to user ${id}`);
+          await this.notificationService.sendToUser(id, {
+            title: 'Neuer Partner verfügbar',
+            body: `${business.name} ist jetzt verfügbar`,
+            data: {
+              type: 'NEW_BUSINESS',
+              businessId: business.id,
+              businessName: business.name,
+            },
+          });
+          this.logger.debug(`[NOTIFICATION] Successfully sent to user ${id}`);
+        } catch (error: any) {
+          this.logger.error(
+            `[NOTIFICATION] Error sending notification to user ${id}: ${error.message}`,
+            error.stack,
+          );
+        }
+      });
+      await Promise.all(sendPromises);
+      this.logger.log(
+        `[NOTIFICATION] Completed notification process for business ${business.id}. Sent to ${usersToNotify.length} users.`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `[NOTIFICATION] Error sending new business notification for business ${business.id}: ${error.message}`,
+        error.stack,
+      );
+    }
   }
 }

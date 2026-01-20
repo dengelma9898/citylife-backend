@@ -63,6 +63,7 @@ export class BusinessesController {
     @Body() patchData: Partial<Business>,
   ): Promise<Business> {
     this.logger.log(`PATCH /businesses/${id}`);
+    this.logger.debug(`PATCH data: ${JSON.stringify(patchData)}`);
     return this.businessesService.update(id, patchData);
   }
 

@@ -70,6 +70,21 @@ export class UsersService {
     }
   }
 
+  public async getAllUserProfilesWithIds(): Promise<{ id: string; profile: UserProfile }[]> {
+    try {
+      this.logger.debug('Getting all users with IDs');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.usersCollection).get();
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        profile: doc.data() as UserProfile,
+      }));
+    } catch (error) {
+      this.logger.error(`Error getting all users with IDs: ${error.message}`);
+      throw error;
+    }
+  }
+
   public async getBusinessUsersNeedsReview(): Promise<
     (BusinessUser & { businessNames: string[] })[]
   > {

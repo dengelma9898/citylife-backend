@@ -10,7 +10,8 @@ export interface FcmToken {
 }
 
 export interface NotificationPreferences {
-  directMessages: boolean;
+  directMessages?: boolean;
+  newBusinesses?: boolean;
 }
 
 export interface UserProfile {
