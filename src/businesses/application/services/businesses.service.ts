@@ -65,12 +65,18 @@ export class BusinessesService {
     });
 
     const createdBusiness = await this.businessRepository.create(business);
-    this.logger.debug(`Created business ${createdBusiness.id} with status ${createdBusiness.status}`);
+    this.logger.debug(
+      `Created business ${createdBusiness.id} with status ${createdBusiness.status}`,
+    );
     if (createdBusiness.status === BusinessStatus.ACTIVE) {
-      this.logger.log(`Business ${createdBusiness.id} created with ACTIVE status. Sending notification.`);
+      this.logger.log(
+        `Business ${createdBusiness.id} created with ACTIVE status. Sending notification.`,
+      );
       await this.sendNewBusinessNotification(createdBusiness);
     } else {
-      this.logger.debug(`Business ${createdBusiness.id} created with status ${createdBusiness.status}. No notification sent.`);
+      this.logger.debug(
+        `Business ${createdBusiness.id} created with status ${createdBusiness.status}. No notification sent.`,
+      );
     }
     return createdBusiness;
   }
@@ -139,10 +145,14 @@ export class BusinessesService {
     const updatedBusiness = existingBusiness.updateStatus(status);
     const savedBusiness = await this.businessRepository.update(id, updatedBusiness);
     if (previousStatus === BusinessStatus.PENDING && status === BusinessStatus.ACTIVE) {
-      this.logger.log(`Status change detected: PENDING -> ACTIVE for business ${id}. Sending notification.`);
+      this.logger.log(
+        `Status change detected: PENDING -> ACTIVE for business ${id}. Sending notification.`,
+      );
       await this.sendNewBusinessNotification(savedBusiness);
     } else {
-      this.logger.debug(`Status change from ${previousStatus} to ${status} does not trigger notification.`);
+      this.logger.debug(
+        `Status change from ${previousStatus} to ${status} does not trigger notification.`,
+      );
     }
     return savedBusiness;
   }
@@ -215,9 +225,7 @@ export class BusinessesService {
             ? notificationPreferences.newBusinesses
             : true;
         if (!newBusinessesEnabled) {
-          this.logger.debug(
-            `[NOTIFICATION] User ${id} has newBusinesses disabled`,
-          );
+          this.logger.debug(`[NOTIFICATION] User ${id} has newBusinesses disabled`);
         }
         return newBusinessesEnabled;
       });

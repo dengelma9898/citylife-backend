@@ -26,7 +26,9 @@ export class FcmNotificationService extends NotificationService {
       let successCount = 0;
       const sendPromises = fcmTokens.map(async token => {
         try {
-          this.logger.debug(`[FCM] Sending to device ${token.deviceId} (token: ${token.token.substring(0, 20)}...)`);
+          this.logger.debug(
+            `[FCM] Sending to device ${token.deviceId} (token: ${token.token.substring(0, 20)}...)`,
+          );
           await admin.messaging().send({
             token: token.token,
             notification: {
@@ -70,7 +72,9 @@ export class FcmNotificationService extends NotificationService {
         `[FCM] Completed sending to user ${userId}: ${successCount} successful, ${invalidTokens.length} invalid tokens`,
       );
       if (invalidTokens.length > 0) {
-        this.logger.debug(`[FCM] Removing ${invalidTokens.length} invalid tokens for user ${userId}`);
+        this.logger.debug(
+          `[FCM] Removing ${invalidTokens.length} invalid tokens for user ${userId}`,
+        );
         for (const deviceId of invalidTokens) {
           try {
             await this.usersService.removeFcmToken(userId, deviceId);
