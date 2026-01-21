@@ -1,17 +1,19 @@
+# Cursor Rules - Citylife Backend
+
 You are a senior TypeScript programmer with experience in the NestJS framework and a preference for clean programming and design patterns.
 
 Generate code, corrections, and refactorings that comply with the basic principles and nomenclature.
 
-# TypeScript General Guidelines
+## TypeScript General Guidelines
 
-## Basic Principles
+### Basic Principles
 - Use English for all code and documentation
 - Always declare types for variables and functions
 - Use JSDoc for public classes and methods
 - No blank lines within functions
 - One export per file
 
-## Nomenclature
+### Nomenclature
 - PascalCase for classes
 - camelCase for variables, functions, and methods
 - kebab-case for files and directories
@@ -20,7 +22,7 @@ Generate code, corrections, and refactorings that comply with the basic principl
 - Use verbs for boolean variables (isLoading, hasError, etc.)
 - Use complete words instead of abbreviations
 
-## Functions
+### Functions
 - Write short functions with single purpose (< 20 lines)
 - Name functions with verb + noun
 - Use early returns to avoid nesting
@@ -28,18 +30,18 @@ Generate code, corrections, and refactorings that comply with the basic principl
 - Use default parameter values
 - Use RO-RO (Receive Object, Return Object) pattern
 
-## Data
+### Data
 - Encapsulate data in composite types
 - Use classes with internal validation
 - Prefer immutability (readonly, as const)
 
-## Classes
+### Classes
 - Follow SOLID principles
 - Prefer composition over inheritance
 - Declare interfaces for contracts
 - Write small classes (< 200 lines, < 10 methods)
 
-## Domain Entities
+### Domain Entities
 - Use readonly properties for immutability
 - Avoid getter methods, expose properties directly
 - Use private constructor with static factory methods
@@ -88,22 +90,35 @@ export class Entity {
 }
 ```
 
-## Exceptions
+### Exceptions
 - Use exceptions for unexpected errors
 - Catch exceptions to:
   - Fix expected problems
   - Add context
   - Use global handler otherwise
 
-## Testing
+### Testing
 - Follow Arrange-Act-Assert
 - Name test variables clearly
 - Write unit tests for public functions
 - Write acceptance tests for modules
+- **IMPORTANT**: After implementing any feature, service method, or functionality:
+  - **MUST** add comprehensive tests covering the new functionality
+  - **MUST** ensure all tests pass before considering the implementation complete
+  - **MUST** test both success and error scenarios
+  - **MUST** test edge cases and boundary conditions
+  - Tests should be added in the same commit/pull request as the implementation
+  - No feature is considered complete until tests are written and passing
+  - When adding new notification functionality, include tests for:
+    - Notification sending when preferences are enabled
+    - Notification not sending when preferences are disabled
+    - Default preference behavior
+    - Error handling during notification sending
+    - Edge cases (missing userId, invalid data, etc.)
 
-# NestJS Specific Guidelines
+## NestJS Specific Guidelines
 
-## Basic Principles
+### Basic Principles
 - Use modular architecture
 - Encapsulate API in modules
 - One module per main domain/route
@@ -113,29 +128,36 @@ export class Entity {
 - Core module for NestJS artifacts
 - Shared module for shared services
 
-## Authentication
+### Authentication
 - **IMPORTANT**: All users are always authenticated (at minimum anonymously)
 - The AuthGuard expects an Authorization header on all requests
 - Users authenticate via Firebase Auth, including anonymous authentication
 - There are no public endpoints without authentication - all endpoints require a valid Firebase token
 - Anonymous users are automatically created by the client apps and have valid Firebase tokens
 
-## Authorization (RolesGuard)
+### Authorization (RolesGuard)
 - **IMPORTANT**: Modules that use `@UseGuards(RolesGuard)` in their controllers MUST import `UsersModule`
 - The `RolesGuard` requires `UsersService` as a dependency to check user roles
 - If a module uses `RolesGuard` but doesn't import `UsersModule`, the endpoints will return 404 errors
 - Example: If `AppVersionsAdminController` uses `@UseGuards(RolesGuard)`, then `AppVersionsModule` must import `UsersModule`
 - Always check if controllers use `RolesGuard` and ensure the module imports `UsersModule`
 
-## Testing
+### Testing
 - Use Jest framework
 - Write tests for controllers and services
 - Write end-to-end tests for API modules
 - Add admin/test method to controllers
+- **IMPORTANT**: After implementing any NestJS feature:
+  - **MUST** add unit tests for service methods
+  - **MUST** add integration tests for controllers
+  - **MUST** ensure all tests pass (`npm test`)
+  - **MUST** mock all external dependencies (repositories, services, etc.)
+  - **MUST** test error scenarios and edge cases
+  - Tests should cover at least 80% of the new code paths
 
-# Feature Development Guidelines
+## Feature Development Guidelines
 
-## Notifications
+### Notifications
 - **IMPORTANT**: When implementing a new feature that involves user interactions or events, always ask:
   "Should this feature send push notifications to users?"
 - If notifications are needed:
@@ -145,12 +167,20 @@ export class Entity {
   - Always check user notification preferences before sending (default: enabled if undefined)
   - Consider mute functionality for user-specific notifications (e.g., muted chats)
   - Document notification behavior in feature documentation
+  - **MUST** add tests for notification functionality:
+    - Test notification sending when preference is enabled
+    - Test notification not sending when preference is disabled
+    - Test default preference behavior
+    - Test error handling during notification sending
+    - Test edge cases (missing userId, invalid data, etc.)
 - **Notification Types**:
   - `DIRECT_CHAT_MESSAGE`: Sent when a new message is received in a direct chat
   - `NEW_BUSINESS`: Sent when a new business becomes active (created with ACTIVE status or changed from PENDING to ACTIVE)
+  - `DIRECT_CHAT_REQUEST`: Sent when a user receives a direct chat request
+  - `CONTACT_REQUEST_RESPONSE`: Sent when an admin responds to a contact request
 - **Notification Preferences**:
   - Stored in `UserProfile.notificationPreferences` (Firebase Firestore `users` collection)
-  - Structure: `{ directMessages?: boolean, newBusinesses?: boolean, directChatRequests?: boolean }`
+  - Structure: `{ directMessages?: boolean, newBusinesses?: boolean, directChatRequests?: boolean, contactRequestResponses?: boolean }`
   - Default: `false` if preference is undefined (Notifications werden nur gesendet, wenn Präferenz explizit auf `true` gesetzt ist)
   - Update endpoint: `PATCH /users/:id/profile` with `notificationPreferences` in body
 - **Module Dependencies**:
@@ -194,14 +224,14 @@ export class Entity {
   - Job applications
   - Comments/reactions on posts
 
-# Firebase Persistence Guidelines
+## Firebase Persistence Guidelines
 
-## Data Conversion Rules
+### Data Conversion Rules
 - Convert undefined to null before saving to Firebase
 - Convert class instances to plain objects
 - Handle Firebase Timestamps correctly
 
-## Repository Implementation
+### Repository Implementation
 ```typescript
 // Required methods for Firebase repositories
 private removeUndefined(obj: any): any {
@@ -232,7 +262,7 @@ private toEntityProps(data: any, id: string) {
 }
 ```
 
-## Best Practices
+### Best Practices
 - Always use removeUndefined before saving
 - Clear separation between domain entities and Firebase data
 - Validate data before saving
@@ -243,9 +273,9 @@ private toEntityProps(data: any, id: string) {
 - Implement caching strategies
 - Create indexes for frequently queried fields
 
-# Code Quality & Maintenance Guidelines
+## Code Quality & Maintenance Guidelines
 
-## .cursorrules Maintenance
+### .cursorrules Maintenance
 - **IMPORTANT**: After implementing a new feature or significant change, review `.cursorrules` for necessary updates
 - Only add meaningful, actionable rules that will help future development
 - Keep rules focused and avoid redundancy
@@ -260,3 +290,31 @@ private toEntityProps(data: any, id: string) {
   - Document architectural decisions and their rationale
   - Remove outdated or conflicting rules
   - Ensure rules are scoped appropriately (project-wide vs. domain-specific)
+
+### Testing Requirements
+- **MANDATORY**: Every feature implementation MUST include tests
+- **MANDATORY**: All tests MUST pass before marking implementation as complete
+- **MANDATORY**: Tests MUST be added in the same commit/pull request as the implementation
+- Test coverage should include:
+  - Happy path scenarios
+  - Error scenarios
+  - Edge cases
+  - Boundary conditions
+  - Integration with dependencies
+- When implementing new services:
+  - Add unit tests for all public methods
+  - Test both success and failure paths
+  - Mock external dependencies
+  - Verify error handling
+- When implementing new controllers:
+  - Add integration tests for all endpoints
+  - Test request validation
+  - Test authorization/authentication
+  - Test response formats
+- When implementing notifications:
+  - Test notification sending logic
+  - Test preference checking
+  - Test error handling
+  - Test edge cases (missing userId, invalid data, etc.)
+- Run tests before committing: `npm test`
+- Ensure no test failures before considering work complete

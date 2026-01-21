@@ -16,4 +16,12 @@ export class NotificationPreferencesDto {
   @IsBoolean()
   @IsOptional()
   public readonly contactRequestResponses?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  public readonly newEvents?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  public readonly eventUpdates?: boolean;
 }

@@ -9,6 +9,8 @@ Dieses Dokument beschreibt vorgeschlagene Notification-Typen, die noch implement
 - `NEW_BUSINESS`: Sent when a new business becomes active
 - `DIRECT_CHAT_REQUEST`: Sent when a user receives a direct chat request
 - `CONTACT_REQUEST_RESPONSE`: Sent when an admin responds to a contact request
+- `NEW_EVENT`: Sent when a new event is created
+- `FAV_EVENT_UPDATE`: Sent when a favorited event is updated
 
 ---
 
@@ -138,9 +140,9 @@ Notification wird gesendet, wenn ein neues Event erstellt wird (analog zu `NEW_B
 - Default: `true`
 
 **Implementierung:**
-- Service: `EventsService.create()`
-- Notification Interface: `EventNotificationData`
-- Module: `EventsModule` muss `NotificationsModule` importieren
+- ✅ Service: `EventsService.create()`
+- ✅ Notification Interface: `EventNotificationData`
+- ✅ Module: `EventsModule` importiert bereits `NotificationsModule`
 
 **Besonderheiten:**
 - Optional: Filterung nach Stadt
@@ -148,7 +150,7 @@ Notification wird gesendet, wenn ein neues Event erstellt wird (analog zu `NEW_B
 
 ---
 
-### 4. EVENT_UPDATE
+### 4. FAV_EVENT_UPDATE
 
 **Priorität:** 🟢 Niedrig
 
@@ -168,7 +170,7 @@ Notification wird gesendet, wenn ein favorisiertes Event aktualisiert wird.
   title: "Event wurde aktualisiert",
   body: "{eventTitle} wurde aktualisiert",
   data: {
-    type: "EVENT_UPDATE",
+    type: "FAV_EVENT_UPDATE",
     eventId: string,
     eventTitle: string,
     updateType: "TIME" | "LOCATION" | "DESCRIPTION" | "OTHER"
@@ -181,13 +183,13 @@ Notification wird gesendet, wenn ein favorisiertes Event aktualisiert wird.
 - Default: `true`
 
 **Implementierung:**
-- Service: `EventsService.update()`
-- Notification Interface: `EventUpdateNotificationData`
-- Module: `EventsModule` muss `NotificationsModule` importieren
+- ✅ Service: `EventsService.update()`
+- ✅ Notification Interface: `FavEventUpdateNotificationData`
+- ✅ Module: `EventsModule` importiert bereits `NotificationsModule`
 
 **Besonderheiten:**
-- Nur für favorisierte Events
-- Optional: Unterscheidung nach Update-Typ (kritische Updates wie Zeit/Ort vs. weniger wichtige)
+- ✅ Nur für favorisierte Events
+- ✅ Unterscheidung nach Update-Typ (TIME, LOCATION, DESCRIPTION, OTHER)
 
 ---
 
@@ -384,13 +386,13 @@ Notification wird gesendet als Erinnerung vor einem favorisierten Event.
 
 ### Phase 1 (Sofort umsetzbar)
 1. ✅ **DIRECT_CHAT_REQUEST** - Hoher Nutzen, einfache Implementierung
-2. ⏳ **NEW_EVENT** - Analog zu NEW_BUSINESS, konsistentes Pattern
+2. ✅ **NEW_EVENT** - Analog zu NEW_BUSINESS, konsistentes Pattern
 3. ✅ **CONTACT_REQUEST_RESPONSE** - Wichtig für Support-Erlebnis
 
 ### Phase 2 (Mittelfristig)
 4. ⏰ **EVENT_REMINDER** - Erfordert Scheduled Jobs Setup
 5. ✅ **NEW_JOB_OFFER** - Ähnlich wie NEW_EVENT/NEW_BUSINESS
-6. ✅ **EVENT_UPDATE** - Für bessere User-Experience
+6. ✅ **FAV_EVENT_UPDATE** - Für bessere User-Experience
 
 ### Phase 3 (Optional)
 7. ✅ **NEWS_REACTION** - Social Engagement
@@ -459,9 +461,9 @@ export interface NotificationPreferences {
   newBusinesses?: boolean;            // ✅ Implementiert
   directChatRequests?: boolean;       // ✅ Implementiert
   contactRequestResponses?: boolean;   // ✅ Implementiert
-  newEvents?: boolean;                // 🔴 Phase 1
+  newEvents?: boolean;                // ✅ Implementiert
   eventReminders?: boolean;           // 🟡 Phase 2
-  eventUpdates?: boolean;             // 🟡 Phase 2
+  eventUpdates?: boolean;             // ✅ Implementiert
   newJobOffers?: boolean;             // 🟡 Phase 2
   newsReactions?: boolean;            // 🟢 Phase 3
   chatroomMessages?: boolean;         // 🟢 Phase 3

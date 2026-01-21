@@ -14,6 +14,8 @@ export interface NotificationPreferences {
   newBusinesses?: boolean;
   directChatRequests?: boolean;
   contactRequestResponses?: boolean;
+  newEvents?: boolean;
+  eventUpdates?: boolean;
 }
 
 export interface UserProfile {
