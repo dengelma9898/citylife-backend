@@ -169,10 +169,7 @@ export class EventsService {
       };
 
       await this.sendNewEventNotification(createdEvent).catch(error => {
-        this.logger.error(
-          `Error sending new event notification: ${error.message}`,
-          error.stack,
-        );
+        this.logger.error(`Error sending new event notification: ${error.message}`, error.stack);
       });
 
       return createdEvent;
@@ -227,10 +224,7 @@ export class EventsService {
       } as Event;
 
       await this.sendEventUpdateNotification(updatedEvent, oldEvent).catch(error => {
-        this.logger.error(
-          `Error sending event update notification: ${error.message}`,
-          error.stack,
-        );
+        this.logger.error(`Error sending event update notification: ${error.message}`, error.stack);
       });
 
       return updatedEvent;
@@ -364,7 +358,10 @@ export class EventsService {
     }
   }
 
-  private determineUpdateType(oldEvent: Event, newEvent: Event): 'TIME' | 'LOCATION' | 'DESCRIPTION' | 'OTHER' {
+  private determineUpdateType(
+    oldEvent: Event,
+    newEvent: Event,
+  ): 'TIME' | 'LOCATION' | 'DESCRIPTION' | 'OTHER' {
     const oldTimeSlots = JSON.stringify(oldEvent.dailyTimeSlots || []);
     const newTimeSlots = JSON.stringify(newEvent.dailyTimeSlots || []);
     if (oldTimeSlots !== newTimeSlots) {
