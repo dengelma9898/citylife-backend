@@ -3,6 +3,7 @@ import { NewsService } from './news.service';
 import { UsersService } from '../users/users.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
+import { NotificationService } from '../notifications/application/services/notification.service';
 import {
   getDocs,
   getDoc,
@@ -28,6 +29,7 @@ describe('NewsService', () => {
   let usersService: UsersService;
   let firebaseService: FirebaseService;
   let firebaseStorageService: FirebaseStorageService;
+  let notificationService: jest.Mocked<NotificationService>;
 
   const createFirestoreMock = (mockData: any = {}, docsList: any[] = []) => {
     const mockDoc = {
@@ -83,10 +85,16 @@ describe('NewsService', () => {
 
   const mockUsersService = {
     getUserProfile: jest.fn(),
+    getUserProfilesByIds: jest.fn(),
+    getAllUserProfilesWithIds: jest.fn(),
   };
 
   const mockFirebaseStorageService = {
     deleteFile: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockNotificationService = {
+    sendToUser: jest.fn(),
   };
 
   const mockTextNewsItem: TextNewsItem = {
@@ -151,6 +159,10 @@ describe('NewsService', () => {
           provide: FirebaseStorageService,
           useValue: mockFirebaseStorageService,
         },
+        {
+          provide: NotificationService,
+          useValue: mockNotificationService,
+        },
       ],
     }).compile();
 
@@ -158,6 +170,7 @@ describe('NewsService', () => {
     usersService = module.get<UsersService>(UsersService);
     firebaseService = module.get<FirebaseService>(FirebaseService);
     firebaseStorageService = module.get<FirebaseStorageService>(FirebaseStorageService);
+    notificationService = module.get(NotificationService);
 
     jest.clearAllMocks();
   });
@@ -209,6 +222,7 @@ describe('NewsService', () => {
     it('should create a new text news item', async () => {
       const mockFirestore = createFirestoreMock();
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
 
       const createDto: CreateTextNewsDto = {
         content: 'New Text News',
@@ -222,12 +236,106 @@ describe('NewsService', () => {
       expect(result.content).toBe(createDto.content);
       expect(mockFirestore.collection().add).toHaveBeenCalled();
     });
+
+    it('should send notification when preference is enabled', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {
+              newNews: true,
+            },
+            businessHistory: [],
+          },
+        },
+      ]);
+
+      const createDto: CreateTextNewsDto = {
+        content: 'New Text News',
+        authorId: 'user1',
+      };
+
+      await service.createTextNews(createDto);
+
+      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
+        title: 'Neue Nachricht verfügbar',
+        body: 'New Text News',
+        data: {
+          type: 'NEW_NEWS',
+          newsId: 'mock-id',
+          newsTitle: 'New Text News',
+        },
+      });
+    });
+
+    it('should not send notification when preference is disabled', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {
+              newNews: false,
+            },
+            businessHistory: [],
+          },
+        },
+      ]);
+
+      const createDto: CreateTextNewsDto = {
+        content: 'New Text News',
+        authorId: 'user1',
+      };
+
+      await service.createTextNews(createDto);
+
+      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should not send notification when preference is undefined (default: false)', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {},
+            businessHistory: [],
+          },
+        },
+      ]);
+
+      const createDto: CreateTextNewsDto = {
+        content: 'New Text News',
+        authorId: 'user1',
+      };
+
+      await service.createTextNews(createDto);
+
+      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
   });
 
   describe('createImageNews', () => {
     it('should create a new image news item', async () => {
       const mockFirestore = createFirestoreMock();
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
 
       const createDto: CreateImageNewsDto = {
         content: 'New Image News',
@@ -242,12 +350,51 @@ describe('NewsService', () => {
       expect(result.imageUrls).toEqual(createDto.imageUrls);
       expect(mockFirestore.collection().add).toHaveBeenCalled();
     });
+
+    it('should send notification when preference is enabled', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {
+              newNews: true,
+            },
+            businessHistory: [],
+          },
+        },
+      ]);
+
+      const createDto: CreateImageNewsDto = {
+        content: 'New Image News',
+        imageUrls: ['https://example.com/image1.jpg'],
+        authorId: 'user1',
+      };
+
+      await service.createImageNews(createDto);
+
+      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
+        title: 'Neue Nachricht verfügbar',
+        body: 'New Image News',
+        data: {
+          type: 'NEW_NEWS',
+          newsId: 'mock-id',
+          newsTitle: 'New Image News',
+        },
+      });
+    });
   });
 
   describe('createPollNews', () => {
     it('should create a new poll news item', async () => {
       const mockFirestore = createFirestoreMock();
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
 
       const createDto: CreatePollNewsDto = {
         content: 'New Poll Question?',
@@ -269,6 +416,81 @@ describe('NewsService', () => {
       expect(result.question).toBe(createDto.content);
       expect(result.options).toHaveLength(2);
       expect(mockFirestore.collection().add).toHaveBeenCalled();
+    });
+
+    it('should send notification when preference is enabled', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {
+              newNews: true,
+            },
+            businessHistory: [],
+          },
+        },
+      ]);
+
+      const createDto: CreatePollNewsDto = {
+        content: 'New Poll Question?',
+        authorId: 'user1',
+        pollInfo: {
+          options: [
+            { id: 'opt1', text: 'Option 1' },
+            { id: 'opt2', text: 'Option 2' },
+          ],
+          allowMultipleChoices: false,
+          endDate: '2024-12-31T23:59:59.999Z',
+        },
+      };
+
+      await service.createPollNews(createDto);
+
+      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
+        title: 'Neue Nachricht verfügbar',
+        body: 'New Poll Question?',
+        data: {
+          type: 'NEW_NEWS',
+          newsId: 'mock-id',
+          newsTitle: 'New Poll Question?',
+        },
+      });
+    });
+
+    it('should handle notification errors gracefully', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {
+              newNews: true,
+            },
+            businessHistory: [],
+          },
+        },
+      ]);
+      mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification failed'));
+
+      const createDto: CreateTextNewsDto = {
+        content: 'New Text News',
+        authorId: 'user1',
+      };
+
+      const result = await service.createTextNews(createDto);
+
+      expect(result).toBeDefined();
+      expect(mockNotificationService.sendToUser).toHaveBeenCalled();
     });
   });
 

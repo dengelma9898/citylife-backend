@@ -146,9 +146,10 @@ export class BusinessesService {
     const savedBusiness = await this.businessRepository.update(id, updatedBusiness);
     if (previousStatus === BusinessStatus.PENDING && status === BusinessStatus.ACTIVE) {
       this.logger.log(
-        `Status change detected: PENDING -> ACTIVE for business ${id}. Sending notification.`,
+        `Status change detected: PENDING -> ACTIVE for business ${id}. Sending notifications.`,
       );
       await this.sendNewBusinessNotification(savedBusiness);
+      await this.sendBusinessActivatedNotification(savedBusiness);
     } else {
       this.logger.debug(
         `Status change from ${previousStatus} to ${status} does not trigger notification.`,
@@ -263,6 +264,74 @@ export class BusinessesService {
     } catch (error: any) {
       this.logger.error(
         `[NOTIFICATION] Error sending new business notification for business ${business.id}: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  private async sendBusinessActivatedNotification(business: Business): Promise<void> {
+    try {
+      this.logger.log(
+        `[BUSINESS_NOTIFICATION] Starting business activated notification process for business ${business.id}`,
+      );
+      this.logger.debug(`[BUSINESS_NOTIFICATION] Business name: ${business.name}`);
+      const allBusinessUsers = await this.usersService.getAllBusinessUsers();
+      this.logger.debug(`[BUSINESS_NOTIFICATION] Found ${allBusinessUsers.length} total business users`);
+      const businessUsersToNotify = allBusinessUsers.filter(user => {
+        const hasBusiness = user.businessIds && user.businessIds.includes(business.id);
+        if (!hasBusiness) {
+          return false;
+        }
+        const notificationPreferences = user.notificationPreferences;
+        const businessActivatedEnabled =
+          notificationPreferences?.businessActivated !== undefined
+            ? notificationPreferences.businessActivated
+            : false;
+        if (!businessActivatedEnabled) {
+          this.logger.debug(
+            `[BUSINESS_NOTIFICATION] Business user ${user.id} has businessActivated disabled`,
+          );
+        }
+        return businessActivatedEnabled;
+      });
+      this.logger.log(
+        `[BUSINESS_NOTIFICATION] Filtered to ${businessUsersToNotify.length} business users with businessActivated enabled`,
+      );
+      if (businessUsersToNotify.length === 0) {
+        this.logger.warn(
+          `[BUSINESS_NOTIFICATION] No business users to notify for business ${business.id}`,
+        );
+        return;
+      }
+      const sendPromises = businessUsersToNotify.map(async user => {
+        try {
+          this.logger.debug(`[BUSINESS_NOTIFICATION] Sending to business user ${user.id}`);
+          await this.notificationService.sendToUser(user.id, {
+            title: 'Dein Business ist jetzt aktiv',
+            body: `${business.name} wurde freigeschaltet und ist jetzt sichtbar`,
+            data: {
+              type: 'BUSINESS_ACTIVATED',
+              businessId: business.id,
+              businessName: business.name,
+              previousStatus: 'PENDING',
+              newStatus: 'ACTIVE',
+            },
+          });
+          this.logger.debug(`[BUSINESS_NOTIFICATION] Successfully sent to business user ${user.id}`);
+        } catch (error: any) {
+          this.logger.error(
+            `[BUSINESS_NOTIFICATION] Error sending notification to business user ${user.id}: ${error.message}`,
+            error.stack,
+          );
+        }
+      });
+      await Promise.all(sendPromises);
+      this.logger.log(
+        `[BUSINESS_NOTIFICATION] Completed business activated notification process for business ${business.id}. Sent to ${businessUsersToNotify.length} business users.`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `[BUSINESS_NOTIFICATION] Error sending business activated notification for business ${business.id}: ${error.message}`,
         error.stack,
       );
     }

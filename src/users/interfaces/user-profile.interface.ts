@@ -16,6 +16,9 @@ export interface NotificationPreferences {
   contactRequestResponses?: boolean;
   newEvents?: boolean;
   eventUpdates?: boolean;
+  newJobOffers?: boolean;
+  newNews?: boolean;
+  newSurveys?: boolean;
 }
 
 export interface UserProfile {

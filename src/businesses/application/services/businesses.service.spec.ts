@@ -9,6 +9,7 @@ import { Business, BusinessAddress, BusinessContact } from '../../domain/entitie
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
 import { KeywordsService } from '../../../keywords/keywords.service';
 import { EventsService } from '../../../events/events.service';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 
 jest.mock('../../../firebase/firebase.service', () => ({
   FirebaseService: jest.fn().mockImplementation(() => ({
@@ -34,6 +35,8 @@ describe('BusinessesService', () => {
 
   const mockUsersService = {
     getById: jest.fn(),
+    getAllBusinessUsers: jest.fn(),
+    getAllUserProfilesWithIds: jest.fn(),
   };
 
   const mockBusinessCategoriesService = {
@@ -46,6 +49,11 @@ describe('BusinessesService', () => {
 
   const mockEventsService = {
     getById: jest.fn(),
+  };
+
+  const mockNotificationService = {
+    sendToUser: jest.fn(),
+    sendToUsers: jest.fn(),
   };
 
   const mockConfigService = {
@@ -104,6 +112,10 @@ describe('BusinessesService', () => {
         {
           provide: FirebaseService,
           useValue: mockFirebaseService,
+        },
+        {
+          provide: NotificationService,
+          useValue: mockNotificationService,
         },
       ],
     }).compile();
@@ -361,6 +373,190 @@ describe('BusinessesService', () => {
         BusinessStatus.ACTIVE,
         true,
       );
+    });
+  });
+
+  describe('updateStatus', () => {
+    const mockBusiness = Business.create({
+      name: 'Test Business',
+      description: 'A test business',
+      contact: mockBusinessContact,
+      address: mockBusinessAddress,
+      categoryIds: ['category1'],
+      keywordIds: ['keyword1'],
+      openingHours: {
+        monday: '09:00-22:00',
+      },
+      benefit: '10% discount',
+      hasAccount: true,
+      status: BusinessStatus.PENDING,
+    });
+
+    const mockUpdatedBusiness = Business.create({
+      ...mockBusiness,
+      status: BusinessStatus.ACTIVE,
+    });
+
+    it('should update business status', async () => {
+      mockBusinessesRepository.findById.mockResolvedValue(mockBusiness);
+      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusiness);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
+      mockUsersService.getAllBusinessUsers.mockResolvedValue([]);
+
+      const result = await service.updateStatus('business1', BusinessStatus.ACTIVE);
+
+      expect(result).toBeDefined();
+      expect(result.status).toBe(BusinessStatus.ACTIVE);
+      expect(mockBusinessesRepository.findById).toHaveBeenCalledWith('business1');
+      expect(mockBusinessesRepository.update).toHaveBeenCalled();
+    });
+
+    it('should send business activated notification when status changes from PENDING to ACTIVE', async () => {
+      const mockBusinessUser = {
+        id: 'business-user-1',
+        email: 'business@example.com',
+        businessIds: ['business1'],
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+        isDeleted: false,
+        needsReview: false,
+        notificationPreferences: {
+          businessActivated: true,
+        },
+      };
+
+      mockBusinessesRepository.findById.mockResolvedValue(mockBusiness);
+      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusiness);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
+      mockUsersService.getAllBusinessUsers.mockResolvedValue([mockBusinessUser]);
+      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+
+      await service.updateStatus('business1', BusinessStatus.ACTIVE);
+
+      expect(mockUsersService.getAllBusinessUsers).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('business-user-1', {
+        title: 'Dein Business ist jetzt aktiv',
+        body: 'Test Business wurde freigeschaltet und ist jetzt sichtbar',
+        data: {
+          type: 'BUSINESS_ACTIVATED',
+          businessId: 'business1',
+          businessName: 'Test Business',
+          previousStatus: 'PENDING',
+          newStatus: 'ACTIVE',
+        },
+      });
+    });
+
+    it('should not send business activated notification when preference is disabled', async () => {
+      const mockBusinessUser = {
+        id: 'business-user-1',
+        email: 'business@example.com',
+        businessIds: ['business1'],
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+        isDeleted: false,
+        needsReview: false,
+        notificationPreferences: {
+          businessActivated: false,
+        },
+      };
+
+      mockBusinessesRepository.findById.mockResolvedValue(mockBusiness);
+      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusiness);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
+      mockUsersService.getAllBusinessUsers.mockResolvedValue([mockBusinessUser]);
+
+      await service.updateStatus('business1', BusinessStatus.ACTIVE);
+
+      expect(mockUsersService.getAllBusinessUsers).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should not send business activated notification when preference is undefined (default false)', async () => {
+      const mockBusinessUser = {
+        id: 'business-user-1',
+        email: 'business@example.com',
+        businessIds: ['business1'],
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+        isDeleted: false,
+        needsReview: false,
+      };
+
+      mockBusinessesRepository.findById.mockResolvedValue(mockBusiness);
+      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusiness);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
+      mockUsersService.getAllBusinessUsers.mockResolvedValue([mockBusinessUser]);
+
+      await service.updateStatus('business1', BusinessStatus.ACTIVE);
+
+      expect(mockUsersService.getAllBusinessUsers).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should only send notification to business users with matching businessId', async () => {
+      const mockBusinessUser1 = {
+        id: 'business-user-1',
+        email: 'business1@example.com',
+        businessIds: ['business1'],
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+        isDeleted: false,
+        needsReview: false,
+        notificationPreferences: {
+          businessActivated: true,
+        },
+      };
+
+      const mockBusinessUser2 = {
+        id: 'business-user-2',
+        email: 'business2@example.com',
+        businessIds: ['business2'],
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+        isDeleted: false,
+        needsReview: false,
+        notificationPreferences: {
+          businessActivated: true,
+        },
+      };
+
+      mockBusinessesRepository.findById.mockResolvedValue(mockBusiness);
+      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusiness);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
+      mockUsersService.getAllBusinessUsers.mockResolvedValue([
+        mockBusinessUser1,
+        mockBusinessUser2,
+      ]);
+      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+
+      await service.updateStatus('business1', BusinessStatus.ACTIVE);
+
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledTimes(1);
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('business-user-1', expect.any(Object));
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalledWith('business-user-2', expect.any(Object));
+    });
+
+    it('should not send notification for other status changes', async () => {
+      const mockActiveBusiness = Business.create({
+        ...mockBusiness,
+        status: BusinessStatus.ACTIVE,
+      });
+
+      const mockInactiveBusiness = Business.create({
+        ...mockActiveBusiness,
+        status: BusinessStatus.INACTIVE,
+      });
+
+      mockBusinessesRepository.findById.mockResolvedValue(mockActiveBusiness);
+      mockBusinessesRepository.update.mockResolvedValue(mockInactiveBusiness);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
+      mockUsersService.getAllBusinessUsers.mockResolvedValue([]);
+
+      await service.updateStatus('business1', BusinessStatus.INACTIVE);
+
+      expect(mockUsersService.getAllBusinessUsers).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
   });
 });

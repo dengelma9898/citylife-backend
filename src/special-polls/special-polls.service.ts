@@ -9,6 +9,7 @@ import { CreateSpecialPollDto } from './dto/create-special-poll.dto';
 import { UpdateSpecialPollStatusDto } from './dto/update-special-poll-status.dto';
 import { DateTimeUtils } from '../utils/date-time.utils';
 import { UsersService } from '../users/users.service';
+import { NotificationService } from '../notifications/application/services/notification.service';
 
 @Injectable()
 export class SpecialPollsService {
@@ -18,6 +19,7 @@ export class SpecialPollsService {
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly usersService: UsersService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private removeUndefined(obj: any): any {
@@ -87,10 +89,14 @@ export class SpecialPollsService {
 
       const docRef = await db.collection(this.collection).add(this.removeUndefined(pollData));
 
-      return {
+      const specialPoll = {
         id: docRef.id,
         ...pollData,
       } as SpecialPoll;
+
+      await this.sendNewSurveyNotification(specialPoll);
+
+      return specialPoll;
     } catch (error) {
       this.logger.error(`Error creating special poll: ${error.message}`);
       throw error;
@@ -212,6 +218,68 @@ export class SpecialPollsService {
     } catch (error) {
       this.logger.error(`Error updating responses for special poll ${id}: ${error.message}`);
       throw error;
+    }
+  }
+
+  private async sendNewSurveyNotification(specialPoll: SpecialPoll): Promise<void> {
+    try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'special-polls.service.ts:224',message:'sendNewSurveyNotification called',data:{surveyId:specialPoll.id,title:specialPoll.title},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      this.logger.log(`[NOTIFICATION] Starting notification process for survey ${specialPoll.id}`);
+      this.logger.debug(`[NOTIFICATION] Survey title: ${specialPoll.title}`);
+      const allUsers = await this.usersService.getAllUserProfilesWithIds();
+      this.logger.debug(`[NOTIFICATION] Found ${allUsers.length} total users`);
+      const usersToNotify = allUsers.filter(({ id, profile }) => {
+        const notificationPreferences = profile.notificationPreferences;
+        const newSurveysEnabled =
+          notificationPreferences?.newSurveys !== undefined
+            ? notificationPreferences.newSurveys
+            : false;
+        if (!newSurveysEnabled) {
+          this.logger.debug(`[NOTIFICATION] User ${id} has newSurveys disabled`);
+        }
+        return newSurveysEnabled;
+      });
+      this.logger.log(
+        `[NOTIFICATION] Filtered to ${usersToNotify.length} users with newSurveys enabled`,
+      );
+      if (usersToNotify.length === 0) {
+        this.logger.warn(`[NOTIFICATION] No users to notify for survey ${specialPoll.id}`);
+        return;
+      }
+      const sendPromises = usersToNotify.map(async ({ id }) => {
+        try {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'special-polls.service.ts:248',message:'sendToUser called for user',data:{userId:id,surveyId:specialPoll.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          this.logger.debug(`[NOTIFICATION] Sending to user ${id}`);
+          await this.notificationService.sendToUser(id, {
+            title: 'Neue Umfrage verfügbar',
+            body: specialPoll.title,
+            data: {
+              type: 'NEW_SURVEY',
+              surveyId: specialPoll.id,
+              surveyTitle: specialPoll.title,
+            },
+          });
+          this.logger.debug(`[NOTIFICATION] Successfully sent to user ${id}`);
+        } catch (error: any) {
+          this.logger.error(
+            `[NOTIFICATION] Error sending notification to user ${id}: ${error.message}`,
+            error.stack,
+          );
+        }
+      });
+      await Promise.all(sendPromises);
+      this.logger.log(
+        `[NOTIFICATION] Completed notification process for survey ${specialPoll.id}. Sent to ${usersToNotify.length} users.`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `[NOTIFICATION] Error sending new survey notification for survey ${specialPoll.id}: ${error.message}`,
+        error.stack,
+      );
     }
   }
 }

@@ -21,6 +21,7 @@ describe('ContactService', () => {
     update: jest.fn(),
     updateBusinessUser: jest.fn(),
     getUserProfile: jest.fn(),
+    getBusinessUser: jest.fn(),
   };
 
   const mockContactRequestRepository = {
@@ -260,9 +261,9 @@ describe('ContactService', () => {
 
     it('should add admin response and send notification when preference is enabled', async () => {
       mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      const jsonData = mockContactRequest.toJSON();
       const updatedRequest = ContactRequest.fromProps({
-        ...mockContactRequest.toJSON(),
-        responded: true,
+        ...jsonData,
         messages: [
           ...mockContactRequest.messages,
           ContactMessage.create({
@@ -271,6 +272,7 @@ describe('ContactService', () => {
             isAdminResponse: true,
           }),
         ],
+        responded: true,
       });
       mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
@@ -296,9 +298,9 @@ describe('ContactService', () => {
 
     it('should add admin response but not send notification when preference is disabled', async () => {
       mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      const jsonData = mockContactRequest.toJSON();
       const updatedRequest = ContactRequest.fromProps({
-        ...mockContactRequest.toJSON(),
-        responded: true,
+        ...jsonData,
         messages: [
           ...mockContactRequest.messages,
           ContactMessage.create({
@@ -307,6 +309,7 @@ describe('ContactService', () => {
             isAdminResponse: true,
           }),
         ],
+        responded: true,
       });
       mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
       mockUsersService.getUserProfile.mockResolvedValue({
@@ -327,9 +330,9 @@ describe('ContactService', () => {
 
     it('should add admin response and send notification when preference is undefined (default: true)', async () => {
       mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      const jsonData = mockContactRequest.toJSON();
       const updatedRequest = ContactRequest.fromProps({
-        ...mockContactRequest.toJSON(),
-        responded: true,
+        ...jsonData,
         messages: [
           ...mockContactRequest.messages,
           ContactMessage.create({
@@ -338,6 +341,7 @@ describe('ContactService', () => {
             isAdminResponse: true,
           }),
         ],
+        responded: true,
       });
       mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
       mockUsersService.getUserProfile.mockResolvedValue({
@@ -356,13 +360,16 @@ describe('ContactService', () => {
     });
 
     it('should not send notification if contact request was already responded', async () => {
+      const jsonData = mockContactRequest.toJSON();
       const alreadyRespondedRequest = ContactRequest.fromProps({
-        ...mockContactRequest.toJSON(),
+        ...jsonData,
+        messages: mockContactRequest.messages,
         responded: true,
       });
       mockContactRequestRepository.findById.mockResolvedValue(alreadyRespondedRequest);
+      const alreadyRespondedJsonData = alreadyRespondedRequest.toJSON();
       const updatedRequest = ContactRequest.fromProps({
-        ...alreadyRespondedRequest.toJSON(),
+        ...alreadyRespondedJsonData,
         messages: [
           ...alreadyRespondedRequest.messages,
           ContactMessage.create({
@@ -395,9 +402,9 @@ describe('ContactService', () => {
         ],
       });
       mockContactRequestRepository.findById.mockResolvedValue(requestWithoutUserId);
+      const requestWithoutUserIdJsonData = requestWithoutUserId.toJSON();
       const updatedRequest = ContactRequest.fromProps({
-        ...requestWithoutUserId.toJSON(),
-        responded: true,
+        ...requestWithoutUserIdJsonData,
         messages: [
           ...requestWithoutUserId.messages,
           ContactMessage.create({
@@ -406,6 +413,7 @@ describe('ContactService', () => {
             isAdminResponse: true,
           }),
         ],
+        responded: true,
       });
       mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
 
@@ -420,9 +428,9 @@ describe('ContactService', () => {
 
     it('should handle notification sending errors gracefully', async () => {
       mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      const jsonData = mockContactRequest.toJSON();
       const updatedRequest = ContactRequest.fromProps({
-        ...mockContactRequest.toJSON(),
-        responded: true,
+        ...jsonData,
         messages: [
           ...mockContactRequest.messages,
           ContactMessage.create({
@@ -431,6 +439,7 @@ describe('ContactService', () => {
             isAdminResponse: true,
           }),
         ],
+        responded: true,
       });
       mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
@@ -477,9 +486,9 @@ describe('ContactService', () => {
     it('should add admin message and send notification when admin responds', async () => {
       mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
       mockUsersService.getById.mockResolvedValue(mockAdminUser);
+      const jsonData = mockContactRequest.toJSON();
       const updatedRequest = ContactRequest.fromProps({
-        ...mockContactRequest.toJSON(),
-        responded: true,
+        ...jsonData,
         messages: [
           ...mockContactRequest.messages,
           ContactMessage.create({
@@ -488,6 +497,7 @@ describe('ContactService', () => {
             isAdminResponse: true,
           }),
         ],
+        responded: true,
       });
       mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
@@ -518,9 +528,9 @@ describe('ContactService', () => {
       };
       mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
       mockUsersService.getById.mockResolvedValue(mockRegularUser);
+      const jsonData = mockContactRequest.toJSON();
       const updatedRequest = ContactRequest.fromProps({
-        ...mockContactRequest.toJSON(),
-        responded: false,
+        ...jsonData,
         messages: [
           ...mockContactRequest.messages,
           ContactMessage.create({
@@ -529,6 +539,7 @@ describe('ContactService', () => {
             isAdminResponse: false,
           }),
         ],
+        responded: false,
       });
       mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
 
@@ -539,6 +550,307 @@ describe('ContactService', () => {
       expect(result).toBeDefined();
       expect(result.responded).toBe(false);
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Business Contact Request Response Notifications', () => {
+    const mockRequestId = 'request123';
+    const mockAdminId = 'admin123';
+    const mockBusinessUserId = 'business-user-123';
+    const mockBusinessId = 'business123';
+
+    const mockBusinessClaimRequest = ContactRequest.create({
+      type: ContactRequestType.BUSINESS_CLAIM,
+      userId: mockBusinessUserId,
+      businessId: mockBusinessId,
+      messages: [
+        ContactMessage.create({
+          message: 'Business claim request',
+          userId: mockBusinessUserId,
+          isAdminResponse: false,
+        }),
+      ],
+    });
+
+    const mockBusinessRequest = ContactRequest.create({
+      type: ContactRequestType.BUSINESS_REQUEST,
+      userId: mockBusinessUserId,
+      businessId: mockBusinessId,
+      messages: [
+        ContactMessage.create({
+          message: 'Business request',
+          userId: mockBusinessUserId,
+          isAdminResponse: false,
+        }),
+      ],
+    });
+
+    const mockBusinessUser = {
+      id: mockBusinessUserId,
+      email: 'business@example.com',
+      businessIds: [mockBusinessId],
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-01',
+      isDeleted: false,
+      needsReview: false,
+      notificationPreferences: {
+        businessContactRequestResponses: true,
+      },
+    };
+
+    it('should send BUSINESS_CONTACT_REQUEST_RESPONSE notification for BUSINESS_CLAIM when preference is enabled', async () => {
+      mockContactRequestRepository.findById.mockResolvedValue(mockBusinessClaimRequest);
+      const jsonData = mockBusinessClaimRequest.toJSON();
+      const updatedRequest = ContactRequest.fromProps({
+        ...jsonData,
+        messages: [
+          ...mockBusinessClaimRequest.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+        responded: true,
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockUsersService.getBusinessUser.mockResolvedValue(mockBusinessUser);
+      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.responded).toBe(true);
+      expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockBusinessUserId);
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(mockBusinessUserId, {
+        title: 'Antwort auf deine Business-Anfrage',
+        body: 'Du hast eine Antwort auf deine Geschäftsinhaber-Anfrage Anfrage erhalten',
+        data: {
+          type: 'BUSINESS_CONTACT_REQUEST_RESPONSE',
+          contactRequestId: result.id,
+          requestType: ContactRequestType.BUSINESS_CLAIM.toString(),
+          businessId: mockBusinessId,
+        },
+      });
+    });
+
+    it('should send BUSINESS_CONTACT_REQUEST_RESPONSE notification for BUSINESS_REQUEST when preference is enabled', async () => {
+      mockContactRequestRepository.findById.mockResolvedValue(mockBusinessRequest);
+      const jsonData = mockBusinessRequest.toJSON();
+      const updatedRequest = ContactRequest.fromProps({
+        ...jsonData,
+        messages: [
+          ...mockBusinessRequest.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+        responded: true,
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockUsersService.getBusinessUser.mockResolvedValue(mockBusinessUser);
+      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.responded).toBe(true);
+      expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockBusinessUserId);
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(mockBusinessUserId, {
+        title: 'Antwort auf deine Business-Anfrage',
+        body: 'Du hast eine Antwort auf deine Geschäftsanfrage Anfrage erhalten',
+        data: {
+          type: 'BUSINESS_CONTACT_REQUEST_RESPONSE',
+          contactRequestId: result.id,
+          requestType: ContactRequestType.BUSINESS_REQUEST.toString(),
+          businessId: mockBusinessId,
+        },
+      });
+    });
+
+    it('should not send BUSINESS_CONTACT_REQUEST_RESPONSE notification for GENERAL/FEEDBACK requests', async () => {
+      const mockGeneralRequest = ContactRequest.create({
+        type: ContactRequestType.GENERAL,
+        userId: mockBusinessUserId,
+        messages: [
+          ContactMessage.create({
+            message: 'General request',
+            userId: mockBusinessUserId,
+            isAdminResponse: false,
+          }),
+        ],
+      });
+
+      mockContactRequestRepository.findById.mockResolvedValue(mockGeneralRequest);
+      const updatedRequest = ContactRequest.fromProps({
+        ...mockGeneralRequest.toJSON(),
+        responded: true,
+        messages: [
+          ...mockGeneralRequest.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockUsersService.getBusinessUser.mockResolvedValue(null);
+      mockUsersService.getUserProfile.mockResolvedValue({
+        notificationPreferences: {
+          contactRequestResponses: true,
+        },
+      });
+      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockBusinessUserId);
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(mockBusinessUserId, {
+        title: 'Antwort auf deine Anfrage',
+        body: 'Du hast eine Antwort auf deine Allgemeine Anfrage erhalten',
+        data: {
+          type: 'CONTACT_REQUEST_RESPONSE',
+          contactRequestId: result.id,
+          requestType: ContactRequestType.GENERAL.toString(),
+        },
+      });
+    });
+
+    it('should not send BUSINESS_CONTACT_REQUEST_RESPONSE notification when preference is disabled', async () => {
+      const businessUserWithDisabledPreference = {
+        ...mockBusinessUser,
+        notificationPreferences: {
+          businessContactRequestResponses: false,
+        },
+      };
+
+      mockContactRequestRepository.findById.mockResolvedValue(mockBusinessClaimRequest);
+      const jsonData = mockBusinessClaimRequest.toJSON();
+      const updatedRequest = ContactRequest.fromProps({
+        ...jsonData,
+        messages: [
+          ...mockBusinessClaimRequest.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+        responded: true,
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockUsersService.getBusinessUser.mockResolvedValue(businessUserWithDisabledPreference);
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.responded).toBe(true);
+      expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockBusinessUserId);
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should not send BUSINESS_CONTACT_REQUEST_RESPONSE notification when preference is undefined (default false)', async () => {
+      const businessUserWithoutPreference = {
+        ...mockBusinessUser,
+        notificationPreferences: undefined,
+      };
+
+      mockContactRequestRepository.findById.mockResolvedValue(mockBusinessClaimRequest);
+      const jsonData = mockBusinessClaimRequest.toJSON();
+      const updatedRequest = ContactRequest.fromProps({
+        ...jsonData,
+        messages: [
+          ...mockBusinessClaimRequest.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+        responded: true,
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockUsersService.getBusinessUser.mockResolvedValue(businessUserWithoutPreference);
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.responded).toBe(true);
+      expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockBusinessUserId);
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should send CONTACT_REQUEST_RESPONSE to normal users for GENERAL/FEEDBACK requests', async () => {
+      const mockNormalUserId = 'normal-user-123';
+      const mockGeneralRequest = ContactRequest.create({
+        type: ContactRequestType.GENERAL,
+        userId: mockNormalUserId,
+        messages: [
+          ContactMessage.create({
+            message: 'General request',
+            userId: mockNormalUserId,
+            isAdminResponse: false,
+          }),
+        ],
+      });
+
+      mockContactRequestRepository.findById.mockResolvedValue(mockGeneralRequest);
+      const updatedRequest = ContactRequest.fromProps({
+        ...mockGeneralRequest.toJSON(),
+        responded: true,
+        messages: [
+          ...mockGeneralRequest.messages,
+          ContactMessage.create({
+            message: 'Admin response',
+            userId: mockAdminId,
+            isAdminResponse: true,
+          }),
+        ],
+      });
+      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      mockUsersService.getBusinessUser.mockResolvedValue(null);
+      mockUsersService.getUserProfile.mockResolvedValue({
+        notificationPreferences: {
+          contactRequestResponses: true,
+        },
+      });
+      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+
+      const result = await service.addAdminResponse(mockRequestId, {
+        userId: mockAdminId,
+        message: 'Admin response',
+      });
+
+      expect(result).toBeDefined();
+      expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockNormalUserId);
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(mockNormalUserId, {
+        title: 'Antwort auf deine Anfrage',
+        body: 'Du hast eine Antwort auf deine Allgemeine Anfrage erhalten',
+        data: {
+          type: 'CONTACT_REQUEST_RESPONSE',
+          contactRequestId: result.id,
+          requestType: ContactRequestType.GENERAL.toString(),
+        },
+      });
     });
   });
 });

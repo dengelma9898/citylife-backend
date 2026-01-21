@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SpecialPollsService } from './special-polls.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { UsersService } from '../users/users.service';
+import { NotificationService } from '../notifications/application/services/notification.service';
 import {
   getDocs,
   getDoc,
@@ -34,6 +35,7 @@ describe('SpecialPollsService', () => {
   let service: SpecialPollsService;
   let firebaseService: FirebaseService;
   let usersService: UsersService;
+  let notificationService: jest.Mocked<NotificationService>;
 
   const createFirestoreMock = (mockData: any = {}) => {
     const mockDoc = {
@@ -70,6 +72,11 @@ describe('SpecialPollsService', () => {
 
   const mockUsersService = {
     getById: jest.fn(),
+    getAllUserProfilesWithIds: jest.fn(),
+  };
+
+  const mockNotificationService = {
+    sendToUser: jest.fn(),
   };
 
   const mockSpecialPoll: SpecialPoll = {
@@ -93,12 +100,17 @@ describe('SpecialPollsService', () => {
           provide: UsersService,
           useValue: mockUsersService,
         },
+        {
+          provide: NotificationService,
+          useValue: mockNotificationService,
+        },
       ],
     }).compile();
 
     service = module.get<SpecialPollsService>(SpecialPollsService);
     firebaseService = module.get<FirebaseService>(FirebaseService);
     usersService = module.get<UsersService>(UsersService);
+    notificationService = module.get(NotificationService);
 
     jest.clearAllMocks();
   });
@@ -147,6 +159,7 @@ describe('SpecialPollsService', () => {
     it('should create a new special poll', async () => {
       const mockFirestore = createFirestoreMock();
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
 
       const createDto: CreateSpecialPollDto = {
         title: 'New Poll',
@@ -158,6 +171,125 @@ describe('SpecialPollsService', () => {
       expect(result.title).toBe(createDto.title);
       expect(result.status).toBe(SpecialPollStatus.PENDING);
       expect(mockFirestore.collection().add).toHaveBeenCalled();
+    });
+
+    it('should send notification when preference is enabled', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {
+              newSurveys: true,
+            },
+            businessHistory: [],
+          },
+        },
+      ]);
+
+      const createDto: CreateSpecialPollDto = {
+        title: 'New Poll',
+      };
+
+      await service.create(createDto);
+
+      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
+        title: 'Neue Umfrage verfügbar',
+        body: 'New Poll',
+        data: {
+          type: 'NEW_SURVEY',
+          surveyId: 'mock-id',
+          surveyTitle: 'New Poll',
+        },
+      });
+    });
+
+    it('should not send notification when preference is disabled', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {
+              newSurveys: false,
+            },
+            businessHistory: [],
+          },
+        },
+      ]);
+
+      const createDto: CreateSpecialPollDto = {
+        title: 'New Poll',
+      };
+
+      await service.create(createDto);
+
+      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should not send notification when preference is undefined (default: false)', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {},
+            businessHistory: [],
+          },
+        },
+      ]);
+
+      const createDto: CreateSpecialPollDto = {
+        title: 'New Poll',
+      };
+
+      await service.create(createDto);
+
+      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should handle notification errors gracefully', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {
+              newSurveys: true,
+            },
+            businessHistory: [],
+          },
+        },
+      ]);
+      mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification failed'));
+
+      const createDto: CreateSpecialPollDto = {
+        title: 'New Poll',
+      };
+
+      const result = await service.create(createDto);
+
+      expect(result).toBeDefined();
+      expect(mockNotificationService.sendToUser).toHaveBeenCalled();
     });
   });
 

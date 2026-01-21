@@ -223,6 +223,14 @@ export class ContactService {
         );
         return;
       }
+      const isBusinessRequestType =
+        contactRequest.type === ContactRequestType.BUSINESS_CLAIM ||
+        contactRequest.type === ContactRequestType.BUSINESS_REQUEST;
+      const businessUser = await this.usersService.getBusinessUser(contactRequest.userId);
+      if (isBusinessRequestType && businessUser) {
+        await this.sendBusinessContactRequestResponseNotification(contactRequest);
+        return;
+      }
       const userProfile = await this.usersService.getUserProfile(contactRequest.userId);
       if (!userProfile) {
         this.logger.warn(
@@ -263,6 +271,69 @@ export class ContactService {
     } catch (error: any) {
       this.logger.error(
         `Error sending contact request response notification: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  private async sendBusinessContactRequestResponseNotification(
+    contactRequest: ContactRequest,
+  ): Promise<void> {
+    try {
+      if (!contactRequest.userId) {
+        this.logger.debug(
+          `Contact request ${contactRequest.id} has no userId, skipping business notification`,
+        );
+        return;
+      }
+      const isBusinessRequestType =
+        contactRequest.type === ContactRequestType.BUSINESS_CLAIM ||
+        contactRequest.type === ContactRequestType.BUSINESS_REQUEST;
+      if (!isBusinessRequestType) {
+        this.logger.debug(
+          `Contact request ${contactRequest.id} is not a business request type, skipping business notification`,
+        );
+        return;
+      }
+      const businessUser = await this.usersService.getBusinessUser(contactRequest.userId);
+      if (!businessUser) {
+        this.logger.debug(
+          `Business user not found for user ${contactRequest.userId}, skipping business notification`,
+        );
+        return;
+      }
+      const notificationPreferences = businessUser.notificationPreferences;
+      const businessContactRequestResponsesEnabled =
+        notificationPreferences?.businessContactRequestResponses !== undefined
+          ? notificationPreferences.businessContactRequestResponses
+          : false;
+      if (!businessContactRequestResponsesEnabled) {
+        this.logger.debug(
+          `Business contact request responses notifications disabled for business user ${contactRequest.userId}`,
+        );
+        return;
+      }
+      const requestTypeLabels: Partial<Record<ContactRequestType, string>> = {
+        [ContactRequestType.BUSINESS_CLAIM]: 'Geschäftsinhaber-Anfrage',
+        [ContactRequestType.BUSINESS_REQUEST]: 'Geschäftsanfrage',
+      };
+      const requestTypeLabel = requestTypeLabels[contactRequest.type] || 'Business-Anfrage';
+      await this.notificationService.sendToUser(contactRequest.userId, {
+        title: 'Antwort auf deine Business-Anfrage',
+        body: `Du hast eine Antwort auf deine ${requestTypeLabel} Anfrage erhalten`,
+        data: {
+          type: 'BUSINESS_CONTACT_REQUEST_RESPONSE',
+          contactRequestId: contactRequest.id,
+          requestType: contactRequest.type.toString(),
+          businessId: contactRequest.businessId || undefined,
+        },
+      });
+      this.logger.debug(
+        `Successfully sent business contact request response notification to business user ${contactRequest.userId}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Error sending business contact request response notification: ${error.message}`,
         error.stack,
       );
     }

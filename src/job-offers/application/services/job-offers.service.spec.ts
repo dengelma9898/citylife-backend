@@ -7,10 +7,14 @@ import {
 } from '../../domain/repositories/job-offer.repository.interface';
 import { CreateJobOfferDto } from '../../dto/create-job-offer.dto';
 import { NotFoundException } from '@nestjs/common';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
+import { UsersService } from '../../../users/users.service';
 
 describe('JobOffersService', () => {
   let service: JobOffersService;
   let repository: JobOfferRepository;
+  let notificationService: jest.Mocked<NotificationService>;
+  let usersService: jest.Mocked<UsersService>;
 
   const mockJobOfferRepository = {
     save: jest.fn(),
@@ -18,6 +22,14 @@ describe('JobOffersService', () => {
     findById: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+  };
+
+  const mockNotificationService = {
+    sendToUser: jest.fn(),
+  };
+
+  const mockUsersService = {
+    getAllUserProfilesWithIds: jest.fn(),
   };
 
   const mockJobOffer: JobOffer = JobOffer.create({
@@ -52,11 +64,21 @@ describe('JobOffersService', () => {
           provide: JOB_OFFER_REPOSITORY,
           useValue: mockJobOfferRepository,
         },
+        {
+          provide: NotificationService,
+          useValue: mockNotificationService,
+        },
+        {
+          provide: UsersService,
+          useValue: mockUsersService,
+        },
       ],
     }).compile();
 
     service = module.get<JobOffersService>(JobOffersService);
     repository = module.get<JobOfferRepository>(JOB_OFFER_REPOSITORY);
+    notificationService = module.get(NotificationService);
+    usersService = module.get(UsersService);
   });
 
   afterEach(() => {
@@ -90,6 +112,7 @@ describe('JobOffersService', () => {
       };
 
       mockJobOfferRepository.save.mockResolvedValue(mockJobOffer);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
 
       const result = await service.create(createDto);
 
@@ -97,6 +120,202 @@ describe('JobOffersService', () => {
       expect(result.title).toBe(mockJobOffer.title);
       expect(result.generalDescription).toBe(mockJobOffer.generalDescription);
       expect(mockJobOfferRepository.save).toHaveBeenCalled();
+    });
+
+    it('should send notification when preference is enabled', async () => {
+      const createDto: CreateJobOfferDto = {
+        title: 'New Job',
+        generalDescription: 'New Description',
+        neededProfile: 'New Profile',
+        location: {
+          address: 'New Street',
+          latitude: 49.4521,
+          longitude: 11.0767,
+        },
+        typeOfEmployment: 'Full-time',
+        homeOffice: false,
+        startDate: '2024-01-01',
+        contactData: {
+          email: 'new@example.com',
+        },
+        link: 'https://example.com',
+        isHighlight: false,
+        jobOfferCategoryId: 'category1',
+        tasks: [],
+        benefits: [],
+        images: [],
+        companyLogo: '',
+      };
+
+      mockJobOfferRepository.save.mockResolvedValue(mockJobOffer);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {
+              newJobOffers: true,
+            },
+            businessHistory: [],
+          },
+        },
+      ]);
+
+      await service.create(createDto);
+
+      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
+        title: 'Neues Job-Angebot',
+        body: expect.stringContaining('New Job'),
+        data: {
+          type: 'NEW_JOB_OFFER',
+          jobOfferId: mockJobOffer.id,
+          jobTitle: 'New Job',
+          jobOfferCategoryId: 'category1',
+        },
+      });
+    });
+
+    it('should not send notification when preference is disabled', async () => {
+      const createDto: CreateJobOfferDto = {
+        title: 'New Job',
+        generalDescription: 'New Description',
+        neededProfile: 'New Profile',
+        location: {
+          address: 'New Street',
+          latitude: 49.4521,
+          longitude: 11.0767,
+        },
+        typeOfEmployment: 'Full-time',
+        homeOffice: false,
+        startDate: '2024-01-01',
+        contactData: {
+          email: 'new@example.com',
+        },
+        link: 'https://example.com',
+        isHighlight: false,
+        jobOfferCategoryId: 'category1',
+        tasks: [],
+        benefits: [],
+        images: [],
+        companyLogo: '',
+      };
+
+      mockJobOfferRepository.save.mockResolvedValue(mockJobOffer);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {
+              newJobOffers: false,
+            },
+            businessHistory: [],
+          },
+        },
+      ]);
+
+      await service.create(createDto);
+
+      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should not send notification when preference is undefined (default: false)', async () => {
+      const createDto: CreateJobOfferDto = {
+        title: 'New Job',
+        generalDescription: 'New Description',
+        neededProfile: 'New Profile',
+        location: {
+          address: 'New Street',
+          latitude: 49.4521,
+          longitude: 11.0767,
+        },
+        typeOfEmployment: 'Full-time',
+        homeOffice: false,
+        startDate: '2024-01-01',
+        contactData: {
+          email: 'new@example.com',
+        },
+        link: 'https://example.com',
+        isHighlight: false,
+        jobOfferCategoryId: 'category1',
+        tasks: [],
+        benefits: [],
+        images: [],
+        companyLogo: '',
+      };
+
+      mockJobOfferRepository.save.mockResolvedValue(mockJobOffer);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {},
+            businessHistory: [],
+          },
+        },
+      ]);
+
+      await service.create(createDto);
+
+      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+
+    it('should handle notification errors gracefully', async () => {
+      const createDto: CreateJobOfferDto = {
+        title: 'New Job',
+        generalDescription: 'New Description',
+        neededProfile: 'New Profile',
+        location: {
+          address: 'New Street',
+          latitude: 49.4521,
+          longitude: 11.0767,
+        },
+        typeOfEmployment: 'Full-time',
+        homeOffice: false,
+        startDate: '2024-01-01',
+        contactData: {
+          email: 'new@example.com',
+        },
+        link: 'https://example.com',
+        isHighlight: false,
+        jobOfferCategoryId: 'category1',
+        tasks: [],
+        benefits: [],
+        images: [],
+        companyLogo: '',
+      };
+
+      mockJobOfferRepository.save.mockResolvedValue(mockJobOffer);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            notificationPreferences: {
+              newJobOffers: true,
+            },
+            businessHistory: [],
+          },
+        },
+      ]);
+      mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification failed'));
+
+      const result = await service.create(createDto);
+
+      expect(result).toBeDefined();
+      expect(mockNotificationService.sendToUser).toHaveBeenCalled();
     });
   });
 

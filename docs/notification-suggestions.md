@@ -224,7 +224,7 @@ Notification wird gesendet, wenn ein neues Job-Angebot erstellt wird.
 
 **Präferenz:**  
 - `notificationPreferences.newJobOffers?: boolean`
-- Default: `true`
+- Default: `false` (wenn `undefined`)
 
 **Implementierung:**
 - Service: `JobOffersService.create()`
@@ -237,91 +237,91 @@ Notification wird gesendet, wenn ein neues Job-Angebot erstellt wird.
 
 ---
 
-### 6. NEWS_REACTION
+### 6. NEW_NEWS
 
-**Priorität:** 🟢 Niedrig
+**Priorität:** 🟡 Mittel
 
 **Beschreibung:**  
-Notification wird gesendet, wenn jemand auf einen News-Post reagiert (für den Autor des Posts).
+Notification wird gesendet, wenn neue News gepostet werden.
 
 **Trigger:**  
-- `PATCH /news/:id/react` wird aufgerufen
-- Reaktion wird zu einem News-Item hinzugefügt
+- `POST /news` wird aufgerufen
+- News wird erfolgreich erstellt
 
 **Empfänger:**  
-- Der Autor des News-Posts (`createdBy`)
+- Alle User mit aktivierter Präferenz
+- Optional: Gefiltert nach News-Kategorie oder Stadt
 
 **Notification Payload:**
 ```typescript
 {
-  title: "Neue Reaktion auf deinen Post",
-  body: "{reactorName} hat mit {reactionType} reagiert",
+  title: "Neue Nachricht verfügbar",
+  body: "{newsTitle}",
   data: {
-    type: "NEWS_REACTION",
-    newsItemId: string,
-    reactorId: string,
-    reactorName: string,
-    reactionType: string
+    type: "NEW_NEWS",
+    newsId: string,
+    newsTitle: string,
+    categoryId?: string
   }
 }
 ```
 
 **Präferenz:**  
-- `notificationPreferences.newsReactions?: boolean`
-- Default: `true`
+- `notificationPreferences.newNews?: boolean`
+- Default: `false` (wenn `undefined`)
 
 **Implementierung:**
-- Service: `NewsService.postReaction()`
-- Notification Interface: `NewsReactionNotificationData`
+- Service: `NewsService.create()`
+- Notification Interface: `NewsNotificationData`
 - Module: `NewsModule` muss `NotificationsModule` importieren
 
 **Besonderheiten:**
-- Nicht senden, wenn User auf eigenen Post reagiert
-- Optional: Aggregation mehrerer Reaktionen (z.B. "5 neue Reaktionen")
+- Optional: Filterung nach News-Kategorie
+- Optional: Filterung nach Stadt/Location
 
 ---
 
-### 7. CHATROOM_MESSAGE
+### 7. NEW_SURVEY
 
-**Priorität:** 🟢 Niedrig
+**Priorität:** 🟡 Mittel
 
 **Beschreibung:**  
-Notification wird gesendet, wenn eine neue Nachricht in einem Chatroom gepostet wird.
+Notification wird gesendet, wenn eine neue Umfrage erstellt wird.
 
 **Trigger:**  
-- `POST /chatrooms/:chatroomId/messages` wird aufgerufen
-- Nachricht wird erfolgreich erstellt
+- `POST /special-polls` wird aufgerufen
+- Umfrage wird erfolgreich erstellt
 
 **Empfänger:**  
-- Alle Teilnehmer des Chatrooms (außer dem Sender)
+- Alle User mit aktivierter Präferenz
+- Optional: Gefiltert nach Umfrage-Kategorie oder Stadt
 
 **Notification Payload:**
 ```typescript
 {
-  title: "Neue Nachricht im Chatroom",
-  body: "{senderName}: {messagePreview}",
+  title: "Neue Umfrage verfügbar",
+  body: "{surveyTitle}",
   data: {
-    type: "CHATROOM_MESSAGE",
-    chatroomId: string,
-    messageId: string,
-    senderId: string,
-    senderName: string
+    type: "NEW_SURVEY",
+    surveyId: string,
+    surveyTitle: string,
+    categoryId?: string
   }
 }
 ```
 
 **Präferenz:**  
-- `notificationPreferences.chatroomMessages?: boolean`
-- Default: `true`
+- `notificationPreferences.newSurveys?: boolean`
+- Default: `false` (wenn `undefined`)
 
 **Implementierung:**
-- Service: `ChatMessagesService.create()`
-- Notification Interface: `ChatroomMessageNotificationData`
-- Module: `ChatroomsModule` muss `NotificationsModule` importieren
+- Service: `SpecialPollsService.create()`
+- Notification Interface: `SurveyNotificationData`
+- Module: `SpecialPollsModule` muss `NotificationsModule` importieren
 
 **Besonderheiten:**
-- Mute-Funktion pro Chatroom sinnvoll (zusätzlich zu globaler Präferenz)
-- Optional: Nicht senden, wenn User aktiv im Chatroom ist (Client-seitige Prüfung)
+- Optional: Filterung nach Umfrage-Kategorie
+- Optional: Filterung nach Stadt/Location
 
 ---
 
@@ -390,13 +390,13 @@ Notification wird gesendet als Erinnerung vor einem favorisierten Event.
 3. ✅ **CONTACT_REQUEST_RESPONSE** - Wichtig für Support-Erlebnis
 
 ### Phase 2 (Mittelfristig)
-4. ⏰ **EVENT_REMINDER** - Erfordert Scheduled Jobs Setup
-5. ✅ **NEW_JOB_OFFER** - Ähnlich wie NEW_EVENT/NEW_BUSINESS
-6. ✅ **FAV_EVENT_UPDATE** - Für bessere User-Experience
+4. ✅ **NEW_JOB_OFFER** - Ähnlich wie NEW_EVENT/NEW_BUSINESS
+5. ✅ **FAV_EVENT_UPDATE** - Für bessere User-Experience
+6. ⏳ **NEW_NEWS** - Analog zu NEW_EVENT/NEW_BUSINESS
+7. ⏳ **NEW_SURVEY** - Analog zu NEW_EVENT/NEW_BUSINESS
 
 ### Phase 3 (Optional)
-7. ✅ **NEWS_REACTION** - Social Engagement
-8. ✅ **CHATROOM_MESSAGE** - Community Engagement
+8. ⏰ **EVENT_REMINDER** - Erfordert Scheduled Jobs Setup
 
 ---
 
@@ -462,11 +462,11 @@ export interface NotificationPreferences {
   directChatRequests?: boolean;       // ✅ Implementiert
   contactRequestResponses?: boolean;   // ✅ Implementiert
   newEvents?: boolean;                // ✅ Implementiert
-  eventReminders?: boolean;           // 🟡 Phase 2
+  eventReminders?: boolean;           // 🟡 Phase 3
   eventUpdates?: boolean;             // ✅ Implementiert
   newJobOffers?: boolean;             // 🟡 Phase 2
-  newsReactions?: boolean;            // 🟢 Phase 3
-  chatroomMessages?: boolean;         // 🟢 Phase 3
+  newNews?: boolean;                  // 🟡 Phase 2
+  newSurveys?: boolean;               // 🟡 Phase 2
 }
 ```
 

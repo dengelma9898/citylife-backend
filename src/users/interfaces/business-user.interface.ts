@@ -1,3 +1,6 @@
+import { BusinessUserNotificationPreferences } from './business-user-notification-preferences.interface';
+import { FcmToken } from './user-profile.interface';
+
 export interface BusinessUser {
   id: string;
   email: string;
@@ -8,4 +11,6 @@ export interface BusinessUser {
   needsReview: boolean;
   eventIds?: string[];
   contactRequestIds?: string[];
+  notificationPreferences?: BusinessUserNotificationPreferences;
+  fcmTokens?: FcmToken[];
 }

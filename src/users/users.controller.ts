@@ -24,6 +24,7 @@ import { UserProfileDto } from './dto/user-profile.dto';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
+import { UpdateBusinessUserDto } from './dto/update-business-user.dto';
 import { BlockUserDto } from './dto/block-user.dto';
 import { BlockChatUserDto } from './dto/block-chat-user.dto';
 import { RegisterFcmTokenDto } from './dto/register-fcm-token.dto';
@@ -127,6 +128,15 @@ export class UsersController {
     @Body() updateUserDto: Partial<BusinessUser>,
   ): Promise<BusinessUser> {
     this.logger.log(`PUT /users/${id}/business-profile`);
+    return this.usersService.updateBusinessUser(id, updateUserDto);
+  }
+
+  @Patch(':id/business-profile')
+  public async patchBusinessUser(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateBusinessUserDto,
+  ): Promise<BusinessUser> {
+    this.logger.log(`PATCH /users/${id}/business-profile`);
     return this.usersService.updateBusinessUser(id, updateUserDto);
   }
 
