@@ -13,9 +13,10 @@ import { FirebaseDirectMessageRepository } from './infrastructure/persistence/fi
 import { FirebaseDirectChatSettingsRepository } from './infrastructure/persistence/firebase-direct-chat-settings.repository';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { UsersModule } from '../users/users.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [FirebaseModule, forwardRef(() => UsersModule)],
+  imports: [FirebaseModule, forwardRef(() => UsersModule), NotificationsModule],
   controllers: [DirectChatsController, DirectMessagesController],
   providers: [
     DirectChatsService,

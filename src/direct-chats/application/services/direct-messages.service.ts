@@ -15,6 +15,8 @@ import { DirectChatsService } from './direct-chats.service';
 import { CreateDirectMessageDto } from '../dtos/create-direct-message.dto';
 import { UpdateDirectMessageDto } from '../dtos/update-direct-message.dto';
 import { UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
+import { UsersService } from '../../../users/users.service';
 
 @Injectable()
 export class DirectMessagesService {
@@ -23,6 +25,8 @@ export class DirectMessagesService {
   constructor(
     private readonly directMessageRepository: DirectMessageRepository,
     private readonly directChatsService: DirectChatsService,
+    private readonly notificationService: NotificationService,
+    private readonly usersService: UsersService,
   ) {}
 
   async createMessage(
@@ -45,7 +49,64 @@ export class DirectMessagesService {
     });
     await this.directMessageRepository.save(message);
     await this.directChatsService.updateLastMessage(chatId, dto.content, userId);
+    const recipientId = chat.getOtherParticipantId(userId);
+    if (recipientId) {
+      await this.sendMessageNotification(
+        recipientId,
+        userName,
+        dto.content,
+        chatId,
+        message.id,
+        userId,
+        chat,
+      );
+    }
     return message;
+  }
+
+  private async sendMessageNotification(
+    recipientId: string,
+    senderName: string,
+    content: string,
+    chatId: string,
+    messageId: string,
+    senderId: string,
+    chat: any,
+  ): Promise<void> {
+    try {
+      const recipientProfile = await this.usersService.getUserProfile(recipientId);
+      if (!recipientProfile) {
+        this.logger.warn(`Recipient profile not found for user ${recipientId}`);
+        return;
+      }
+      const notificationPreferences = recipientProfile.notificationPreferences;
+      const directMessagesEnabled =
+        notificationPreferences?.directMessages !== undefined
+          ? notificationPreferences.directMessages
+          : false;
+      if (!directMessagesEnabled) {
+        this.logger.debug(`Direct messages notifications disabled for user ${recipientId}`);
+        return;
+      }
+      const mutedBy = chat.mutedBy || [];
+      if (mutedBy.includes(recipientId)) {
+        this.logger.debug(`Chat ${chatId} is muted by user ${recipientId}`);
+        return;
+      }
+      const truncatedContent = content.length > 100 ? content.substring(0, 97) + '...' : content;
+      await this.notificationService.sendToUser(recipientId, {
+        title: senderName,
+        body: truncatedContent,
+        data: {
+          type: 'DIRECT_CHAT_MESSAGE',
+          chatId,
+          messageId,
+          senderId,
+        },
+      });
+    } catch (error: any) {
+      this.logger.error(`Error sending notification to user ${recipientId}: ${error.message}`);
+    }
   }
 
   async getMessages(userId: string, chatId: string): Promise<DirectMessageProps[]> {

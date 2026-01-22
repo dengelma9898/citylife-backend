@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { ContactRequest } from '../../domain/entities/contact-request.entity';
-import { ContactRequestRepository } from '../../domain/repositories/contact-request.repository';
+import {
+  ContactRequest,
+  ContactRequestProps,
+  ContactRequestJSON,
+} from '../../domain/entities/contact-request.entity';
 import { ContactMessage } from '../../domain/entities/contact-message.entity';
+import { ContactRequestRepository } from '../../domain/repositories/contact-request.repository';
 
 @Injectable()
 export class FirebaseContactRequestRepository implements ContactRequestRepository {
@@ -12,8 +16,12 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
   constructor(private readonly firebaseService: FirebaseService) {}
 
   private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
+    if (obj === null || obj === undefined) {
+      return null;
+    }
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.removeUndefined(item));
+    }
     if (typeof obj === 'object') {
       const result: any = {};
       for (const key in obj) {
@@ -24,18 +32,29 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
     return obj;
   }
 
-  private toPlainObject(entity: ContactRequest): any {
+  private toPlainObject(entity: ContactRequest): Omit<ContactRequestJSON, 'id'> {
     const { id, ...data } = entity.toJSON();
     return this.removeUndefined(data);
   }
 
-  private toEntityProps(data: any, id: string): any {
+  private toContactRequestProps(data: any, id: string): ContactRequestProps {
     return {
       id,
-      ...data,
-      messages: (data.messages || []).map((msg: any) => ContactMessage.fromProps(msg)),
-      createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
+      type: data.type,
+      userId: data.userId,
+      businessId: data.businessId,
+      messages: (data.messages || []).map((msg: any) =>
+        ContactMessage.fromProps({
+          userId: msg.userId,
+          message: msg.message,
+          createdAt: msg.createdAt,
+          isAdminResponse: msg.isAdminResponse,
+        }),
+      ),
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+      isProcessed: data.isProcessed ?? false,
+      responded: data.responded ?? false,
     };
   }
 
@@ -44,7 +63,7 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.contactRequestCollection).get();
     return snapshot.docs.map(doc =>
-      ContactRequest.fromProps(this.toEntityProps(doc.data(), doc.id)),
+      ContactRequest.fromProps(this.toContactRequestProps(doc.data(), doc.id)),
     );
   }
 
@@ -57,7 +76,7 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
       return null;
     }
 
-    return ContactRequest.fromProps(this.toEntityProps(doc.data(), doc.id));
+    return ContactRequest.fromProps(this.toContactRequestProps(doc.data(), doc.id));
   }
 
   async create(
@@ -68,7 +87,7 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
     const contactRequest = ContactRequest.create(data);
     const plainData = this.toPlainObject(contactRequest);
     const docRef = await db.collection(this.contactRequestCollection).add(plainData);
-    return ContactRequest.fromProps(this.toEntityProps(plainData, docRef.id));
+    return ContactRequest.fromProps(this.toContactRequestProps(plainData, docRef.id));
   }
 
   async update(
@@ -84,19 +103,12 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
       return null;
     }
 
-    const updateData: any = { ...data };
-    if (data.messages) {
-      updateData.messages = data.messages.map((msg: ContactMessage) =>
-        msg instanceof ContactMessage ? msg.toJSON() : msg,
-      );
-    }
-    updateData.updatedAt = new Date().toISOString();
+    const currentRequest = ContactRequest.fromProps(this.toContactRequestProps(doc.data(), doc.id));
+    const updatedRequest = currentRequest.update(data);
+    const plainData = this.toPlainObject(updatedRequest);
 
-    const plainUpdateData = this.removeUndefined(updateData);
-    await db.collection(this.contactRequestCollection).doc(id).update(plainUpdateData);
-
-    const updatedDoc = await db.collection(this.contactRequestCollection).doc(id).get();
-    return ContactRequest.fromProps(this.toEntityProps(updatedDoc.data(), updatedDoc.id));
+    await db.collection(this.contactRequestCollection).doc(id).update(plainData);
+    return ContactRequest.fromProps(this.toContactRequestProps(plainData, id));
   }
 
   async delete(id: string): Promise<void> {
@@ -113,7 +125,7 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
       .where('userId', '==', userId)
       .get();
     return snapshot.docs.map(doc =>
-      ContactRequest.fromProps(this.toEntityProps(doc.data(), doc.id)),
+      ContactRequest.fromProps(this.toContactRequestProps(doc.data(), doc.id)),
     );
   }
 
@@ -125,7 +137,7 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
       .where('businessId', '==', businessId)
       .get();
     return snapshot.docs.map(doc =>
-      ContactRequest.fromProps(this.toEntityProps(doc.data(), doc.id)),
+      ContactRequest.fromProps(this.toContactRequestProps(doc.data(), doc.id)),
     );
   }
 }

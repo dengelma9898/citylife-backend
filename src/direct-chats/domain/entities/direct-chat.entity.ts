@@ -14,6 +14,7 @@ export interface DirectChatProps {
   invitedConfirmed: boolean;
   status: DirectChatStatus;
   lastMessage?: LastMessage;
+  mutedBy?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +27,7 @@ export class DirectChat {
   readonly invitedConfirmed: boolean;
   readonly status: DirectChatStatus;
   readonly lastMessage?: LastMessage;
+  readonly mutedBy?: string[];
   readonly createdAt: string;
   readonly updatedAt: string;
 
@@ -37,6 +39,7 @@ export class DirectChat {
     this.invitedConfirmed = props.invitedConfirmed;
     this.status = props.status;
     this.lastMessage = props.lastMessage;
+    this.mutedBy = props.mutedBy;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }
@@ -98,6 +101,7 @@ export class DirectChat {
       invitedConfirmed: this.invitedConfirmed,
       status: this.status,
       lastMessage: this.lastMessage,
+      mutedBy: this.mutedBy,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

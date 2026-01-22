@@ -9,6 +9,8 @@ import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { BlockUserDto } from './dto/block-user.dto';
 import { UserType } from './enums/user-type.enum';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { AuthGuard } from '../core/guards/auth.guard';
+import { RolesGuard } from '../core/guards/roles.guard';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -74,7 +76,12 @@ describe('UsersController', () => {
           useValue: mockFirebaseStorageService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(AuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<UsersController>(UsersController);
     usersService = module.get<UsersService>(UsersService);

@@ -18,9 +18,10 @@ import {
   where,
   runTransaction,
 } from 'firebase/firestore';
-import { UserProfile } from './interfaces/user-profile.interface';
+import { UserProfile, FcmToken } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
+import { RegisterFcmTokenDto } from './dto/register-fcm-token.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { UserType } from './enums/user-type.enum';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
@@ -65,6 +66,21 @@ export class UsersService {
       return snapshot.docs.map(doc => doc.data() as UserProfile);
     } catch (error) {
       this.logger.error(`Error getting all users: ${error.message}`);
+      throw error;
+    }
+  }
+
+  public async getAllUserProfilesWithIds(): Promise<{ id: string; profile: UserProfile }[]> {
+    try {
+      this.logger.debug('Getting all users with IDs');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.usersCollection).get();
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        profile: doc.data() as UserProfile,
+      }));
+    } catch (error) {
+      this.logger.error(`Error getting all users with IDs: ${error.message}`);
       throw error;
     }
   }
@@ -693,6 +709,126 @@ export class UsersService {
       return userProfile.blockedUserIds || [];
     } catch (error) {
       this.logger.error(`Error getting blocked users for user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  public async registerFcmToken(userId: string, dto: RegisterFcmTokenDto): Promise<void> {
+    try {
+      this.logger.debug(`Registering FCM token for user ${userId}, device ${dto.deviceId}`);
+      const userProfile = await this.getUserProfile(userId);
+      if (userProfile) {
+        const existingTokens = userProfile.fcmTokens || [];
+        const existingTokenIndex = existingTokens.findIndex(
+          token => token.deviceId === dto.deviceId,
+        );
+        const now = new Date().toISOString();
+        let updatedTokens: FcmToken[];
+        if (existingTokenIndex >= 0) {
+          updatedTokens = existingTokens.map((token, index) =>
+            index === existingTokenIndex
+              ? {
+                  ...token,
+                  token: dto.token,
+                  platform: dto.platform,
+                  lastUsedAt: now,
+                }
+              : token,
+          );
+        } else {
+          updatedTokens = [
+            ...existingTokens,
+            {
+              token: dto.token,
+              deviceId: dto.deviceId,
+              platform: dto.platform,
+              createdAt: now,
+              lastUsedAt: now,
+            },
+          ];
+        }
+        await this.update(userId, { fcmTokens: updatedTokens });
+        return;
+      }
+      const businessUser = await this.getBusinessUser(userId);
+      if (businessUser) {
+        const existingTokens = businessUser.fcmTokens || [];
+        const existingTokenIndex = existingTokens.findIndex(
+          token => token.deviceId === dto.deviceId,
+        );
+        const now = new Date().toISOString();
+        let updatedTokens: FcmToken[];
+        if (existingTokenIndex >= 0) {
+          updatedTokens = existingTokens.map((token, index) =>
+            index === existingTokenIndex
+              ? {
+                  ...token,
+                  token: dto.token,
+                  platform: dto.platform,
+                  lastUsedAt: now,
+                }
+              : token,
+          );
+        } else {
+          updatedTokens = [
+            ...existingTokens,
+            {
+              token: dto.token,
+              deviceId: dto.deviceId,
+              platform: dto.platform,
+              createdAt: now,
+              lastUsedAt: now,
+            },
+          ];
+        }
+        await this.updateBusinessUser(userId, { fcmTokens: updatedTokens });
+        return;
+      }
+      throw new NotFoundException('User not found');
+    } catch (error) {
+      this.logger.error(`Error registering FCM token for user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  public async removeFcmToken(userId: string, deviceId: string): Promise<void> {
+    try {
+      this.logger.debug(`Removing FCM token for user ${userId}, device ${deviceId}`);
+      const userProfile = await this.getUserProfile(userId);
+      if (userProfile) {
+        const existingTokens = userProfile.fcmTokens || [];
+        const updatedTokens = existingTokens.filter(token => token.deviceId !== deviceId);
+        await this.update(userId, { fcmTokens: updatedTokens });
+        return;
+      }
+      const businessUser = await this.getBusinessUser(userId);
+      if (businessUser) {
+        const existingTokens = businessUser.fcmTokens || [];
+        const updatedTokens = existingTokens.filter(token => token.deviceId !== deviceId);
+        await this.updateBusinessUser(userId, { fcmTokens: updatedTokens });
+        return;
+      }
+      throw new NotFoundException('User not found');
+    } catch (error) {
+      this.logger.error(`Error removing FCM token for user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  public async getFcmTokens(userId: string): Promise<FcmToken[]> {
+    try {
+      this.logger.debug(`Getting FCM tokens for user ${userId}`);
+      const userProfile = await this.getUserProfile(userId);
+      if (userProfile) {
+        return userProfile.fcmTokens || [];
+      }
+      const businessUser = await this.getBusinessUser(userId);
+      if (businessUser) {
+        return businessUser.fcmTokens || [];
+      }
+      throw new NotFoundException('User not found');
+    } catch (error) {
+      this.logger.error(`Error getting FCM tokens for user ${userId}: ${error.message}`);
       throw error;
     }
   }

@@ -18,6 +18,7 @@ import { HybridExtractorService } from './infrastructure/llm/hybrid-extractor.se
 import { CostTrackerService } from './infrastructure/llm/cost-tracker.service';
 import { EventCategoriesModule } from '../event-categories/event-categories.module';
 import { IsValidCategoryConstraint } from './dto/validators/is-valid-category.validator';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { IsValidCategoryConstraint } from './dto/validators/is-valid-category.va
     forwardRef(() => UsersModule),
     forwardRef(() => BusinessesModule),
     EventCategoriesModule,
+    forwardRef(() => NotificationsModule),
   ],
   controllers: [EventsController],
   providers: [

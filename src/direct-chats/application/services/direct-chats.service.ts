@@ -12,6 +12,7 @@ import { DirectMessageRepository } from '../../domain/repositories/direct-messag
 import { DirectChat, DirectChatProps } from '../../domain/entities/direct-chat.entity';
 import { CreateDirectChatDto } from '../dtos/create-direct-chat.dto';
 import { UsersService } from '../../../users/users.service';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 
 export interface DirectChatWithParticipantInfo extends DirectChatProps {
   otherParticipantName?: string;
@@ -27,6 +28,7 @@ export class DirectChatsService {
     private readonly directMessageRepository: DirectMessageRepository,
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async createChat(userId: string, dto: CreateDirectChatDto): Promise<DirectChat> {
@@ -64,6 +66,7 @@ export class DirectChatsService {
     await this.directChatRepository.save(chat);
     await this.updateUserDirectChatIds(userId, chat.id, 'add');
     await this.updateUserDirectChatIds(dto.invitedUserId, chat.id, 'add');
+    await this.sendDirectChatRequestNotification(chat, userProfile);
     return chat;
   }
 
@@ -175,6 +178,51 @@ export class DirectChatsService {
       throw new ForbiddenException('You are not a participant of this chat');
     }
     return chat;
+  }
+
+  private async sendDirectChatRequestNotification(
+    chat: DirectChat,
+    senderProfile: any,
+  ): Promise<void> {
+    try {
+      const invitedUserProfile = await this.usersService.getUserProfile(chat.invitedUserId);
+      if (!invitedUserProfile) {
+        this.logger.warn(
+          `Invited user profile not found for user ${chat.invitedUserId}, skipping notification`,
+        );
+        return;
+      }
+      const notificationPreferences = invitedUserProfile.notificationPreferences;
+      const directChatRequestsEnabled =
+        notificationPreferences?.directChatRequests !== undefined
+          ? notificationPreferences.directChatRequests
+          : false;
+      if (!directChatRequestsEnabled) {
+        this.logger.debug(
+          `Direct chat requests notifications disabled for user ${chat.invitedUserId}`,
+        );
+        return;
+      }
+      const senderName = senderProfile.name || 'Jemand';
+      await this.notificationService.sendToUser(chat.invitedUserId, {
+        title: 'Neue Chat-Anfrage',
+        body: `${senderName} möchte mit dir chatten`,
+        data: {
+          type: 'DIRECT_CHAT_REQUEST',
+          chatId: chat.id,
+          senderId: chat.creatorId,
+          senderName,
+        },
+      });
+      this.logger.debug(
+        `Successfully sent direct chat request notification to user ${chat.invitedUserId}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Error sending direct chat request notification: ${error.message}`,
+        error.stack,
+      );
+    }
   }
 
   private async updateUserDirectChatIds(

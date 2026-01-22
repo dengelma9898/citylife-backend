@@ -9,6 +9,7 @@ import { KeywordsModule } from '../keywords/keywords.module';
 import { EventsModule } from '../events/events.module';
 import { FirebaseBusinessRepository } from './infrastructure/persistence/firebase-business.repository';
 import { BUSINESS_REPOSITORY } from './domain/repositories/business.repository';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { BUSINESS_REPOSITORY } from './domain/repositories/business.repository';
     BusinessCategoriesModule,
     KeywordsModule,
     forwardRef(() => EventsModule),
+    NotificationsModule,
   ],
   controllers: [BusinessesController],
   providers: [

@@ -13,6 +13,7 @@ import {
   CONTACT_REQUEST_REPOSITORY,
   ContactRequestRepository,
 } from '../../domain/repositories/contact-request.repository';
+import { NotificationService } from '../../../notifications/application/services/notification.service';
 
 @Injectable()
 export class ContactService {
@@ -23,6 +24,7 @@ export class ContactService {
     private readonly usersService: UsersService,
     @Inject(CONTACT_REQUEST_REPOSITORY)
     private readonly contactRequestRepository: ContactRequestRepository,
+    private readonly notificationService: NotificationService,
   ) {}
 
   public async createContactRequest(
@@ -92,6 +94,8 @@ export class ContactService {
       throw new Error(`Contact request with id ${id} not found`);
     }
 
+    const wasResponded = contactRequest.responded;
+
     const newMessage = ContactMessage.create({
       message: data.message,
       userId: data.userId,
@@ -105,6 +109,10 @@ export class ContactService {
 
     if (!updatedRequest) {
       throw new Error(`Contact request with id ${id} not found after update`);
+    }
+
+    if (!wasResponded && updatedRequest.userId) {
+      await this.sendContactRequestResponseNotification(updatedRequest);
     }
 
     return updatedRequest;
@@ -174,19 +182,26 @@ export class ContactService {
       throw new UnauthorizedException('Benutzer nicht gefunden');
     }
 
+    const wasResponded = contactRequest.responded;
+    const isAdminResponse = 'userType' in user && user.userType === UserType.SUPER_ADMIN;
+
     const newMessage = ContactMessage.create({
       message: messageDto.message,
       userId: userId,
-      isAdminResponse: 'userType' in user && user.userType === UserType.SUPER_ADMIN,
+      isAdminResponse,
     });
 
     const updatedRequest = await this.contactRequestRepository.update(id, {
       messages: [...contactRequest.messages.map(msg => ContactMessage.fromProps(msg)), newMessage],
-      responded: 'userType' in user && user.userType === UserType.SUPER_ADMIN,
+      responded: isAdminResponse,
     });
 
     if (!updatedRequest) {
       throw new Error('Kontaktanfrage konnte nach dem Update nicht gefunden werden');
+    }
+
+    if (!wasResponded && isAdminResponse && updatedRequest.userId) {
+      await this.sendContactRequestResponseNotification(updatedRequest);
     }
 
     return updatedRequest;
@@ -196,5 +211,131 @@ export class ContactService {
     this.logger.debug('Getting count of open contact requests');
     const requests = await this.contactRequestRepository.findAll();
     return requests.filter(request => !request.responded).length;
+  }
+
+  private async sendContactRequestResponseNotification(
+    contactRequest: ContactRequest,
+  ): Promise<void> {
+    try {
+      if (!contactRequest.userId) {
+        this.logger.debug(
+          `Contact request ${contactRequest.id} has no userId, skipping notification`,
+        );
+        return;
+      }
+      const isBusinessRequestType =
+        contactRequest.type === ContactRequestType.BUSINESS_CLAIM ||
+        contactRequest.type === ContactRequestType.BUSINESS_REQUEST;
+      const businessUser = await this.usersService.getBusinessUser(contactRequest.userId);
+      if (isBusinessRequestType && businessUser) {
+        await this.sendBusinessContactRequestResponseNotification(contactRequest);
+        return;
+      }
+      const userProfile = await this.usersService.getUserProfile(contactRequest.userId);
+      if (!userProfile) {
+        this.logger.warn(
+          `User profile not found for user ${contactRequest.userId}, skipping notification`,
+        );
+        return;
+      }
+      const notificationPreferences = userProfile.notificationPreferences;
+      const contactRequestResponsesEnabled =
+        notificationPreferences?.contactRequestResponses !== undefined
+          ? notificationPreferences.contactRequestResponses
+          : true;
+      if (!contactRequestResponsesEnabled) {
+        this.logger.debug(
+          `Contact request responses notifications disabled for user ${contactRequest.userId}`,
+        );
+        return;
+      }
+      const requestTypeLabels: Record<ContactRequestType, string> = {
+        [ContactRequestType.GENERAL]: 'Allgemeine',
+        [ContactRequestType.FEEDBACK]: 'Feedback',
+        [ContactRequestType.BUSINESS_CLAIM]: 'Geschäftsinhaber-Anfrage',
+        [ContactRequestType.BUSINESS_REQUEST]: 'Geschäftsanfrage',
+      };
+      const requestTypeLabel = requestTypeLabels[contactRequest.type] || 'Anfrage';
+      await this.notificationService.sendToUser(contactRequest.userId, {
+        title: 'Antwort auf deine Anfrage',
+        body: `Du hast eine Antwort auf deine ${requestTypeLabel} Anfrage erhalten`,
+        data: {
+          type: 'CONTACT_REQUEST_RESPONSE',
+          contactRequestId: contactRequest.id,
+          requestType: contactRequest.type.toString(),
+        },
+      });
+      this.logger.debug(
+        `Successfully sent contact request response notification to user ${contactRequest.userId}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Error sending contact request response notification: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  private async sendBusinessContactRequestResponseNotification(
+    contactRequest: ContactRequest,
+  ): Promise<void> {
+    try {
+      if (!contactRequest.userId) {
+        this.logger.debug(
+          `Contact request ${contactRequest.id} has no userId, skipping business notification`,
+        );
+        return;
+      }
+      const isBusinessRequestType =
+        contactRequest.type === ContactRequestType.BUSINESS_CLAIM ||
+        contactRequest.type === ContactRequestType.BUSINESS_REQUEST;
+      if (!isBusinessRequestType) {
+        this.logger.debug(
+          `Contact request ${contactRequest.id} is not a business request type, skipping business notification`,
+        );
+        return;
+      }
+      const businessUser = await this.usersService.getBusinessUser(contactRequest.userId);
+      if (!businessUser) {
+        this.logger.debug(
+          `Business user not found for user ${contactRequest.userId}, skipping business notification`,
+        );
+        return;
+      }
+      const notificationPreferences = businessUser.notificationPreferences;
+      const businessContactRequestResponsesEnabled =
+        notificationPreferences?.businessContactRequestResponses !== undefined
+          ? notificationPreferences.businessContactRequestResponses
+          : false;
+      if (!businessContactRequestResponsesEnabled) {
+        this.logger.debug(
+          `Business contact request responses notifications disabled for business user ${contactRequest.userId}`,
+        );
+        return;
+      }
+      const requestTypeLabels: Partial<Record<ContactRequestType, string>> = {
+        [ContactRequestType.BUSINESS_CLAIM]: 'Geschäftsinhaber-Anfrage',
+        [ContactRequestType.BUSINESS_REQUEST]: 'Geschäftsanfrage',
+      };
+      const requestTypeLabel = requestTypeLabels[contactRequest.type] || 'Business-Anfrage';
+      await this.notificationService.sendToUser(contactRequest.userId, {
+        title: 'Antwort auf deine Business-Anfrage',
+        body: `Du hast eine Antwort auf deine ${requestTypeLabel} Anfrage erhalten`,
+        data: {
+          type: 'BUSINESS_CONTACT_REQUEST_RESPONSE',
+          contactRequestId: contactRequest.id,
+          requestType: contactRequest.type.toString(),
+          businessId: contactRequest.businessId || undefined,
+        },
+      });
+      this.logger.debug(
+        `Successfully sent business contact request response notification to business user ${contactRequest.userId}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Error sending business contact request response notification: ${error.message}`,
+        error.stack,
+      );
+    }
   }
 }

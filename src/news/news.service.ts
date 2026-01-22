@@ -16,6 +16,7 @@ import { UsersService } from '../users/users.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { DateTimeUtils } from '../utils/date-time.utils';
+import { NotificationService } from '../notifications/application/services/notification.service';
 
 @Injectable()
 export class NewsService {
@@ -27,6 +28,7 @@ export class NewsService {
     private readonly usersService: UsersService,
     private readonly firebaseService: FirebaseService,
     private readonly firebaseStorageService: FirebaseStorageService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private removeUndefined(obj: any): any {
@@ -234,6 +236,7 @@ export class NewsService {
         ...newsItem,
       } as NewsItem;
       await this.enforceNewsLimit();
+      await this.sendNewNewsNotification(savedNewsItem);
       return savedNewsItem;
     } catch (error) {
       this.logger.error(`Error saving news item: ${error.message}`);
@@ -515,6 +518,64 @@ export class NewsService {
     } catch (error) {
       this.logger.error(`Error incrementing view count for news ${newsId}: ${error.message}`);
       throw error;
+    }
+  }
+
+  private async sendNewNewsNotification(newsItem: NewsItem): Promise<void> {
+    try {
+      this.logger.log(`[NOTIFICATION] Starting notification process for news ${newsItem.id}`);
+      const newsTitle =
+        newsItem.type === 'poll'
+          ? (newsItem as PollNewsItem).question
+          : (newsItem as TextNewsItem | ImageNewsItem).content;
+      this.logger.debug(`[NOTIFICATION] News title: ${newsTitle}`);
+      const allUsers = await this.usersService.getAllUserProfilesWithIds();
+      this.logger.debug(`[NOTIFICATION] Found ${allUsers.length} total users`);
+      const usersToNotify = allUsers.filter(({ id, profile }) => {
+        const notificationPreferences = profile.notificationPreferences;
+        const newNewsEnabled =
+          notificationPreferences?.newNews !== undefined ? notificationPreferences.newNews : false;
+        if (!newNewsEnabled) {
+          this.logger.debug(`[NOTIFICATION] User ${id} has newNews disabled`);
+        }
+        return newNewsEnabled;
+      });
+      this.logger.log(
+        `[NOTIFICATION] Filtered to ${usersToNotify.length} users with newNews enabled`,
+      );
+      if (usersToNotify.length === 0) {
+        this.logger.warn(`[NOTIFICATION] No users to notify for news ${newsItem.id}`);
+        return;
+      }
+      const sendPromises = usersToNotify.map(async ({ id }) => {
+        try {
+          this.logger.debug(`[NOTIFICATION] Sending to user ${id}`);
+          await this.notificationService.sendToUser(id, {
+            title: 'Neue Nachricht verfügbar',
+            body: newsTitle,
+            data: {
+              type: 'NEW_NEWS',
+              newsId: newsItem.id,
+              newsTitle: newsTitle,
+            },
+          });
+          this.logger.debug(`[NOTIFICATION] Successfully sent to user ${id}`);
+        } catch (error: any) {
+          this.logger.error(
+            `[NOTIFICATION] Error sending notification to user ${id}: ${error.message}`,
+            error.stack,
+          );
+        }
+      });
+      await Promise.all(sendPromises);
+      this.logger.log(
+        `[NOTIFICATION] Completed notification process for news ${newsItem.id}. Sent to ${usersToNotify.length} users.`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `[NOTIFICATION] Error sending new news notification for news ${newsItem.id}: ${error.message}`,
+        error.stack,
+      );
     }
   }
 }
