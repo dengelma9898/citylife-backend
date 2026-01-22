@@ -412,6 +412,16 @@ describe('BusinessesService', () => {
     });
 
     it('should send business activated notification when status changes from PENDING to ACTIVE', async () => {
+      const mockBusinessWithId = Business.fromProps({
+        ...mockBusiness.toJSON(),
+        id: 'business1',
+      });
+
+      const mockUpdatedBusinessWithId = Business.fromProps({
+        ...mockUpdatedBusiness.toJSON(),
+        id: 'business1',
+      });
+
       const mockBusinessUser = {
         id: 'business-user-1',
         email: 'business@example.com',
@@ -425,8 +435,8 @@ describe('BusinessesService', () => {
         },
       };
 
-      mockBusinessesRepository.findById.mockResolvedValue(mockBusiness);
-      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusiness);
+      mockBusinessesRepository.findById.mockResolvedValue(mockBusinessWithId);
+      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusinessWithId);
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
       mockUsersService.getAllBusinessUsers.mockResolvedValue([mockBusinessUser]);
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
@@ -495,6 +505,16 @@ describe('BusinessesService', () => {
     });
 
     it('should only send notification to business users with matching businessId', async () => {
+      const mockBusinessWithId = Business.fromProps({
+        ...mockBusiness.toJSON(),
+        id: 'business1',
+      });
+
+      const mockUpdatedBusinessWithId = Business.fromProps({
+        ...mockUpdatedBusiness.toJSON(),
+        id: 'business1',
+      });
+
       const mockBusinessUser1 = {
         id: 'business-user-1',
         email: 'business1@example.com',
@@ -521,8 +541,8 @@ describe('BusinessesService', () => {
         },
       };
 
-      mockBusinessesRepository.findById.mockResolvedValue(mockBusiness);
-      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusiness);
+      mockBusinessesRepository.findById.mockResolvedValue(mockBusinessWithId);
+      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusinessWithId);
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
       mockUsersService.getAllBusinessUsers.mockResolvedValue([
         mockBusinessUser1,

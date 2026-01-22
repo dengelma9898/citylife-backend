@@ -147,7 +147,8 @@ describe('JobOffersService', () => {
         companyLogo: '',
       };
 
-      mockJobOfferRepository.save.mockResolvedValue(mockJobOffer);
+      const savedJobOffer = JobOffer.create(createDto);
+      mockJobOfferRepository.save.mockResolvedValue(savedJobOffer);
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
         {
           id: 'user1',
@@ -168,10 +169,10 @@ describe('JobOffersService', () => {
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
         title: 'Neues Job-Angebot',
-        body: expect.stringContaining('New Job'),
+        body: 'New Job - category1',
         data: {
           type: 'NEW_JOB_OFFER',
-          jobOfferId: mockJobOffer.id,
+          jobOfferId: savedJobOffer.id,
           jobTitle: 'New Job',
           jobOfferCategoryId: 'category1',
         },

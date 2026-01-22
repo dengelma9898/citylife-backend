@@ -56,6 +56,10 @@ export class JobOffersService {
       this.logger.log(`[NOTIFICATION] Starting notification process for job offer ${jobOffer.id}`);
       this.logger.debug(`[NOTIFICATION] Job offer title: ${jobOffer.title}`);
       const allUsers = await this.usersService.getAllUserProfilesWithIds();
+      if (!allUsers || !Array.isArray(allUsers)) {
+        this.logger.warn(`[NOTIFICATION] getAllUserProfilesWithIds returned invalid data: ${allUsers}`);
+        return;
+      }
       this.logger.debug(`[NOTIFICATION] Found ${allUsers.length} total users`);
       const usersToNotify = allUsers.filter(({ id, profile }) => {
         const notificationPreferences = profile.notificationPreferences;

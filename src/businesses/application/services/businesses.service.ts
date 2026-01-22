@@ -218,6 +218,10 @@ export class BusinessesService {
       this.logger.log(`[NOTIFICATION] Starting notification process for business ${business.id}`);
       this.logger.debug(`[NOTIFICATION] Business name: ${business.name}`);
       const allUsers = await this.usersService.getAllUserProfilesWithIds();
+      if (!allUsers || !Array.isArray(allUsers)) {
+        this.logger.warn(`[NOTIFICATION] getAllUserProfilesWithIds returned invalid data: ${allUsers}`);
+        return;
+      }
       this.logger.debug(`[NOTIFICATION] Found ${allUsers.length} total users`);
       const usersToNotify = allUsers.filter(({ id, profile }) => {
         const notificationPreferences = profile.notificationPreferences;
@@ -276,6 +280,10 @@ export class BusinessesService {
       );
       this.logger.debug(`[BUSINESS_NOTIFICATION] Business name: ${business.name}`);
       const allBusinessUsers = await this.usersService.getAllBusinessUsers();
+      if (!allBusinessUsers || !Array.isArray(allBusinessUsers)) {
+        this.logger.warn(`[BUSINESS_NOTIFICATION] getAllBusinessUsers returned invalid data: ${allBusinessUsers}`);
+        return;
+      }
       this.logger.debug(
         `[BUSINESS_NOTIFICATION] Found ${allBusinessUsers.length} total business users`,
       );
