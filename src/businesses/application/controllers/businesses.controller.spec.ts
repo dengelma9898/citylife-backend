@@ -1,12 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BusinessesController } from './businesses.controller';
 import { BusinessesService } from '../services/businesses.service';
+import { BusinessEventsSettingsService } from '../services/business-events-settings.service';
 import { Business, BusinessAddress, BusinessContact } from '../../domain/entities/business.entity';
+import { BusinessEventsSettings } from '../../domain/entities/business-events-settings.entity';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { FirebaseStorageService } from '../../../firebase/firebase-storage.service';
 import { UsersService } from '../../../users/users.service';
+import { AuthGuard } from '../../../core/guards/auth.guard';
+import { RolesGuard } from '../../../core/guards/roles.guard';
 
 jest.mock('../../../firebase/firebase.service', () => ({
   FirebaseService: jest.fn().mockImplementation(() => ({
@@ -49,6 +53,12 @@ describe('BusinessesController', () => {
     addBusinessToUser: jest.fn(),
   };
 
+  const mockBusinessEventsSettingsService = {
+    getSettings: jest.fn(),
+    isFeatureEnabled: jest.fn(),
+    updateSettings: jest.fn(),
+  };
+
   const mockBusinessAddress = BusinessAddress.create({
     street: 'Main Street',
     houseNumber: '123',
@@ -73,6 +83,10 @@ describe('BusinessesController', () => {
           useValue: mockBusinessesService,
         },
         {
+          provide: BusinessEventsSettingsService,
+          useValue: mockBusinessEventsSettingsService,
+        },
+        {
           provide: ConfigService,
           useValue: mockConfigService,
         },
@@ -89,7 +103,12 @@ describe('BusinessesController', () => {
           useValue: mockUsersService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(AuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<BusinessesController>(BusinessesController);
     service = module.get<BusinessesService>(BusinessesService);
@@ -427,6 +446,81 @@ describe('BusinessesController', () => {
         hasAccount: true,
         status: BusinessStatus.PENDING,
       });
+    });
+  });
+
+  describe('getBusinessEventsSettings', () => {
+    const mockSettings = BusinessEventsSettings.fromProps({
+      id: 'business_events_settings',
+      isEnabled: true,
+      updatedAt: new Date().toISOString(),
+    });
+
+    it('should return current business events settings', async () => {
+      mockBusinessEventsSettingsService.getSettings.mockResolvedValue(mockSettings);
+
+      const result = await controller.getBusinessEventsSettings();
+
+      expect(result).toBeDefined();
+      expect(result.isEnabled).toBe(true);
+      expect(mockBusinessEventsSettingsService.getSettings).toHaveBeenCalled();
+    });
+  });
+
+  describe('updateBusinessEventsSettings', () => {
+    const mockSettings = BusinessEventsSettings.fromProps({
+      id: 'business_events_settings',
+      isEnabled: true,
+      updatedAt: new Date().toISOString(),
+    });
+
+    const updatedSettings = BusinessEventsSettings.fromProps({
+      id: 'business_events_settings',
+      isEnabled: false,
+      updatedAt: new Date().toISOString(),
+      updatedBy: 'user-1',
+    });
+
+    const mockRequest = {
+      user: { uid: 'user-1' },
+    };
+
+    it('should update business events settings', async () => {
+      mockBusinessEventsSettingsService.updateSettings.mockResolvedValue(updatedSettings);
+
+      const result = await controller.updateBusinessEventsSettings(mockRequest, {
+        isEnabled: false,
+      });
+
+      expect(result).toBeDefined();
+      expect(result.isEnabled).toBe(false);
+      expect(result.updatedBy).toBe('user-1');
+      expect(mockBusinessEventsSettingsService.updateSettings).toHaveBeenCalledWith(
+        false,
+        'user-1',
+      );
+    });
+
+    it('should update settings to enabled', async () => {
+      const enabledSettings = BusinessEventsSettings.fromProps({
+        id: 'business_events_settings',
+        isEnabled: true,
+        updatedAt: new Date().toISOString(),
+        updatedBy: 'user-1',
+      });
+
+      mockBusinessEventsSettingsService.updateSettings.mockResolvedValue(enabledSettings);
+
+      const result = await controller.updateBusinessEventsSettings(mockRequest, {
+        isEnabled: true,
+      });
+
+      expect(result).toBeDefined();
+      expect(result.isEnabled).toBe(true);
+      expect(mockBusinessEventsSettingsService.updateSettings).toHaveBeenCalledWith(
+        true,
+        'user-1',
+      );
     });
   });
 });

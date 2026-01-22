@@ -12,6 +12,8 @@ import {
   UploadedFile,
   UploadedFiles,
   BadRequestException,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { BusinessesService } from '../services/businesses.service';
 import { Business } from '../../domain/entities/business.entity';
@@ -24,7 +26,14 @@ import { UsersService } from '../../../users/users.service';
 import { NuernbergspotsReviewDto } from '../../dto/nuernbergspots-review.dto';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
 import { UpdateOpeningHoursDto } from '../../dto/update-opening-hours.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { RolesGuard } from '../../../core/guards/roles.guard';
+import { Roles } from '../../../core/decorators/roles.decorator';
+import { BusinessEventsSettingsService } from '../services/business-events-settings.service';
+import { UpdateBusinessEventsSettingsDto } from '../dtos/update-business-events-settings.dto';
 
+@ApiTags('businesses')
+@ApiBearerAuth()
 @Controller('businesses')
 export class BusinessesController {
   private readonly logger = new Logger(BusinessesController.name);
@@ -33,6 +42,7 @@ export class BusinessesController {
     private readonly businessesService: BusinessesService,
     private readonly firebaseStorageService: FirebaseStorageService,
     private readonly usersService: UsersService,
+    private readonly businessEventsSettingsService: BusinessEventsSettingsService,
   ) {}
 
   @Get()
@@ -410,5 +420,28 @@ export class BusinessesController {
     });
 
     return { count: pendingBusinesses.length };
+  }
+
+  @Get('events/settings')
+  @ApiOperation({ summary: 'Get business events feature settings' })
+  @ApiResponse({ status: 200, description: 'Feature settings' })
+  async getBusinessEventsSettings() {
+    this.logger.log('GET /businesses/events/settings');
+    return this.businessEventsSettingsService.getSettings();
+  }
+
+  @Patch('events/settings')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  @ApiOperation({ summary: 'Update business events feature settings (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Settings updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Admin access required' })
+  async updateBusinessEventsSettings(
+    @Request() req: any,
+    @Body() dto: UpdateBusinessEventsSettingsDto,
+  ) {
+    this.logger.log('PATCH /businesses/events/settings');
+    const updatedBy = req.user.uid;
+    return this.businessEventsSettingsService.updateSettings(dto.isEnabled, updatedBy);
   }
 }
