@@ -20,10 +20,7 @@ export class BusinessEventsSettingsService {
     return settings.isEnabled;
   }
 
-  async updateSettings(
-    isEnabled: boolean,
-    updatedBy?: string,
-  ): Promise<BusinessEventsSettings> {
+  async updateSettings(isEnabled: boolean, updatedBy?: string): Promise<BusinessEventsSettings> {
     this.logger.debug(
       `Updating business events settings: isEnabled=${isEnabled}, updatedBy=${updatedBy}`,
     );
