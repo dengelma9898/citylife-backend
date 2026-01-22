@@ -9,11 +9,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [
-    FirebaseModule,
-    forwardRef(() => NotificationsModule),
-    forwardRef(() => UsersModule),
-  ],
+  imports: [FirebaseModule, forwardRef(() => NotificationsModule), forwardRef(() => UsersModule)],
   controllers: [JobOffersController],
   providers: [
     JobOffersService,

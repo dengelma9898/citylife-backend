@@ -276,7 +276,9 @@ export class BusinessesService {
       );
       this.logger.debug(`[BUSINESS_NOTIFICATION] Business name: ${business.name}`);
       const allBusinessUsers = await this.usersService.getAllBusinessUsers();
-      this.logger.debug(`[BUSINESS_NOTIFICATION] Found ${allBusinessUsers.length} total business users`);
+      this.logger.debug(
+        `[BUSINESS_NOTIFICATION] Found ${allBusinessUsers.length} total business users`,
+      );
       const businessUsersToNotify = allBusinessUsers.filter(user => {
         const hasBusiness = user.businessIds && user.businessIds.includes(business.id);
         if (!hasBusiness) {
@@ -317,7 +319,9 @@ export class BusinessesService {
               newStatus: 'ACTIVE',
             },
           });
-          this.logger.debug(`[BUSINESS_NOTIFICATION] Successfully sent to business user ${user.id}`);
+          this.logger.debug(
+            `[BUSINESS_NOTIFICATION] Successfully sent to business user ${user.id}`,
+          );
         } catch (error: any) {
           this.logger.error(
             `[BUSINESS_NOTIFICATION] Error sending notification to business user ${user.id}: ${error.message}`,

@@ -524,16 +524,17 @@ export class NewsService {
   private async sendNewNewsNotification(newsItem: NewsItem): Promise<void> {
     try {
       this.logger.log(`[NOTIFICATION] Starting notification process for news ${newsItem.id}`);
-      const newsTitle = newsItem.type === 'poll' ? (newsItem as PollNewsItem).question : (newsItem as TextNewsItem | ImageNewsItem).content;
+      const newsTitle =
+        newsItem.type === 'poll'
+          ? (newsItem as PollNewsItem).question
+          : (newsItem as TextNewsItem | ImageNewsItem).content;
       this.logger.debug(`[NOTIFICATION] News title: ${newsTitle}`);
       const allUsers = await this.usersService.getAllUserProfilesWithIds();
       this.logger.debug(`[NOTIFICATION] Found ${allUsers.length} total users`);
       const usersToNotify = allUsers.filter(({ id, profile }) => {
         const notificationPreferences = profile.notificationPreferences;
         const newNewsEnabled =
-          notificationPreferences?.newNews !== undefined
-            ? notificationPreferences.newNews
-            : false;
+          notificationPreferences?.newNews !== undefined ? notificationPreferences.newNews : false;
         if (!newNewsEnabled) {
           this.logger.debug(`[NOTIFICATION] User ${id} has newNews disabled`);
         }

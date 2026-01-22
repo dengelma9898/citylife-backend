@@ -103,9 +103,7 @@ export class FirebaseContactRequestRepository implements ContactRequestRepositor
       return null;
     }
 
-    const currentRequest = ContactRequest.fromProps(
-      this.toContactRequestProps(doc.data(), doc.id),
-    );
+    const currentRequest = ContactRequest.fromProps(this.toContactRequestProps(doc.data(), doc.id));
     const updatedRequest = currentRequest.update(data);
     const plainData = this.toPlainObject(updatedRequest);
 

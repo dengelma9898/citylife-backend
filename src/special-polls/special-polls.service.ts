@@ -224,7 +224,19 @@ export class SpecialPollsService {
   private async sendNewSurveyNotification(specialPoll: SpecialPoll): Promise<void> {
     try {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'special-polls.service.ts:224',message:'sendNewSurveyNotification called',data:{surveyId:specialPoll.id,title:specialPoll.title},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'special-polls.service.ts:224',
+          message: 'sendNewSurveyNotification called',
+          data: { surveyId: specialPoll.id, title: specialPoll.title },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'B',
+        }),
+      }).catch(() => {});
       // #endregion
       this.logger.log(`[NOTIFICATION] Starting notification process for survey ${specialPoll.id}`);
       this.logger.debug(`[NOTIFICATION] Survey title: ${specialPoll.title}`);
@@ -251,7 +263,19 @@ export class SpecialPollsService {
       const sendPromises = usersToNotify.map(async ({ id }) => {
         try {
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'special-polls.service.ts:248',message:'sendToUser called for user',data:{userId:id,surveyId:specialPoll.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              location: 'special-polls.service.ts:248',
+              message: 'sendToUser called for user',
+              data: { userId: id, surveyId: specialPoll.id },
+              timestamp: Date.now(),
+              sessionId: 'debug-session',
+              runId: 'run1',
+              hypothesisId: 'C',
+            }),
+          }).catch(() => {});
           // #endregion
           this.logger.debug(`[NOTIFICATION] Sending to user ${id}`);
           await this.notificationService.sendToUser(id, {

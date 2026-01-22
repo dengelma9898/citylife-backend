@@ -719,7 +719,9 @@ export class UsersService {
       const userProfile = await this.getUserProfile(userId);
       if (userProfile) {
         const existingTokens = userProfile.fcmTokens || [];
-        const existingTokenIndex = existingTokens.findIndex(token => token.deviceId === dto.deviceId);
+        const existingTokenIndex = existingTokens.findIndex(
+          token => token.deviceId === dto.deviceId,
+        );
         const now = new Date().toISOString();
         let updatedTokens: FcmToken[];
         if (existingTokenIndex >= 0) {
@@ -751,7 +753,9 @@ export class UsersService {
       const businessUser = await this.getBusinessUser(userId);
       if (businessUser) {
         const existingTokens = businessUser.fcmTokens || [];
-        const existingTokenIndex = existingTokens.findIndex(token => token.deviceId === dto.deviceId);
+        const existingTokenIndex = existingTokens.findIndex(
+          token => token.deviceId === dto.deviceId,
+        );
         const now = new Date().toISOString();
         let updatedTokens: FcmToken[];
         if (existingTokenIndex >= 0) {
