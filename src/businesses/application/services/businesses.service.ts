@@ -219,7 +219,9 @@ export class BusinessesService {
       this.logger.debug(`[NOTIFICATION] Business name: ${business.name}`);
       const allUsers = await this.usersService.getAllUserProfilesWithIds();
       if (!allUsers || !Array.isArray(allUsers)) {
-        this.logger.warn(`[NOTIFICATION] getAllUserProfilesWithIds returned invalid data: ${allUsers}`);
+        this.logger.warn(
+          `[NOTIFICATION] getAllUserProfilesWithIds returned invalid data: ${allUsers}`,
+        );
         return;
       }
       this.logger.debug(`[NOTIFICATION] Found ${allUsers.length} total users`);
@@ -281,7 +283,9 @@ export class BusinessesService {
       this.logger.debug(`[BUSINESS_NOTIFICATION] Business name: ${business.name}`);
       const allBusinessUsers = await this.usersService.getAllBusinessUsers();
       if (!allBusinessUsers || !Array.isArray(allBusinessUsers)) {
-        this.logger.warn(`[BUSINESS_NOTIFICATION] getAllBusinessUsers returned invalid data: ${allBusinessUsers}`);
+        this.logger.warn(
+          `[BUSINESS_NOTIFICATION] getAllBusinessUsers returned invalid data: ${allBusinessUsers}`,
+        );
         return;
       }
       this.logger.debug(
