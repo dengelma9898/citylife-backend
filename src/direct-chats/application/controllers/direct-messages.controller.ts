@@ -17,7 +17,7 @@ import { DirectChatEnabledGuard } from '../guards/direct-chat-enabled.guard';
 import { DirectMessagesService } from '../services/direct-messages.service';
 import { CreateDirectMessageDto } from '../dtos/create-direct-message.dto';
 import { UpdateDirectMessageDto } from '../dtos/update-direct-message.dto';
-import { UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
+import { UpdateDirectMessageReactionDto } from '../dtos/update-message-reaction.dto';
 
 @ApiTags('direct-chats')
 @ApiBearerAuth()
@@ -104,7 +104,7 @@ export class DirectMessagesController {
     @Request() req: any,
     @Param('chatId') chatId: string,
     @Param('messageId') messageId: string,
-    @Body() dto: UpdateMessageReactionDto,
+    @Body() dto: UpdateDirectMessageReactionDto,
   ) {
     const userId = req.user.uid;
     return this.directMessagesService.updateReaction(userId, chatId, messageId, dto);

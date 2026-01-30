@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { ChatMessage, ChatMessageProps } from '../../domain/entities/chat-message.entity';
 import { ChatMessageRepository } from '../../domain/repositories/chat-message.repository';
-import { UpdateMessageReactionDto } from 'src/chatrooms/application/dtos/update-message-reaction.dto';
+import { UpdateChatMessageReactionDto } from 'src/chatrooms/application/dtos/update-message-reaction.dto';
 
 @Injectable()
 export class FirebaseChatMessageRepository implements ChatMessageRepository {
@@ -222,7 +222,7 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
     chatroomId: string,
     id: string,
     userId: string,
-    reaction: UpdateMessageReactionDto,
+    reaction: UpdateChatMessageReactionDto,
   ): Promise<ChatMessage | null> {
     try {
       this.logger.debug(`Attempting to add reaction to message ${id} in chatroom ${chatroomId}`);

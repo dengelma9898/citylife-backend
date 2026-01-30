@@ -9,7 +9,7 @@ export enum ReactionType {
   ANGRY = 'angry',
 }
 
-export class UpdateMessageReactionDto {
+export class UpdateChatMessageReactionDto {
   @IsNotEmpty()
   @IsEnum(ReactionType)
   type!: ReactionType;

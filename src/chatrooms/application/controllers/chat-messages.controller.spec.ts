@@ -3,7 +3,7 @@ import { ChatMessagesController } from './chat-messages.controller';
 import { ChatMessagesService } from '../services/chat-messages.service';
 import { CreateMessageDto } from '../dtos/create-message.dto';
 import { UpdateMessageDto } from '../dtos/update-message.dto';
-import { ReactionType, UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
+import { ReactionType, UpdateChatMessageReactionDto } from '../dtos/update-message-reaction.dto';
 
 describe('ChatMessagesController', () => {
   let controller: ChatMessagesController;
@@ -176,7 +176,7 @@ describe('ChatMessagesController', () => {
   });
 
   describe('addReaction', () => {
-    const reactionDto: UpdateMessageReactionDto = {
+    const reactionDto: UpdateChatMessageReactionDto = {
       type: ReactionType.LIKE,
     };
 

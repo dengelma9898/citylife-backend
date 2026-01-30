@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestj
 import { ChatMessagesService } from '../services/chat-messages.service';
 import { CreateMessageDto } from '../dtos/create-message.dto';
 import { UpdateMessageDto } from '../dtos/update-message.dto';
-import { UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
+import { UpdateChatMessageReactionDto } from '../dtos/update-message-reaction.dto';
 
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
@@ -80,7 +80,7 @@ export class ChatMessagesController {
     @Param('chatroomId') chatroomId: string,
     @Param('id') id: string,
     @CurrentUser() userId: string,
-    @Body() reactionDto: UpdateMessageReactionDto,
+    @Body() reactionDto: UpdateChatMessageReactionDto,
   ) {
     return this.chatMessagesService.addReaction(chatroomId, id, userId, reactionDto);
   }

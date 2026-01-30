@@ -17,7 +17,7 @@ import {
   orderBy,
   limit,
 } from 'firebase/firestore';
-import { ReactionType, UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
+import { ReactionType, UpdateChatMessageReactionDto } from '../dtos/update-message-reaction.dto';
 import { UserType } from '../../../users/enums/user-type.enum';
 
 jest.mock('firebase/firestore', () => ({
@@ -472,7 +472,7 @@ describe('ChatMessagesService', () => {
   });
 
   describe('addReaction', () => {
-    const reactionDto: UpdateMessageReactionDto = {
+    const reactionDto: UpdateChatMessageReactionDto = {
       type: ReactionType.LIKE,
     };
 

@@ -14,7 +14,7 @@ import {
 import { DirectChatsService } from './direct-chats.service';
 import { CreateDirectMessageDto } from '../dtos/create-direct-message.dto';
 import { UpdateDirectMessageDto } from '../dtos/update-direct-message.dto';
-import { UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
+import { UpdateDirectMessageReactionDto } from '../dtos/update-message-reaction.dto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { UsersService } from '../../../users/users.service';
 
@@ -159,7 +159,7 @@ export class DirectMessagesService {
     userId: string,
     chatId: string,
     messageId: string,
-    dto: UpdateMessageReactionDto,
+    dto: UpdateDirectMessageReactionDto,
   ): Promise<DirectMessage> {
     this.logger.debug(`User ${userId} updating reaction on message ${messageId} in chat ${chatId}`);
     await this.directChatsService.validateChatAccess(userId, chatId);

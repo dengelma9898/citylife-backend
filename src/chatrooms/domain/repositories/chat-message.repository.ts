@@ -1,4 +1,4 @@
-import { UpdateMessageReactionDto } from 'src/chatrooms/application/dtos/update-message-reaction.dto';
+import { UpdateChatMessageReactionDto } from 'src/chatrooms/application/dtos/update-message-reaction.dto';
 import { ChatMessage } from '../entities/chat-message.entity';
 
 export const CHAT_MESSAGE_REPOSITORY = 'CHAT_MESSAGE_REPOSITORY';
@@ -21,7 +21,7 @@ export interface ChatMessageRepository {
     chatroomId: string,
     id: string,
     userId: string,
-    reaction: UpdateMessageReactionDto,
+    reaction: UpdateChatMessageReactionDto,
   ): Promise<ChatMessage | null>;
   removeReaction(chatroomId: string, id: string, userId: string): Promise<ChatMessage | null>;
 }

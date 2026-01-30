@@ -12,7 +12,7 @@ import {
   orderBy,
   limit,
 } from 'firebase/firestore';
-import { UpdateMessageReactionDto } from '../dtos/update-message-reaction.dto';
+import { UpdateChatMessageReactionDto } from '../dtos/update-message-reaction.dto';
 import { CreateMessageDto } from '../dtos/create-message.dto';
 import { UpdateMessageDto } from '../dtos/update-message.dto';
 import { UsersService } from '../../../users/users.service';
@@ -196,7 +196,7 @@ export class ChatMessagesService {
     chatroomId: string,
     id: string,
     userId: string,
-    reaction: UpdateMessageReactionDto,
+    reaction: UpdateChatMessageReactionDto,
   ): Promise<ChatMessage> {
     try {
       this.logger.log(`Adding reaction to message with id: ${id}`);

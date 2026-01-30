@@ -67,7 +67,7 @@ Das Direct Chat Feature kann vom Admin aktiviert/deaktiviert werden. Bei deaktiv
 
 ---
 
-### 4. UpdateMessageReactionDto
+### 4. UpdateDirectMessageReactionDto
 **Endpoint:** `PATCH /direct-chats/:chatId/messages/:messageId/reactions`
 
 ```typescript
@@ -187,7 +187,7 @@ Das Direct Chat Feature kann vom Admin aktiviert/deaktiviert werden. Bei deaktiv
 | `GET` | `/direct-chats/:chatId/messages` | Nachrichten abrufen | - |
 | `PATCH` | `/direct-chats/:chatId/messages/:messageId` | Nachricht bearbeiten | `UpdateDirectMessageDto` |
 | `DELETE` | `/direct-chats/:chatId/messages/:messageId` | Nachricht löschen | - |
-| `PATCH` | `/direct-chats/:chatId/messages/:messageId/reactions` | Reaktion toggle | `UpdateMessageReactionDto` |
+| `PATCH` | `/direct-chats/:chatId/messages/:messageId/reactions` | Reaktion toggle | `UpdateDirectMessageReactionDto` |
 
 ---
 
