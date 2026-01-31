@@ -186,28 +186,21 @@ if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.
   - `Content-Security-Policy`
   - Weitere Security-Headers
 
-### 8. Fehlendes Rate-Limiting
+### 8. Fehlendes Rate-Limiting ✅ BEHOBEN
 **Schweregrad:** Mittel  
-**Datei:** `src/main.ts`
+**Status:** ✅ **BEHOBEN** (31. Januar 2026)  
+**Dateien:** `src/app.module.ts`, `src/core/core.module.ts`
 
 **Problem:**
 - Kein Rate-Limiting implementiert
 - API ist anfällig für DDoS-Angriffe und Brute-Force-Angriffe
 
-**Empfehlung:**
-```bash
-npm install @nestjs/throttler
-```
-
-```typescript
-// In AppModule
-import { ThrottlerModule } from '@nestjs/throttler';
-
-ThrottlerModule.forRoot({
-  ttl: 60,
-  limit: 10,
-}),
-```
+**Umsetzung:**
+- ✅ `@nestjs/throttler` installiert
+- ✅ `ThrottlerModule` in `AppModule` mit Konfiguration registriert
+- ✅ `ThrottlerGuard` als globaler Guard in `CoreModule` konfiguriert
+- ✅ Rate-Limiting: 60 Anfragen pro 60 Sekunden (Production), 100 pro 60 Sekunden (Development)
+- ✅ Dokumentation der Konfigurationswerte in `docs/configuration-values.md`
 
 ### 9. Token-Verifizierung ohne Caching
 **Schweregrad:** Niedrig  
@@ -225,58 +218,50 @@ ThrottlerModule.forRoot({
 
 ## ⚡ Performance-Optimierungen
 
-### 10. Kein Caching implementiert
+### 10. Kein Caching implementiert ✅ BEHOBEN
 **Schweregrad:** Mittel  
-**Dateien:** Alle Services
+**Status:** ✅ **BEHOBEN** (31. Januar 2026)  
+**Dateien:** `src/app.module.ts`, `src/users/users.service.ts`, `src/event-categories/services/event-categories.service.ts`, `src/business-categories/application/services/business-categories.service.ts`
 
 **Problem:**
 - Kein Caching für teure Operationen
 - Jede Anfrage führt Datenbankabfragen aus
 - Kein `@nestjs/cache-manager` implementiert
 
-**Betroffene Bereiche:**
-- User-Profile-Abfragen (`getUserProfilesByIds`)
-- Event-Kategorien
-- Business-Kategorien
-- App-Settings
+**Umsetzung:**
+- ✅ `@nestjs/cache-manager` und `cache-manager` installiert
+- ✅ `CacheModule` in `AppModule` global registriert (TTL: 5 Minuten, Max: 100 Items)
+- ✅ Caching in `UsersService.getUserProfilesByIds()` implementiert mit Cache-Invalidierung
+- ✅ Caching in `EventCategoriesService.findAll()` implementiert (TTL: 10 Minuten)
+- ✅ Caching in `BusinessCategoriesService.getAll()` implementiert (TTL: 10 Minuten)
+- ✅ Cache-Invalidierung bei Create/Update/Delete in allen Services
+- ✅ Dokumentation der Konfigurationswerte in `docs/configuration-values.md`
 
-**Empfehlung:**
-```bash
-npm install @nestjs/cache-manager cache-manager
-```
-
-```typescript
-// In AppModule
-import { CacheModule } from '@nestjs/cache-manager';
-
-CacheModule.register({
-  ttl: 300, // 5 Minuten
-  max: 100, // Max 100 Items
-}),
-```
-
-### 11. Potenzielle N+1 Query-Probleme
+### 11. Potenzielle N+1 Query-Probleme ✅ BEHOBEN
 **Schweregrad:** Mittel  
+**Status:** ✅ **BEHOBEN** (31. Januar 2026)  
 **Dateien:** 
-- `src/direct-chats/application/services/direct-chats.service.ts`
-- `src/news/news.service.ts`
-- `src/events/events.service.ts`
+- `src/core/loaders/user-profile.loader.ts` (neu)
+- `src/core/loaders/loaders.module.ts` (neu)
+- `src/direct-chats/direct-chats.module.ts`
 
 **Problem:**
 - `getUserProfilesByIds` wird mehrfach aufgerufen
 - Keine Batch-Loading-Strategie
 - Jede Nachricht könnte separate User-Abfrage auslösen
 
-**Beispiel:**
-```typescript
-// In direct-chats.service.ts
-const userProfiles = await this.usersService.getUserProfilesByIds(otherParticipantIds);
-// Gut: Batch-Loading implementiert
-```
+**Umsetzung:**
+- ✅ `dataloader` Paket installiert für Request-scoped Batching
+- ✅ `UserProfileLoader` erstellt mit Request-Scope für automatisches Batching
+- ✅ `LoadersModule` erstellt und in `CoreModule` exportiert
+- ✅ `getUserProfilesByIds` mit Application-Level Caching erweitert (Finding 10)
+- ✅ Kombination aus DataLoader (Request-scoped) und CacheManager (Application-scoped)
+- ✅ Dokumentation in `docs/configuration-values.md`
 
-**Empfehlung:**
-- DataLoader-Pattern implementieren für besseres Batch-Loading
-- Caching von User-Profiles
+**Implementierte Lösung:**
+- **Caching (Application-scoped):** User-Profiles werden 5 Minuten gecacht
+- **DataLoader (Request-scoped):** Batching und Deduplizierung innerhalb eines Requests
+- **Batch-Loading:** Existierendes Chunking (10 IDs pro Query) bleibt erhalten
 
 ### 12. Fehlende Database-Index-Strategie
 **Schweregrad:** Niedrig  
@@ -419,33 +404,36 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
 ## 📝 Code-Qualität & Best Practices
 
-### 20. Fehlende Health Checks
+### 20. Fehlende Health Checks ✅ BEHOBEN
 **Schweregrad:** Mittel  
-**Datei:** Keine Health-Check-Implementierung
+**Status:** ✅ **BEHOBEN** (31. Januar 2026)  
+**Dateien:** 
+- `src/health/health.module.ts` (neu)
+- `src/health/health.controller.ts` (neu)
+- `src/health/indicators/firebase-health.indicator.ts` (neu)
+- `src/health/indicators/memory-health.indicator.ts` (neu)
+- `src/app.module.ts`
 
 **Problem:**
 - Keine Health-Check-Endpoints für Monitoring
 - Keine Möglichkeit, System-Status zu prüfen
 
-**Empfehlung:**
-```bash
-npm install @nestjs/terminus
-```
+**Umsetzung:**
+- ✅ `@nestjs/terminus` installiert
+- ✅ `HealthModule` mit `HealthController` erstellt
+- ✅ `FirebaseHealthIndicator` für Firebase-Verbindungs-Check
+- ✅ `MemoryHealthIndicator` für Memory-Status-Check (konfigurierbarer Threshold)
+- ✅ Health-Endpoints vom Rate-Limiting ausgenommen mit `@SkipThrottle()`
+- ✅ Swagger-Dokumentation für alle Endpoints
 
-```typescript
-// Health-Check-Modul implementieren
-@Controller('health')
-export class HealthController {
-  @Get()
-  @HealthCheck()
-  check() {
-    return this.health.check([
-      () => this.http.pingCheck('api', 'https://api.example.com'),
-      () => this.db.pingCheck('database'),
-    ]);
-  }
-}
-```
+**Verfügbare Endpoints:**
+- `GET /health` - Basis Health-Check (Liveness Probe)
+- `GET /health/detailed` - Detaillierter Check mit allen Indikatoren (Readiness Probe)
+- `GET /health/firebase` - Firebase-Verbindungs-Check
+- `GET /health/memory` - Memory-Status-Check
+
+**Konfiguration:**
+- `MEMORY_HEAP_THRESHOLD`: Maximaler Heap in MB (Standard: 500MB)
 
 ### 21. Fehlende Request-Id für Tracing
 **Schweregrad:** Niedrig  
@@ -587,10 +575,10 @@ export class CreateBusinessDto {
 4. ✅ Fehlende Security-Headers - **BEHOBEN**
 
 **🟡 Mittel (Bald beheben):**
-5. Fehlendes Rate-Limiting
-6. Kein Caching implementiert
-7. Potenzielle N+1 Query-Probleme
-8. Fehlende Health Checks
+5. ✅ Fehlendes Rate-Limiting - **BEHOBEN**
+6. ✅ Kein Caching implementiert - **BEHOBEN**
+7. ✅ Potenzielle N+1 Query-Probleme - **BEHOBEN**
+8. ✅ Fehlende Health Checks - **BEHOBEN**
 9. Inkonsistentes Error Handling
 10. Fehlende E2E-Tests
 11. Fehlende Konfigurationsvalidierung
@@ -619,9 +607,9 @@ export class CreateBusinessDto {
    - ✅ Helmet für Security-Headers hinzugefügt
 
 2. **Diese Woche:**
-   - Rate-Limiting implementieren
-   - Caching für teure Operationen hinzufügen
-   - Health Checks implementieren
+   - ✅ Rate-Limiting implementieren - **BEHOBEN**
+   - ✅ Caching für teure Operationen hinzufügen - **BEHOBEN**
+   - ✅ Health Checks implementieren - **BEHOBEN**
    - Konfigurationsvalidierung hinzufügen
 
 3. **Dieser Monat:**
@@ -641,5 +629,11 @@ export class CreateBusinessDto {
 - ✅ Finding #2: Module-Imports für RolesGuard verifiziert (waren bereits korrekt)
 - ✅ Finding #6: CORS-Konfiguration abgesichert mit Port-Einschränkungen
 - ✅ Finding #7: Security-Headers mit Helmet implementiert
+
+**31. Januar 2026:**
+- ✅ Finding #8: Rate-Limiting mit @nestjs/throttler implementiert (60 Anfragen/60s in Production, 100/60s in Development)
+- ✅ Finding #10: Caching mit @nestjs/cache-manager implementiert (TTL: 5 Minuten global, 10 Minuten für Kategorien)
+- ✅ Finding #11: N+1 Query-Probleme mit DataLoader-Pattern und Application-Level Caching behoben
+- ✅ Finding #20: Health Checks mit @nestjs/terminus implementiert (Liveness/Readiness Probes)
 
 **Ende des Code Reviews**

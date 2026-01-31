@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BusinessCategoriesService } from './business-categories.service';
 import { BUSINESS_CATEGORY_REPOSITORY } from '../../domain/repositories/business-category.repository';
 import { BusinessCategory } from '../../domain/entities/business-category.entity';
@@ -33,6 +34,12 @@ describe('BusinessCategoriesService', () => {
     getClientStorage: jest.fn(),
   };
 
+  const mockCacheManager = {
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -52,6 +59,10 @@ describe('BusinessCategoriesService', () => {
         {
           provide: FirebaseService,
           useValue: mockFirebaseService,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
         },
       ],
     }).compile();

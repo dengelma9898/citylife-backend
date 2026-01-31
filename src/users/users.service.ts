@@ -6,6 +6,7 @@ import {
   forwardRef,
   BadRequestException,
 } from '@nestjs/common';
+import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import {
   collection,
   getDocs,
@@ -36,6 +37,8 @@ export class UsersService {
   private readonly logger = new Logger(UsersService.name);
   private readonly usersCollection = 'users';
   private readonly businessUsersCollection = 'business_users';
+  private readonly CACHE_PREFIX = 'user-profile:';
+  private readonly CACHE_TTL = 300000; // 5 Minuten
 
   constructor(
     @Inject(forwardRef(() => EventsService))
@@ -43,6 +46,7 @@ export class UsersService {
     @Inject(forwardRef(() => BusinessesService))
     private readonly businessesService: BusinessesService,
     private readonly firebaseService: FirebaseService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   private removeUndefined(obj: any): any {
@@ -260,18 +264,16 @@ export class UsersService {
       this.logger.debug(`Updating user profile for id: ${id}`);
       const db = this.firebaseService.getFirestore();
       const doc = await db.collection(this.usersCollection).doc(id).get();
-
       if (!doc.exists) {
         throw new NotFoundException('User not found');
       }
-
       const updateData = {
         ...profile,
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
-
       await db.collection(this.usersCollection).doc(id).update(this.removeUndefined(updateData));
-
+      // Cache invalidieren nach Update
+      await this.invalidateUserProfileCache(id);
       const updatedDoc = await db.collection(this.usersCollection).doc(id).get();
       return updatedDoc.data() as UserProfile;
     } catch (error) {
@@ -578,30 +580,57 @@ export class UsersService {
       if (ids.length === 0) {
         return new Map();
       }
-
-      const db = this.firebaseService.getFirestore();
       const uniqueIds = [...new Set(ids)];
-      const chunks = this.chunkArray(uniqueIds, 10);
       const userProfiles = new Map<string, UserProfile>();
-
+      const uncachedIds: string[] = [];
+      // Prüfe zuerst den Cache für jede ID
+      for (const id of uniqueIds) {
+        const cached = await this.cacheManager.get<UserProfile>(`${this.CACHE_PREFIX}${id}`);
+        if (cached) {
+          this.logger.debug(`Cache hit for user profile: ${id}`);
+          userProfiles.set(id, cached);
+        } else {
+          uncachedIds.push(id);
+        }
+      }
+      // Wenn alle IDs im Cache waren, direkt zurückgeben
+      if (uncachedIds.length === 0) {
+        this.logger.debug('All user profiles found in cache');
+        return userProfiles;
+      }
+      // Hole fehlende Profile aus der Datenbank
+      this.logger.debug(`Cache miss for ${uncachedIds.length} user profiles, fetching from DB`);
+      const db = this.firebaseService.getFirestore();
+      const chunks = this.chunkArray(uncachedIds, 10);
       const chunkPromises = chunks.map(chunk =>
         db
           .collection(this.usersCollection)
           .where('__name__', 'in', chunk)
           .get()
-          .then(snapshot => {
-            snapshot.docs.forEach(doc => {
-              userProfiles.set(doc.id, doc.data() as UserProfile);
-            });
+          .then(async snapshot => {
+            for (const doc of snapshot.docs) {
+              const profile = doc.data() as UserProfile;
+              userProfiles.set(doc.id, profile);
+              // Speichere im Cache
+              await this.cacheManager.set(`${this.CACHE_PREFIX}${doc.id}`, profile, this.CACHE_TTL);
+            }
           }),
       );
-
       await Promise.all(chunkPromises);
       return userProfiles;
     } catch (error) {
       this.logger.error(`Error getting user profiles for ids: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * Invalidiert den Cache für ein bestimmtes User-Profil
+   * Sollte nach Updates aufgerufen werden
+   */
+  public async invalidateUserProfileCache(userId: string): Promise<void> {
+    await this.cacheManager.del(`${this.CACHE_PREFIX}${userId}`);
+    this.logger.debug(`Cache invalidated for user profile: ${userId}`);
   }
 
   public async blockUser(

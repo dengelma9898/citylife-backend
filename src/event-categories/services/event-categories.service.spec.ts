@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { EventCategoriesService } from './event-categories.service';
 import { FirebaseService } from '../../firebase/firebase.service';
 import { EventCategory } from '../interfaces/event-category.interface';
@@ -10,6 +11,12 @@ describe('EventCategoriesService', () => {
 
   const mockFirebaseService = {
     getFirestore: jest.fn(),
+  };
+
+  const mockCacheManager = {
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockCategory: EventCategory = {
@@ -57,6 +64,10 @@ describe('EventCategoriesService', () => {
         {
           provide: FirebaseService,
           useValue: mockFirebaseService,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
         },
       ],
     }).compile();
