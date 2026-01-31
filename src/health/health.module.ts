@@ -7,16 +7,16 @@ import { FirebaseModule } from '../firebase/firebase.module';
 
 /**
  * Health-Modul für System-Monitoring und Kubernetes Probes.
- * 
+ *
  * Endpoints:
  * - GET /health - Basis Health-Check (Liveness Probe)
  * - GET /health/detailed - Detaillierter Check (Readiness Probe)
  * - GET /health/firebase - Firebase-Verbindungs-Check
  * - GET /health/memory - Memory-Status-Check
- * 
+ *
  * Konfiguration:
  * - MEMORY_HEAP_THRESHOLD: Maximaler Heap in MB (Standard: 500MB)
- * 
+ *
  * Siehe docs/configuration-values.md für Details.
  */
 @Module({

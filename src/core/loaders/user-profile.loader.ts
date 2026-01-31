@@ -6,11 +6,11 @@ import { UserProfile } from '../../users/interfaces/user-profile.interface';
 /**
  * DataLoader für User-Profiles zur Vermeidung von N+1 Query-Problemen.
  * Der Loader ist Request-scoped, d.h. er wird für jeden Request neu erstellt.
- * 
+ *
  * Vorteile:
  * - Batching: Sammelt alle Anfragen innerhalb eines Request-Zyklus und führt sie als Batch aus
  * - Caching: Cached Ergebnisse innerhalb eines Requests (verhindert doppelte Abfragen)
- * 
+ *
  * Verwendung:
  * - Injiziere den Loader in Services, die User-Profiles laden müssen
  * - Verwende loader.load(userId) statt directem Service-Aufruf

@@ -7,11 +7,11 @@ import { SkipThrottle } from '@nestjs/throttler';
 
 /**
  * Health-Check-Controller für Monitoring und Liveness/Readiness Probes.
- * 
+ *
  * Endpoints:
  * - GET /health - Basis Health-Check (nur Status)
  * - GET /health/detailed - Detaillierter Health-Check mit allen Indikatoren
- * 
+ *
  * Alle Endpoints sind vom Rate-Limiting ausgenommen.
  */
 @ApiTags('Health')
@@ -62,9 +62,7 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Firebase-Verbindung OK' })
   @ApiResponse({ status: 503, description: 'Firebase-Verbindung fehlgeschlagen' })
   async checkFirebase(): Promise<HealthCheckResult> {
-    return this.health.check([
-      () => this.firebaseHealthIndicator.isHealthy('firebase'),
-    ]);
+    return this.health.check([() => this.firebaseHealthIndicator.isHealthy('firebase')]);
   }
 
   /**
@@ -76,8 +74,6 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Memory-Status OK' })
   @ApiResponse({ status: 503, description: 'Memory-Auslastung zu hoch' })
   async checkMemory(): Promise<HealthCheckResult> {
-    return this.health.check([
-      () => this.memoryHealthIndicator.isHealthy('memory'),
-    ]);
+    return this.health.check([() => this.memoryHealthIndicator.isHealthy('memory')]);
   }
 }

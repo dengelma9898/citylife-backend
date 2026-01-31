@@ -29,7 +29,10 @@ export class FirebaseHealthIndicator extends HealthIndicator {
       return this.getStatus(key, true, { responseTime: `${responseTime}ms` });
     } catch (error) {
       this.logger.error(`Firebase health check failed: ${error.message}`);
-      throw new HealthCheckError('Firebase check failed', this.getStatus(key, false, { error: error.message }));
+      throw new HealthCheckError(
+        'Firebase check failed',
+        this.getStatus(key, false, { error: error.message }),
+      );
     }
   }
 }

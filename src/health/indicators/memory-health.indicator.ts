@@ -4,10 +4,10 @@ import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestj
 /**
  * Health-Indicator für Memory-Status.
  * Prüft den verfügbaren Speicher und warnt bei hoher Auslastung.
- * 
+ *
  * Konfiguration:
  * - MEMORY_HEAP_THRESHOLD: Maximaler Heap-Verbrauch in MB (Standard: 500MB)
- * 
+ *
  * Siehe docs/configuration-values.md für Details.
  */
 @Injectable()
