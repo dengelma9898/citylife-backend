@@ -25,7 +25,7 @@ import { UsersModule } from '../users/users.module';
       provide: APP_GUARD,
       useClass: RolesGuard,
     },
-    RolesGuard,
+    RolesGuard, // Als normaler Provider registrieren, damit es exportiert werden kann
   ],
   exports: [RolesGuard],
 })

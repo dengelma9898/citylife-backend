@@ -6,8 +6,6 @@ import { WalletModule } from './wallet/wallet.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
 import { BusinessesModule } from './businesses/businesses.module';
-import { APP_GUARD } from '@nestjs/core';
-import { AuthGuard } from './core/guards/auth.guard';
 import { NewsModule } from './news/news.module';
 import { EventsModule } from './events/events.module';
 import { ChatroomsModule } from './chatrooms/chatrooms.module';
@@ -57,12 +55,6 @@ import { AppVersionsModule } from './app-versions/app-versions.module';
     DirectChatsModule,
     FeatureRequestsModule,
     AppVersionsModule,
-  ],
-  providers: [
-    {
-      provide: APP_GUARD,
-      useClass: AuthGuard,
-    },
   ],
 })
 export class AppModule {}
