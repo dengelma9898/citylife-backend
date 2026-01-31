@@ -5,6 +5,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { TimezoneInterceptor } from './core/interceptors/timezone.interceptor';
 import { useContainer } from 'class-validator';
+import helmet from 'helmet';
 
 async function bootstrap() {
   // Log-Level basierend auf Umgebung konfigurieren
@@ -27,12 +28,28 @@ async function bootstrap() {
     logger: loggerLevels,
   });
 
+  // Security-Headers mit Helmet hinzufügen
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
+      },
+      crossOriginEmbedderPolicy: false, // Für Swagger UI Kompatibilität
+    }),
+  );
+
   const configService = app.get(ConfigService);
 
   // Enable class-validator to use NestJS's dependency injection container
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   // Enable CORS
+  const allowedLocalhostPorts = ['5173', '3000', '4200']; // Erlaubte Ports für lokale Entwicklung
   const allowedOrigins: string[] = ['http://localhost:5173']; // Local Frontend Development
   const frontendUrl = configService.get<string>('FRONTEND_URL');
   if (frontendUrl) {
@@ -47,10 +64,19 @@ async function bootstrap() {
         corsLogger.debug('Request without origin - allowing (likely OPTIONS preflight)');
         return callback(null, true);
       }
-      // Erlaube localhost für lokale Entwicklung
+      // Erlaube localhost nur für spezifische Ports (Sicherheitsverbesserung)
       if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
-        corsLogger.debug(`Allowing localhost origin: ${origin}`);
-        return callback(null, true);
+        try {
+          const url = new URL(origin);
+          const port = url.port || (url.protocol === 'https:' ? '443' : '80');
+          if (allowedLocalhostPorts.includes(port)) {
+            corsLogger.debug(`Allowing localhost origin: ${origin}`);
+            return callback(null, true);
+          }
+          corsLogger.debug(`Blocking localhost origin with non-allowed port: ${origin}`);
+        } catch {
+          corsLogger.debug(`Invalid localhost origin format: ${origin}`);
+        }
       }
       // Prüfe erlaubte Origins
       if (allowedOrigins.includes(origin)) {

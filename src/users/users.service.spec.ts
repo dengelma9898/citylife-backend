@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { UsersService } from './users.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { EventsService } from '../events/events.service';
@@ -92,6 +93,12 @@ describe('UsersService', () => {
     getById: jest.fn(),
   };
 
+  const mockCacheManager = {
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn().mockResolvedValue(undefined),
+  };
+
   const mockUserProfile: UserProfile = {
     name: 'Test User',
     email: 'test@example.com',
@@ -130,6 +137,10 @@ describe('UsersService', () => {
         {
           provide: BusinessesService,
           useValue: mockBusinessesService,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
         },
       ],
     }).compile();

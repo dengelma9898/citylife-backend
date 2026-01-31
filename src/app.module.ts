@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { CoreModule } from './core/core.module';
 import { UsersModule } from './users/users.module';
 import { WalletModule } from './wallet/wallet.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
 import { BusinessesModule } from './businesses/businesses.module';
-import { APP_GUARD } from '@nestjs/core';
-import { AuthGuard } from './core/guards/auth.guard';
 import { NewsModule } from './news/news.module';
 import { EventsModule } from './events/events.module';
 import { ChatroomsModule } from './chatrooms/chatrooms.module';
@@ -26,12 +26,33 @@ import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
 import { DirectChatsModule } from './direct-chats/direct-chats.module';
 import { FeatureRequestsModule } from './feature-requests/feature-requests.module';
 import { AppVersionsModule } from './app-versions/app-versions.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [process.env.NODE_ENV === 'prd' ? '.env.prd' : '.env.dev'],
+    }),
+    // Rate-Limiting: Schutz vor DDoS und Brute-Force-Angriffen
+    // ttl: Zeitfenster in Millisekunden (60000ms = 60 Sekunden)
+    // limit: Maximale Anzahl Anfragen pro Zeitfenster
+    // Siehe docs/configuration-values.md für Erläuterungen der Werte
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60000,
+        limit: process.env.NODE_ENV === 'dev' ? 100 : 60,
+      },
+    ]),
+    // Caching: In-Memory-Cache für teure Operationen
+    // ttl: Time-to-Live in Millisekunden (300000ms = 5 Minuten)
+    // max: Maximale Anzahl gecachter Items (LRU Eviction bei Überschreitung)
+    // Siehe docs/configuration-values.md für Erläuterungen der Werte
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 300000, // 5 Minuten
+      max: process.env.NODE_ENV === 'dev' ? 50 : 100,
     }),
     CoreModule,
     FirebaseModule,
@@ -57,12 +78,7 @@ import { AppVersionsModule } from './app-versions/app-versions.module';
     DirectChatsModule,
     FeatureRequestsModule,
     AppVersionsModule,
-  ],
-  providers: [
-    {
-      provide: APP_GUARD,
-      useClass: AuthGuard,
-    },
+    HealthModule,
   ],
 })
 export class AppModule {}
