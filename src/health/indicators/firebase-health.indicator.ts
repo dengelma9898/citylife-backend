@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';
+import { HealthIndicatorService, HealthIndicatorResult } from '@nestjs/terminus';
 import { FirebaseService } from '../../firebase/firebase.service';
 
 /**
@@ -7,12 +7,13 @@ import { FirebaseService } from '../../firebase/firebase.service';
  * Prüft die Verbindung durch eine einfache Query.
  */
 @Injectable()
-export class FirebaseHealthIndicator extends HealthIndicator {
+export class FirebaseHealthIndicator {
   private readonly logger = new Logger(FirebaseHealthIndicator.name);
 
-  constructor(private readonly firebaseService: FirebaseService) {
-    super();
-  }
+  constructor(
+    private readonly firebaseService: FirebaseService,
+    private readonly healthIndicatorService: HealthIndicatorService,
+  ) {}
 
   /**
    * Prüft die Firebase Firestore-Verbindung.
@@ -26,13 +27,12 @@ export class FirebaseHealthIndicator extends HealthIndicator {
       await db.collection('_health_check').limit(1).get();
       const responseTime = Date.now() - startTime;
       this.logger.debug(`Firebase health check passed in ${responseTime}ms`);
-      return this.getStatus(key, true, { responseTime: `${responseTime}ms` });
+      const indicator = this.healthIndicatorService.check(key);
+      return indicator.up({ responseTime: `${responseTime}ms` });
     } catch (error) {
       this.logger.error(`Firebase health check failed: ${error.message}`);
-      throw new HealthCheckError(
-        'Firebase check failed',
-        this.getStatus(key, false, { error: error.message }),
-      );
+      const indicator = this.healthIndicatorService.check(key);
+      return indicator.down({ error: error.message });
     }
   }
 }

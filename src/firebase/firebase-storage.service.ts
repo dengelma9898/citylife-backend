@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as admin from 'firebase-admin';
+import { getStorage } from 'firebase-admin/storage';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class FirebaseStorageService {
       if (!storageBucket) {
         throw new Error('FIREBASE_STORAGE_BUCKET environment variable is not set');
       }
-      this.bucket = admin.storage().bucket(storageBucket);
+      this.bucket = getStorage().bucket(storageBucket);
     }
     return this.bucket;
   }

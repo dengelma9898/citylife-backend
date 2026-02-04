@@ -1,13 +1,19 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as admin from 'firebase-admin';
+import { initializeApp as initializeAdminApp, cert, App } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getAuth, Auth } from 'firebase-admin/auth';
 import { initializeApp } from 'firebase/app';
-import { Firestore, getFirestore } from 'firebase/firestore';
+import {
+  Firestore as ClientFirestore,
+  getFirestore as getClientFirestore,
+} from 'firebase/firestore';
 import * as path from 'path';
 
 @Injectable()
 export class FirebaseService implements OnModuleInit {
   private readonly logger = new Logger(FirebaseService.name);
+  private adminApp: App;
 
   constructor(private configService: ConfigService) {}
 
@@ -31,15 +37,16 @@ export class FirebaseService implements OnModuleInit {
 
       const serviceAccount = require(path.resolve(process.cwd(), serviceAccountPath));
 
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+      this.adminApp = initializeAdminApp({
+        credential: cert(serviceAccount),
         projectId: firebaseConfig.projectId,
         storageBucket: firebaseConfig.storageBucket,
       });
 
-      admin
-        .firestore()
-        .settings({ databaseId: this.configService.get<string>('FIREBASE_STORAGE_ID') });
+      const firestoreInstance = getFirestore(this.adminApp);
+      firestoreInstance.settings({
+        databaseId: this.configService.get<string>('FIREBASE_STORAGE_ID'),
+      });
 
       // Initialize Firebase App
       initializeApp(firebaseConfig);
@@ -51,22 +58,22 @@ export class FirebaseService implements OnModuleInit {
     }
   }
 
-  public getFirestore(): FirebaseFirestore.Firestore {
-    return admin.firestore();
+  public getFirestore(): Firestore {
+    return getFirestore(this.adminApp);
   }
 
-  public getAuth(): admin.auth.Auth {
-    return admin.auth();
+  public getAuth(): Auth {
+    return getAuth(this.adminApp);
   }
 
-  public getClientFirestore(): Firestore {
+  public getClientFirestore(): ClientFirestore {
     if (process.env.NODE_ENV === 'prd') {
       this.logger.log(
         'Using Firestore database ID:',
         this.configService.get<string>('FIREBASE_STORAGE_ID'),
       );
-      return getFirestore(this.configService.get<string>('FIREBASE_STORAGE_ID')!);
+      return getClientFirestore(this.configService.get<string>('FIREBASE_STORAGE_ID')!);
     }
-    return getFirestore();
+    return getClientFirestore();
   }
 }

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';
+import { HealthIndicatorService, HealthIndicatorResult } from '@nestjs/terminus';
 
 /**
  * Health-Indicator für Memory-Status.
@@ -11,12 +11,11 @@ import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestj
  * Siehe docs/configuration-values.md für Details.
  */
 @Injectable()
-export class MemoryHealthIndicator extends HealthIndicator {
+export class MemoryHealthIndicator {
   private readonly logger = new Logger(MemoryHealthIndicator.name);
   private readonly heapThresholdMB: number;
 
-  constructor() {
-    super();
+  constructor(private readonly healthIndicatorService: HealthIndicatorService) {
     // Konfigurierbar über Environment-Variable, Standard: 500MB
     this.heapThresholdMB = parseInt(process.env.MEMORY_HEAP_THRESHOLD || '500', 10);
   }
@@ -36,11 +35,12 @@ export class MemoryHealthIndicator extends HealthIndicator {
       rss: `${rssMB}MB`,
       threshold: `${this.heapThresholdMB}MB`,
     };
+    const indicator = this.healthIndicatorService.check(key);
     if (heapUsedMB > this.heapThresholdMB) {
       this.logger.warn(`Memory usage high: ${heapUsedMB}MB (threshold: ${this.heapThresholdMB}MB)`);
-      throw new HealthCheckError('Memory usage high', this.getStatus(key, false, details));
+      return indicator.down(details);
     }
     this.logger.debug(`Memory health check passed: ${heapUsedMB}MB used`);
-    return this.getStatus(key, true, details);
+    return indicator.up(details);
   }
 }

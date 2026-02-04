@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as admin from 'firebase-admin';
+import { getMessaging, Messaging } from 'firebase-admin/messaging';
 import { NotificationService } from '../../application/services/notification.service';
 import { NotificationPayload } from '../../domain/interfaces/notification-payload.interface';
 import { UsersService } from '../../../users/users.service';
@@ -78,7 +78,7 @@ export class FcmNotificationService extends NotificationService {
           this.logger.debug(
             `[FCM] Sending to device ${token.deviceId} (token: ${token.token.substring(0, 20)}...)`,
           );
-          await admin.messaging().send({
+          await getMessaging().send({
             token: token.token,
             notification: {
               title: payload.title,
