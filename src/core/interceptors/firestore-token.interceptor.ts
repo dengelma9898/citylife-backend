@@ -1,7 +1,6 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { FirebaseService } from '../../firebase/firebase.service';
-import * as admin from 'firebase-admin';
 
 @Injectable()
 export class FirestoreTokenInterceptor implements NestInterceptor {
@@ -15,7 +14,7 @@ export class FirestoreTokenInterceptor implements NestInterceptor {
 
     if (token) {
       try {
-        const db = admin.firestore();
+        const db = this.firebaseService.getFirestore();
         request.firestore = db;
         this.logger.debug('Firestore client initialized with admin SDK');
       } catch (error) {

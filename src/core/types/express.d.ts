@@ -1,9 +1,9 @@
-import { FirebaseFirestore } from 'firebase-admin/firestore';
+import { Firestore } from 'firebase-admin/firestore';
 
 declare global {
   namespace Express {
     interface Request {
-      firestore?: FirebaseFirestore;
+      firestore?: Firestore;
     }
   }
 }
