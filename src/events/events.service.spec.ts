@@ -297,6 +297,83 @@ describe('EventsService', () => {
     });
   });
 
+  describe('monthYear field', () => {
+    const currentYear = new Date().getFullYear();
+    const monthYear = `11.${currentYear}`;
+    const dateStr = `${currentYear}-11-15`;
+
+    it('should create event with monthYear field', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
+
+      const createEventDto: CreateEventDto = {
+        title: 'November Event',
+        description: 'Event im November',
+        address: 'Test Location',
+        latitude: 49.45,
+        longitude: 11.08,
+        categoryId: 'konzert',
+        dailyTimeSlots: [],
+        monthYear,
+      };
+
+      const result = await service.create(createEventDto);
+
+      expect(result).toBeDefined();
+      expect(result.monthYear).toBe(monthYear);
+      expect(mockFirestore.collection().add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          monthYear,
+        }),
+      );
+    });
+
+    it('should create event without monthYear field (backwards compatibility)', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
+
+      const createEventDto: CreateEventDto = {
+        title: 'Test Event',
+        description: 'Test Description',
+        address: 'Test Location',
+        latitude: 49.45,
+        longitude: 11.08,
+        categoryId: 'konzert',
+        dailyTimeSlots: [{ date: dateStr, from: '18:00', to: '22:00' }],
+      };
+
+      const result = await service.create(createEventDto);
+
+      expect(result).toBeDefined();
+      expect(result.monthYear).toBeUndefined();
+    });
+
+    it('should create event with both monthYear and dailyTimeSlots', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
+
+      const createEventDto: CreateEventDto = {
+        title: 'Mixed Event',
+        description: 'Event mit Monat und genauen Daten',
+        address: 'Test Location',
+        latitude: 49.45,
+        longitude: 11.08,
+        categoryId: 'konzert',
+        dailyTimeSlots: [{ date: dateStr, from: '18:00', to: '22:00' }],
+        monthYear,
+      };
+
+      const result = await service.create(createEventDto);
+
+      expect(result).toBeDefined();
+      expect(result.monthYear).toBe(monthYear);
+      expect(result.dailyTimeSlots).toHaveLength(1);
+    });
+  });
+
   describe('FAV_EVENT_UPDATE Notification', () => {
     const mockOldEvent: Event = {
       id: 'event1',

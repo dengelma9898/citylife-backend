@@ -187,6 +187,27 @@ describe('EventsController', () => {
       expect(result.title).toBe(createDto.title);
       expect(mockEventsService.create).toHaveBeenCalledWith(createDto);
     });
+
+    it('should create an event with monthYear field', async () => {
+      const currentYear = new Date().getFullYear();
+      const monthYear = `11.${currentYear}`;
+      const createDtoWithMonthYear: CreateEventDto = {
+        ...createDto,
+        dailyTimeSlots: [],
+        monthYear,
+      };
+
+      mockEventsService.create.mockResolvedValue({
+        id: 'newEventId',
+        ...createDtoWithMonthYear,
+      });
+
+      const result = await controller.create(createDtoWithMonthYear);
+
+      expect(result).toBeDefined();
+      expect(result.monthYear).toBe(monthYear);
+      expect(mockEventsService.create).toHaveBeenCalledWith(createDtoWithMonthYear);
+    });
   });
 
   describe('update', () => {
@@ -208,6 +229,25 @@ describe('EventsController', () => {
       expect(result.title).toBe(updateDto.title);
       expect(result.description).toBe(updateDto.description);
       expect(mockEventsService.update).toHaveBeenCalledWith('event1', updateDto);
+    });
+
+    it('should update an event with monthYear field', async () => {
+      const currentYear = new Date().getFullYear();
+      const monthYear = `12.${currentYear}`;
+      const updateDtoWithMonthYear = {
+        monthYear,
+      };
+
+      mockEventsService.update.mockResolvedValue({
+        ...mockEvent,
+        ...updateDtoWithMonthYear,
+      });
+
+      const result = await controller.update('event1', updateDtoWithMonthYear);
+
+      expect(result).toBeDefined();
+      expect(result.monthYear).toBe(monthYear);
+      expect(mockEventsService.update).toHaveBeenCalledWith('event1', updateDtoWithMonthYear);
     });
   });
 
