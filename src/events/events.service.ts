@@ -157,6 +157,7 @@ export class EventsService {
         },
         isPromoted: data.isPromoted,
         dailyTimeSlots: data.dailyTimeSlots,
+        monthYear: data.monthYear,
         createdAt: DateTimeUtils.getBerlinTime(),
         updatedAt: DateTimeUtils.getBerlinTime(),
       };

@@ -14,6 +14,7 @@ import {
 import { DailyTimeSlot } from '../interfaces/event.interface';
 import { DailyTimeSlotDTO } from './daily-time-slot.dto';
 import { IsValidCategory } from './validators/is-valid-category.validator';
+import { IsValidMonthYear } from './validators/is-valid-month-year.validator';
 
 export class CreateEventDto {
   @IsString()
@@ -95,4 +96,9 @@ export class CreateEventDto {
   @ValidateNested({ each: true })
   @Type(() => DailyTimeSlotDTO)
   public readonly dailyTimeSlots: DailyTimeSlot[];
+
+  @IsOptional()
+  @IsString()
+  @IsValidMonthYear()
+  public readonly monthYear?: string;
 }

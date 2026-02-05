@@ -61,4 +61,9 @@ export interface Event {
   };
   isPromoted?: boolean;
   dailyTimeSlots?: DailyTimeSlot[];
+  /**
+   * Monat und Jahr des Events im Format MM.YYYY (z.B. "11.2024" für November 2024)
+   * Wird verwendet, wenn nur der Monat/Jahr bekannt ist, aber nicht das genaue Datum
+   */
+  monthYear?: string;
 }
