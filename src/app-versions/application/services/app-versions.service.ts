@@ -1,9 +1,10 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, NotFoundException, ConflictException } from '@nestjs/common';
 import {
   AppVersionRepository,
   APP_VERSION_REPOSITORY,
 } from '../../domain/repositories/app-version.repository';
 import { AppVersion } from '../../domain/entities/app-version.entity';
+import { VersionChangelog } from '../../domain/entities/version-changelog.entity';
 
 @Injectable()
 export class AppVersionsService {
@@ -113,5 +114,82 @@ export class AppVersionsService {
     }
 
     return 0;
+  }
+
+  /**
+   * Gibt den Changelog für eine bestimmte Version zurück
+   * @param version Die Version im Format "X.Y.Z"
+   * @returns Der Changelog oder null wenn nicht vorhanden
+   */
+  async getChangelogForVersion(version: string): Promise<VersionChangelog | null> {
+    const cleanedVersion = this.extractVersion(version);
+    this.logger.log(`Getting changelog for version: ${cleanedVersion}`);
+    return await this.appVersionRepository.findChangelogByVersion(cleanedVersion);
+  }
+
+  /**
+   * Erstellt einen neuen Changelog für eine Version
+   * @param version Die Version im Format "X.Y.Z"
+   * @param content Der Changelog-Inhalt als Markdown
+   * @param createdBy Die User-ID des Erstellers
+   * @returns Der erstellte Changelog
+   */
+  async createChangelog(
+    version: string,
+    content: string,
+    createdBy: string,
+  ): Promise<VersionChangelog> {
+    this.logger.log(`Creating changelog for version: ${version}`);
+    if (!this.isValidVersionFormat(version)) {
+      throw new Error(`Invalid version format: ${version}. Expected format: X.Y.Z`);
+    }
+    const existingChangelog = await this.appVersionRepository.findChangelogByVersion(version);
+    if (existingChangelog) {
+      throw new ConflictException(`Changelog for version ${version} already exists`);
+    }
+    const changelog = VersionChangelog.create({
+      version,
+      content,
+      createdBy,
+    });
+    return await this.appVersionRepository.saveChangelog(changelog);
+  }
+
+  /**
+   * Aktualisiert einen bestehenden Changelog
+   * @param version Die Version im Format "X.Y.Z"
+   * @param content Der neue Changelog-Inhalt als Markdown
+   * @returns Der aktualisierte Changelog
+   */
+  async updateChangelog(version: string, content: string): Promise<VersionChangelog> {
+    this.logger.log(`Updating changelog for version: ${version}`);
+    const existingChangelog = await this.appVersionRepository.findChangelogByVersion(version);
+    if (!existingChangelog) {
+      throw new NotFoundException(`Changelog for version ${version} not found`);
+    }
+    const updatedChangelog = existingChangelog.update({ content });
+    return await this.appVersionRepository.saveChangelog(updatedChangelog);
+  }
+
+  /**
+   * Gibt alle Changelogs zurück
+   * @returns Liste aller Changelogs, sortiert nach Version absteigend
+   */
+  async getAllChangelogs(): Promise<VersionChangelog[]> {
+    this.logger.log('Getting all changelogs');
+    return await this.appVersionRepository.findAllChangelogs();
+  }
+
+  /**
+   * Löscht einen Changelog für eine Version
+   * @param version Die Version im Format "X.Y.Z"
+   */
+  async deleteChangelog(version: string): Promise<void> {
+    this.logger.log(`Deleting changelog for version: ${version}`);
+    const existingChangelog = await this.appVersionRepository.findChangelogByVersion(version);
+    if (!existingChangelog) {
+      throw new NotFoundException(`Changelog for version ${version} not found`);
+    }
+    await this.appVersionRepository.deleteChangelog(version);
   }
 }

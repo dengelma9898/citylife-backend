@@ -18,7 +18,12 @@ export class AppVersionsController {
 
     try {
       const requiresUpdate = await this.appVersionsService.checkVersion(version);
-      return { requiresUpdate };
+      const changelog = await this.appVersionsService.getChangelogForVersion(version);
+      const response: CheckVersionResponseDto = { requiresUpdate };
+      if (changelog) {
+        response.changelogContent = changelog.content;
+      }
+      return response;
     } catch (error) {
       this.logger.error(`Error checking version: ${error.message}`);
       throw new BadRequestException(`Invalid version format: ${version}`);

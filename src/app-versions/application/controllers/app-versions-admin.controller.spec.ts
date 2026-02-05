@@ -2,7 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppVersionsAdminController } from './app-versions-admin.controller';
 import { AppVersionsService } from '../services/app-versions.service';
 import { AppVersion } from '../../domain/entities/app-version.entity';
-import { BadRequestException } from '@nestjs/common';
+import { VersionChangelog } from '../../domain/entities/version-changelog.entity';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 
 describe('AppVersionsAdminController', () => {
@@ -12,6 +13,11 @@ describe('AppVersionsAdminController', () => {
   const mockAppVersionsService = {
     getMinimumVersion: jest.fn(),
     setMinimumVersion: jest.fn(),
+    createChangelog: jest.fn(),
+    getAllChangelogs: jest.fn(),
+    getChangelogForVersion: jest.fn(),
+    updateChangelog: jest.fn(),
+    deleteChangelog: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -94,6 +100,125 @@ describe('AppVersionsAdminController', () => {
 
       await expect(controller.setMinimumVersion(dto)).rejects.toThrow(BadRequestException);
       expect(mockAppVersionsService.setMinimumVersion).toHaveBeenCalledWith('invalid');
+    });
+  });
+
+  describe('createChangelog', () => {
+    it('should create changelog successfully', async () => {
+      const mockChangelog = VersionChangelog.create({
+        version: '1.2.3',
+        content: '# Changelog',
+        createdBy: 'user123',
+      });
+      mockAppVersionsService.createChangelog.mockResolvedValue(mockChangelog);
+
+      const dto = { version: '1.2.3', content: '# Changelog' };
+      const result = await controller.createChangelog(dto, 'user123');
+
+      expect(result).toBeDefined();
+      expect(result.version).toBe('1.2.3');
+      expect(mockAppVersionsService.createChangelog).toHaveBeenCalledWith('1.2.3', '# Changelog', 'user123');
+    });
+
+    it('should throw ConflictException when changelog already exists', async () => {
+      mockAppVersionsService.createChangelog.mockRejectedValue(
+        new ConflictException('Changelog for version 1.2.3 already exists'),
+      );
+
+      const dto = { version: '1.2.3', content: '# New' };
+
+      await expect(controller.createChangelog(dto, 'user123')).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('getAllChangelogs', () => {
+    it('should return all changelogs', async () => {
+      const changelogs = [
+        VersionChangelog.create({ version: '1.3.0', content: '# v1.3.0', createdBy: 'user1' }),
+        VersionChangelog.create({ version: '1.2.0', content: '# v1.2.0', createdBy: 'user2' }),
+      ];
+      mockAppVersionsService.getAllChangelogs.mockResolvedValue(changelogs);
+
+      const result = await controller.getAllChangelogs();
+
+      expect(result).toHaveLength(2);
+      expect(mockAppVersionsService.getAllChangelogs).toHaveBeenCalled();
+    });
+
+    it('should return empty array when no changelogs exist', async () => {
+      mockAppVersionsService.getAllChangelogs.mockResolvedValue([]);
+
+      const result = await controller.getAllChangelogs();
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('getChangelogByVersion', () => {
+    it('should return changelog for version', async () => {
+      const mockChangelog = VersionChangelog.create({
+        version: '1.2.3',
+        content: '# Changelog',
+        createdBy: 'user123',
+      });
+      mockAppVersionsService.getChangelogForVersion.mockResolvedValue(mockChangelog);
+
+      const result = await controller.getChangelogByVersion('1.2.3');
+
+      expect(result).toBeDefined();
+      expect(result.version).toBe('1.2.3');
+      expect(mockAppVersionsService.getChangelogForVersion).toHaveBeenCalledWith('1.2.3');
+    });
+
+    it('should throw NotFoundException when changelog does not exist', async () => {
+      mockAppVersionsService.getChangelogForVersion.mockResolvedValue(null);
+
+      await expect(controller.getChangelogByVersion('1.2.3')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateChangelog', () => {
+    it('should update changelog successfully', async () => {
+      const mockChangelog = VersionChangelog.create({
+        version: '1.2.3',
+        content: '# Updated',
+        createdBy: 'user123',
+      });
+      mockAppVersionsService.updateChangelog.mockResolvedValue(mockChangelog);
+
+      const dto = { content: '# Updated' };
+      const result = await controller.updateChangelog('1.2.3', dto);
+
+      expect(result).toBeDefined();
+      expect(mockAppVersionsService.updateChangelog).toHaveBeenCalledWith('1.2.3', '# Updated');
+    });
+
+    it('should throw NotFoundException when changelog does not exist', async () => {
+      mockAppVersionsService.updateChangelog.mockRejectedValue(
+        new NotFoundException('Changelog for version 1.2.3 not found'),
+      );
+
+      const dto = { content: '# Updated' };
+
+      await expect(controller.updateChangelog('1.2.3', dto)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('deleteChangelog', () => {
+    it('should delete changelog successfully', async () => {
+      mockAppVersionsService.deleteChangelog.mockResolvedValue(undefined);
+
+      await controller.deleteChangelog('1.2.3');
+
+      expect(mockAppVersionsService.deleteChangelog).toHaveBeenCalledWith('1.2.3');
+    });
+
+    it('should throw NotFoundException when changelog does not exist', async () => {
+      mockAppVersionsService.deleteChangelog.mockRejectedValue(
+        new NotFoundException('Changelog for version 1.2.3 not found'),
+      );
+
+      await expect(controller.deleteChangelog('1.2.3')).rejects.toThrow(NotFoundException);
     });
   });
 });
