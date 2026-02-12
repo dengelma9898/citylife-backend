@@ -34,6 +34,9 @@ import {
 import { HybridExtractorService } from './infrastructure/llm/hybrid-extractor.service';
 import { CostTrackerService } from './infrastructure/llm/cost-tracker.service';
 import { LlmScrapeDto } from './dto/llm-scrape.dto';
+import { CsvImportService } from './application/services/csv-import.service';
+import { CsvImportResult } from './dto/csv-import-result.dto';
+import { CsvFileValidationPipe } from '../core/pipes/csv-file-validation.pipe';
 
 @Controller('events')
 export class EventsController {
@@ -48,6 +51,7 @@ export class EventsController {
     private readonly scraperService: ScraperService,
     private readonly hybridExtractor: HybridExtractorService,
     private readonly costTracker: CostTrackerService,
+    private readonly csvImportService: CsvImportService,
   ) {
     this.logger.log('EventsController initialized');
   }
@@ -352,6 +356,32 @@ export class EventsController {
 
     // Events basierend auf den IDs im Business-Dokument abrufen
     return this.eventsService.getByIds(business.eventIds);
+  }
+
+  /**
+   * Importiert Events aus einer CSV-Datei
+   * Verarbeitet jede Zeile einzeln, prüft auf Duplikate und löst Locations auf
+   *
+   * @param file - CSV-Datei mit Event-Daten
+   * @returns Detailliertes Import-Ergebnis mit Erfolgen, Fehlern und übersprungenen Duplikaten
+   */
+  @Post('import/csv')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Importiert Events aus einer CSV-Datei',
+    description:
+      'Parst eine CSV-Datei, löst Locations via HERE API auf, mappt Kategorien und erstellt Events. Duplikate werden erkannt und übersprungen. Fehler brechen den Import nicht ab.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Import abgeschlossen (auch bei teilweisen Fehlern)',
+  })
+  @ApiResponse({ status: 400, description: 'Ungültige CSV-Datei' })
+  public async importFromCsv(
+    @UploadedFile(new CsvFileValidationPipe()) file: Express.Multer.File,
+  ): Promise<CsvImportResult> {
+    this.logger.log('POST /events/import/csv');
+    return this.csvImportService.importFromCsv(file);
   }
 
   /**

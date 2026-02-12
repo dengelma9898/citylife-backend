@@ -19,6 +19,8 @@ import { CostTrackerService } from './infrastructure/llm/cost-tracker.service';
 import { EventCategoriesModule } from '../event-categories/event-categories.module';
 import { IsValidCategoryConstraint } from './dto/validators/is-valid-category.validator';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { LocationModule } from '../location/location.module';
+import { CsvImportService } from './application/services/csv-import.service';
 
 @Module({
   imports: [
@@ -27,6 +29,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     forwardRef(() => BusinessesModule),
     EventCategoriesModule,
     forwardRef(() => NotificationsModule),
+    LocationModule,
   ],
   controllers: [EventsController],
   providers: [
@@ -44,6 +47,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     HybridExtractorService,
     CostTrackerService,
     IsValidCategoryConstraint,
+    CsvImportService,
   ],
   exports: [EventsService],
 })

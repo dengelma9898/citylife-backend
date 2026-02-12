@@ -284,6 +284,37 @@ export class EventsService {
     }
   }
 
+  /**
+   * Sucht nach einem existierenden Event mit gleichem Titel und mindestens einem übereinstimmenden Datum
+   * Wird für die Duplikatsprüfung beim CSV-Import verwendet
+   *
+   * @param title - Titel des Events (wird case-insensitive verglichen)
+   * @param dates - Array von Datum-Strings im Format YYYY-MM-DD
+   * @returns Gefundenes Event oder null wenn kein Duplikat
+   */
+  public async findByTitleAndDate(title: string, dates: string[]): Promise<Event | null> {
+    try {
+      this.logger.debug(`Checking for duplicate: title="${title}", dates=${dates.join(', ')}`);
+      const normalizedTitle = title.toLowerCase().trim();
+      const allEvents = await this.getAll();
+      const duplicate = allEvents.find(event => {
+        const eventTitleNormalized = event.title.toLowerCase().trim();
+        if (eventTitleNormalized !== normalizedTitle) {
+          return false;
+        }
+        const eventDates = (event.dailyTimeSlots || []).map(slot => slot.date);
+        return dates.some(date => eventDates.includes(date));
+      });
+      if (duplicate) {
+        this.logger.debug(`Duplicate found: ${duplicate.id} - ${duplicate.title}`);
+      }
+      return duplicate || null;
+    } catch (error) {
+      this.logger.error(`Error checking for duplicate event: ${error.message}`);
+      throw error;
+    }
+  }
+
   public async getByIds(ids: string[]): Promise<Event[]> {
     try {
       this.logger.debug(`Getting events by IDs: ${ids.join(', ')}`);

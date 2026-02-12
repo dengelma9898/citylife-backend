@@ -7,10 +7,12 @@ import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
 import { HybridExtractorService } from './infrastructure/llm/hybrid-extractor.service';
 import { CostTrackerService } from './infrastructure/llm/cost-tracker.service';
+import { CsvImportService } from './application/services/csv-import.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { NotFoundException } from '@nestjs/common';
 import { Event } from './interfaces/event.interface';
 import { ScraperType } from './infrastructure/scraping/base-scraper.interface';
+import { CsvImportResult } from './dto/csv-import-result.dto';
 
 describe('EventsController', () => {
   let controller: EventsController;
@@ -61,6 +63,10 @@ describe('EventsController', () => {
     trackUsage: jest.fn(),
   };
 
+  const mockCsvImportService = {
+    importFromCsv: jest.fn(),
+  };
+
   const mockEvent: Event = {
     id: '1',
     title: 'Test Event',
@@ -108,6 +114,10 @@ describe('EventsController', () => {
         {
           provide: CostTrackerService,
           useValue: mockCostTrackerService,
+        },
+        {
+          provide: CsvImportService,
+          useValue: mockCsvImportService,
         },
       ],
     }).compile();
@@ -504,6 +514,80 @@ describe('EventsController', () => {
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
       expect(mockEventsService.getByIds).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('importFromCsv', () => {
+    const mockCsvFile = {
+      fieldname: 'file',
+      originalname: 'events.csv',
+      encoding: '7bit',
+      mimetype: 'text/csv',
+      buffer: Buffer.from('test csv content'),
+      size: 1024,
+    } as Express.Multer.File;
+
+    it('should import events from CSV file', async () => {
+      const mockImportResult: CsvImportResult = {
+        totalRows: 3,
+        successful: 2,
+        failed: 0,
+        skipped: 1,
+        results: [
+          { rowIndex: 1, success: true, eventId: 'event-1', errors: [] },
+          { rowIndex: 2, success: false, skipped: true, duplicateEventId: 'existing-1', errors: [{ rowIndex: 2, field: 'Titel', message: 'Duplikat', value: 'Test' }] },
+          { rowIndex: 3, success: true, eventId: 'event-2', errors: [] },
+        ],
+      };
+      mockCsvImportService.importFromCsv.mockResolvedValue(mockImportResult);
+
+      const result = await controller.importFromCsv(mockCsvFile);
+
+      expect(result).toBeDefined();
+      expect(result.totalRows).toBe(3);
+      expect(result.successful).toBe(2);
+      expect(result.failed).toBe(0);
+      expect(result.skipped).toBe(1);
+      expect(result.results).toHaveLength(3);
+      expect(mockCsvImportService.importFromCsv).toHaveBeenCalledWith(mockCsvFile);
+    });
+
+    it('should return result with all failures', async () => {
+      const mockImportResult: CsvImportResult = {
+        totalRows: 2,
+        successful: 0,
+        failed: 2,
+        skipped: 0,
+        results: [
+          { rowIndex: 1, success: false, errors: [{ rowIndex: 1, field: 'Titel', message: 'Titel fehlt' }] },
+          { rowIndex: 2, success: false, errors: [{ rowIndex: 2, field: 'Startdatum', message: 'Datum ungültig' }] },
+        ],
+      };
+      mockCsvImportService.importFromCsv.mockResolvedValue(mockImportResult);
+
+      const result = await controller.importFromCsv(mockCsvFile);
+
+      expect(result.totalRows).toBe(2);
+      expect(result.successful).toBe(0);
+      expect(result.failed).toBe(2);
+      expect(result.results[0].errors[0].field).toBe('Titel');
+      expect(result.results[1].errors[0].field).toBe('Startdatum');
+    });
+
+    it('should return empty result for empty CSV', async () => {
+      const mockImportResult: CsvImportResult = {
+        totalRows: 0,
+        successful: 0,
+        failed: 0,
+        skipped: 0,
+        results: [],
+      };
+      mockCsvImportService.importFromCsv.mockResolvedValue(mockImportResult);
+
+      const result = await controller.importFromCsv(mockCsvFile);
+
+      expect(result.totalRows).toBe(0);
+      expect(result.results).toHaveLength(0);
     });
   });
 
