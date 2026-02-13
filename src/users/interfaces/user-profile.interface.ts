@@ -19,6 +19,7 @@ export interface NotificationPreferences {
   newJobOffers?: boolean;
   newNews?: boolean;
   newSurveys?: boolean;
+  easterEggHuntWinner?: boolean;
 }
 
 export interface UserProfile {
