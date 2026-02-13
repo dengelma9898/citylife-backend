@@ -27,6 +27,7 @@ import { DirectChatsModule } from './direct-chats/direct-chats.module';
 import { FeatureRequestsModule } from './feature-requests/feature-requests.module';
 import { AppVersionsModule } from './app-versions/app-versions.module';
 import { HealthModule } from './health/health.module';
+import { EasterEggHuntModule } from './easter-egg-hunt/easter-egg-hunt.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { HealthModule } from './health/health.module';
     FeatureRequestsModule,
     AppVersionsModule,
     HealthModule,
+    EasterEggHuntModule,
   ],
 })
 export class AppModule {}
