@@ -312,6 +312,15 @@ export class CsvImportService {
         value: row.Enddatum,
       });
     }
+    if (row.Startdatum && this.isDateInPastOrToday(row.Startdatum.trim())) {
+      const todayStr = this.getTodayDateString();
+      errors.push({
+        rowIndex,
+        field: 'Startdatum',
+        message: `Event liegt in der Vergangenheit oder heute (${row.Startdatum}). Es werden nur zukünftige Events importiert (ab ${this.getTomorrowDateString()}).`,
+        value: row.Startdatum,
+      });
+    }
     if (row.Startzeit && row.Startzeit.trim() !== '' && !this.isValidTime(row.Startzeit)) {
       errors.push({
         rowIndex,
@@ -504,6 +513,32 @@ export class CsvImportService {
       return trimmed;
     }
     return undefined;
+  }
+
+  /**
+   * Gibt das heutige Datum als YYYY-MM-DD zurück (Server-Zeitzone)
+   */
+  private getTodayDateString(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }
+
+  /**
+   * Gibt das morgige Datum als YYYY-MM-DD zurück
+   */
+  private getTomorrowDateString(): string {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+  }
+
+  /**
+   * Prüft, ob ein Datum heute oder in der Vergangenheit liegt
+   * Nur Events mit Startdatum nach heute werden importiert
+   */
+  private isDateInPastOrToday(dateString: string): boolean {
+    const today = this.getTodayDateString();
+    return dateString <= today;
   }
 
   /**

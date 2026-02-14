@@ -73,6 +73,7 @@ describe('CsvImportService', () => {
   ];
 
   beforeEach(async () => {
+    jest.useFakeTimers({ now: new Date('2026-01-15T12:00:00Z') });
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CsvImportService,
@@ -104,6 +105,10 @@ describe('CsvImportService', () => {
     eventCategoriesService = module.get(
       EventCategoriesService,
     ) as jest.Mocked<EventCategoriesService>;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('should be defined', () => {
@@ -365,6 +370,55 @@ Event,Beschreibung,2026-02-09,,25:99,,Location,Konzert,,,,,,,,`;
       const timeError = result.results[0].errors.find(e => e.field === 'Startzeit');
       expect(timeError).toBeDefined();
       expect(timeError.message).toContain('Ungültiges Zeitformat');
+    });
+
+    it('should reject events with start date in the past', async () => {
+      const csvContent = `Titel,Beschreibung,Startdatum,Enddatum,Startzeit,Endzeit,Veranstaltungsort,Kategorien,Preis,Tickets,E-Mail,Telefon,Webseite,Social Media,Bild-URL,Detail-URL
+Past Event,Beschreibung,2026-01-14,2026-01-14,20:00,,Location,Konzert,,,,,,,,`;
+      const result = await service.importFromCsv(createCsvFile(csvContent));
+      expect(result.results[0].success).toBe(false);
+      expect(result.results[0].errors).toContainEqual(
+        expect.objectContaining({
+          field: 'Startdatum',
+          message: expect.stringContaining('Vergangenheit'),
+        }),
+      );
+      expect(eventsService.create).not.toHaveBeenCalled();
+    });
+
+    it('should reject events with start date today', async () => {
+      const csvContent = `Titel,Beschreibung,Startdatum,Enddatum,Startzeit,Endzeit,Veranstaltungsort,Kategorien,Preis,Tickets,E-Mail,Telefon,Webseite,Social Media,Bild-URL,Detail-URL
+Today Event,Beschreibung,2026-01-15,2026-01-15,20:00,,Location,Konzert,,,,,,,,`;
+      const result = await service.importFromCsv(createCsvFile(csvContent));
+      expect(result.results[0].success).toBe(false);
+      expect(result.results[0].errors).toContainEqual(
+        expect.objectContaining({
+          field: 'Startdatum',
+          message: expect.stringContaining('heute'),
+        }),
+      );
+      expect(eventsService.create).not.toHaveBeenCalled();
+    });
+
+    it('should accept events with start date tomorrow or later', async () => {
+      const csvContent = `Titel,Beschreibung,Startdatum,Enddatum,Startzeit,Endzeit,Veranstaltungsort,Kategorien,Preis,Tickets,E-Mail,Telefon,Webseite,Social Media,Bild-URL,Detail-URL
+Future Event,Beschreibung,2026-01-16,2026-01-16,20:00,,Location,Konzert,,,,,,,,`;
+      eventsService.findByTitleAndDate.mockResolvedValue(null);
+      locationService.searchLocations.mockResolvedValue(mockLocationResult);
+      eventCategoriesService.findAll.mockResolvedValue(mockCategories);
+      eventsService.create.mockResolvedValue({
+        id: 'future-event-1',
+        title: 'Future Event',
+        description: 'Beschreibung',
+        location: { address: 'Location', latitude: 49.4521, longitude: 11.0767 },
+        categoryId: 'konzert',
+        dailyTimeSlots: [{ date: '2026-01-16', from: '20:00' }],
+        createdAt: '2026-01-16T10:00:00Z',
+        updatedAt: '2026-01-16T10:00:00Z',
+      });
+      const result = await service.importFromCsv(createCsvFile(csvContent));
+      expect(result.results[0].success).toBe(true);
+      expect(eventsService.create).toHaveBeenCalled();
     });
   });
 

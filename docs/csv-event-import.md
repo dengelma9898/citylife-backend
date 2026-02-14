@@ -51,7 +51,7 @@ Titel,Beschreibung,Startdatum,Enddatum,Startzeit,Endzeit,Veranstaltungsort,Kateg
 |--------------------|---------|----------------------------------------------------------|
 | Titel              | Ja      | Freitext                                                 |
 | Beschreibung       | Nein    | Freitext                                                 |
-| Startdatum         | Ja      | `YYYY-MM-DD` (z.B. `2026-02-09`)                        |
+| Startdatum         | Ja      | `YYYY-MM-DD` (z.B. `2026-02-09`). **Nur zukuenftige Events:** Es werden ausschliesslich Events importiert, deren Startdatum nach heute liegt (ab morgen). Events von heute oder in der Vergangenheit werden abgelehnt. |
 | Enddatum           | Nein    | `YYYY-MM-DD` (wenn leer, wird Startdatum verwendet)     |
 | Startzeit          | Nein    | `HH:mm` (z.B. `19:45`)                                  |
 | Endzeit            | Nein    | `HH:mm` (z.B. `22:00`)                                  |
@@ -72,9 +72,9 @@ Der Endpunkt gibt **immer** HTTP 200 zurueck, auch wenn einzelne Zeilen fehlschl
 
 ```json
 {
-  "totalRows": 10,
+  "totalRows": 11,
   "successful": 7,
-  "failed": 1,
+  "failed": 2,
   "skipped": 2,
   "results": [
     {
@@ -106,6 +106,18 @@ Der Endpunkt gibt **immer** HTTP 200 zurueck, auch wenn einzelne Zeilen fehlschl
           "field": "Startdatum",
           "message": "Ungültiges Datumsformat: '09.02.2026'. Erwartet: YYYY-MM-DD",
           "value": "09.02.2026"
+        }
+      ]
+    },
+    {
+      "rowIndex": 4,
+      "success": false,
+      "errors": [
+        {
+          "rowIndex": 4,
+          "field": "Startdatum",
+          "message": "Event liegt in der Vergangenheit oder heute (2026-02-14). Es werden nur zukünftige Events importiert (ab 2026-02-15).",
+          "value": "2026-02-14"
         }
       ]
     }
@@ -197,6 +209,12 @@ duplicates.forEach(row => {
   console.info(`Zeile ${row.rowIndex}: Duplikat (existierendes Event: ${row.duplicateEventId})`);
 });
 ```
+
+## Zukunfts-Validierung
+
+Es werden **nur Events importiert, deren Startdatum in der Zukunft liegt**. Konkret:
+- Heute (14. Februar) = nur Events ab **15. Februar** oder spaeter werden importiert
+- Events mit Startdatum heute oder in der Vergangenheit werden abgelehnt und erscheinen in `results` mit `success: false` und einer entsprechenden Fehlermeldung im `field` `Startdatum`
 
 ## Duplikaterkennung
 
