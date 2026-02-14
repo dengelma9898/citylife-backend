@@ -28,6 +28,7 @@ import { FeatureRequestsModule } from './feature-requests/feature-requests.modul
 import { AppVersionsModule } from './app-versions/app-versions.module';
 import { HealthModule } from './health/health.module';
 import { EasterEggHuntModule } from './easter-egg-hunt/easter-egg-hunt.module';
+import { TaxiStandsModule } from './taxi-stands/taxi-stands.module';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { EasterEggHuntModule } from './easter-egg-hunt/easter-egg-hunt.module';
     AppVersionsModule,
     HealthModule,
     EasterEggHuntModule,
+    TaxiStandsModule,
   ],
 })
 export class AppModule {}
