@@ -111,6 +111,32 @@ describe('LocationService', () => {
       expect(mockFetch).toHaveBeenCalled();
     });
 
+    it('should filter out locations outside Germany', async () => {
+      const germanResult = { ...mockLocationResult, id: 'de-1' };
+      const austrianResult = {
+        ...mockLocationResult,
+        id: 'at-1',
+        address: { ...mockLocationResult.address, countryCode: 'AT' },
+      };
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          items: [germanResult, austrianResult],
+        }),
+      };
+
+      mockFetch.mockResolvedValue(mockResponse);
+
+      const result = await service.searchLocations('Wien');
+
+      expect(result).toBeDefined();
+      expect(result).toHaveLength(1);
+      expect(result[0].address.countryCode).toBe('DE');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('in=countryCode%3ADEU'),
+      );
+    });
+
     it('should throw error when HERE API credentials are not configured', async () => {
       mockConfigService.get.mockReturnValue(undefined);
 

@@ -11,11 +11,15 @@ export class LocationService {
 
   constructor(private readonly configService: ConfigService) {}
 
+  /** ISO 3166-1 Alpha-2 Country Code für Deutschland */
+  private readonly COUNTRY_CODE_DE = 'DE';
+
   /**
    * Sucht nach Adressen basierend auf dem Suchbegriff
+   * Ergebnisse sind auf Deutschland beschränkt (in=countryCode:DEU).
    *
    * @param searchQuery - Der Suchbegriff für die Adresssuche
-   * @returns Array von LocationResults mit gefundenen Adressen
+   * @returns Array von LocationResults mit gefundenen Adressen in Deutschland
    */
   public async searchLocations(searchQuery: string): Promise<LocationResult[]> {
     this.logger.log(`Searching locations for query: ${searchQuery}`);
@@ -30,6 +34,7 @@ export class LocationService {
     const url = new URL(this.HERE_API_URL);
     url.searchParams.append('q', searchQuery);
     url.searchParams.append('apiKey', apiKey);
+    url.searchParams.append('in', 'countryCode:DEU');
 
     try {
       const response = await fetch(url.toString());
@@ -38,8 +43,16 @@ export class LocationService {
       }
 
       const data = (await response.json()) as HereApiResponse;
-      this.logger.debug(`Found ${data.items?.length || 0} location results`);
-      return data.items || [];
+      const items = data.items || [];
+      const filteredItems = items.filter(
+        (item) =>
+          item.address?.countryCode?.toUpperCase() === this.COUNTRY_CODE_DE ||
+          item.address?.countryCode === 'DEU',
+      );
+      this.logger.debug(
+        `Found ${items.length} location results, ${filteredItems.length} in Germany`,
+      );
+      return filteredItems;
     } catch (error) {
       this.logger.error(`Error searching locations: ${error.message}`);
       throw error;
