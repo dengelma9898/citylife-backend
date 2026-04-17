@@ -347,7 +347,7 @@ describe('UsersService', () => {
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       await expect(service.deleteBusinessUser('nonexistent')).rejects.toThrow(
-        new Error('Failed to delete business user: Business user not found'),
+        'Failed to delete business user: Business user not found',
       );
     });
   });

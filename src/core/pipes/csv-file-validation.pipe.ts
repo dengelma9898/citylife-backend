@@ -14,11 +14,7 @@ import {
 export class CsvFileValidationPipe implements PipeTransform {
   private readonly logger = new Logger(CsvFileValidationPipe.name);
   private readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-  private readonly ALLOWED_MIME_TYPES = [
-    'text/csv',
-    'application/vnd.ms-excel',
-    'text/plain',
-  ];
+  private readonly ALLOWED_MIME_TYPES = ['text/csv', 'application/vnd.ms-excel', 'text/plain'];
 
   transform(file: Express.Multer.File, metadata: ArgumentMetadata) {
     this.logger.debug(`Validating CSV file: ${file?.originalname}`);
@@ -28,9 +24,7 @@ export class CsvFileValidationPipe implements PipeTransform {
     }
     if (!this.isValidMimeType(file)) {
       this.logger.error(`CSV file validation failed: Invalid mime type ${file.mimetype}`);
-      throw new BadRequestException(
-        'Ungültiger Dateityp. Nur CSV-Dateien sind erlaubt (.csv)',
-      );
+      throw new BadRequestException('Ungültiger Dateityp. Nur CSV-Dateien sind erlaubt (.csv)');
     }
     if (file.size > this.MAX_FILE_SIZE) {
       this.logger.error(

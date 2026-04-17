@@ -7,7 +7,10 @@ export class CreateEasterEggDto {
   @IsNotEmpty()
   readonly title: string;
 
-  @ApiProperty({ description: 'Beschreibung des Ostereis', example: 'Versteckt hinter dem Schönen Brunnen' })
+  @ApiProperty({
+    description: 'Beschreibung des Ostereis',
+    example: 'Versteckt hinter dem Schönen Brunnen',
+  })
   @IsString()
   @IsNotEmpty()
   readonly description: string;
@@ -28,7 +31,10 @@ export class CreateEasterEggDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'startDate muss im Format YYYY-MM-DD sein' })
   readonly startDate: string;
 
-  @ApiPropertyOptional({ description: 'Enddatum optional (ISO-Format YYYY-MM-DD)', example: '2026-04-06' })
+  @ApiPropertyOptional({
+    description: 'Enddatum optional (ISO-Format YYYY-MM-DD)',
+    example: '2026-04-06',
+  })
   @IsOptional()
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'endDate muss im Format YYYY-MM-DD sein' })

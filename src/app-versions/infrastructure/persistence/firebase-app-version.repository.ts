@@ -77,9 +77,7 @@ export class FirebaseAppVersionRepository implements AppVersionRepository {
     }
   }
 
-  private toChangelogPlainObject(
-    entity: VersionChangelog,
-  ): Omit<VersionChangelogProps, 'id'> {
+  private toChangelogPlainObject(entity: VersionChangelog): Omit<VersionChangelogProps, 'id'> {
     const { id, ...data } = entity.toJSON();
     return this.removeUndefined(data);
   }
@@ -140,7 +138,9 @@ export class FirebaseAppVersionRepository implements AppVersionRepository {
         return changelog;
       }
     } catch (error) {
-      this.logger.error(`Error saving changelog for version ${changelog.version}: ${error.message}`);
+      this.logger.error(
+        `Error saving changelog for version ${changelog.version}: ${error.message}`,
+      );
       throw error;
     }
   }

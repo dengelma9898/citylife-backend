@@ -4,11 +4,7 @@ import { EventsService } from '../../events.service';
 import { LocationService } from '../../../location/services/location.service';
 import { EventCategoriesService } from '../../../event-categories/services/event-categories.service';
 import { CsvRow } from '../../dto/csv-row.dto';
-import {
-  CsvImportResult,
-  CsvRowResult,
-  CsvRowError,
-} from '../../dto/csv-import-result.dto';
+import { CsvImportResult, CsvRowResult, CsvRowError } from '../../dto/csv-import-result.dto';
 import { CreateEventDto } from '../../dto/create-event.dto';
 import { DailyTimeSlot } from '../../interfaces/event.interface';
 import { EventCategory } from '../../../event-categories/interfaces/event-category.interface';
@@ -106,13 +102,17 @@ export class CsvImportService {
     // Header-Spalten aus der ersten Zeile ermitteln
     if (rows.length > 0) {
       const detectedColumns = Object.keys(rows[0]);
-      this.logger.debug(`Erkannte Spalten (${detectedColumns.length}): ${detectedColumns.join(', ')}`);
+      this.logger.debug(
+        `Erkannte Spalten (${detectedColumns.length}): ${detectedColumns.join(', ')}`,
+      );
       const matched = detectedColumns.filter(col => EXPECTED_CSV_COLUMNS.includes(col));
       const unexpected = detectedColumns.filter(col => !EXPECTED_CSV_COLUMNS.includes(col));
       const missing = EXPECTED_CSV_COLUMNS.filter(col => !detectedColumns.includes(col));
       this.logger.debug(`Zugeordnete Spalten (${matched.length}): ${matched.join(', ')}`);
       if (unexpected.length > 0) {
-        this.logger.debug(`Unbekannte Spalten (werden ignoriert) (${unexpected.length}): ${unexpected.join(', ')}`);
+        this.logger.debug(
+          `Unbekannte Spalten (werden ignoriert) (${unexpected.length}): ${unexpected.join(', ')}`,
+        );
       }
       if (missing.length > 0) {
         this.logger.debug(`Fehlende Spalten (${missing.length}): ${missing.join(', ')}`);
@@ -131,21 +131,33 @@ export class CsvImportService {
   private async processRow(row: CsvRow, rowIndex: number): Promise<CsvRowResult> {
     this.logger.debug(`--- Zeile ${rowIndex} ---`);
     this.logger.debug(`  Titel:            "${row.Titel || ''}"`);
-    this.logger.debug(`  Beschreibung:     "${(row.Beschreibung || '').substring(0, 80)}${(row.Beschreibung || '').length > 80 ? '...' : ''}"`);
-    this.logger.debug(`  Startdatum:       "${row.Startdatum || ''}" | Enddatum: "${row.Enddatum || ''}"`);
-    this.logger.debug(`  Startzeit:        "${row.Startzeit || ''}" | Endzeit: "${row.Endzeit || ''}"`);
+    this.logger.debug(
+      `  Beschreibung:     "${(row.Beschreibung || '').substring(0, 80)}${(row.Beschreibung || '').length > 80 ? '...' : ''}"`,
+    );
+    this.logger.debug(
+      `  Startdatum:       "${row.Startdatum || ''}" | Enddatum: "${row.Enddatum || ''}"`,
+    );
+    this.logger.debug(
+      `  Startzeit:        "${row.Startzeit || ''}" | Endzeit: "${row.Endzeit || ''}"`,
+    );
     this.logger.debug(`  Veranstaltungsort:"${row.Veranstaltungsort || ''}"`);
     this.logger.debug(`  Kategorien:       "${row.Kategorien || ''}"`);
     this.logger.debug(`  Preis:            "${row.Preis || ''}" | Tickets: "${row.Tickets || ''}"`);
-    this.logger.debug(`  E-Mail:           "${row['E-Mail'] || ''}" | Telefon: "${row.Telefon || ''}"`);
-    this.logger.debug(`  Webseite:         "${row.Webseite || ''}" | Detail-URL: "${row['Detail-URL'] || ''}"`);
+    this.logger.debug(
+      `  E-Mail:           "${row['E-Mail'] || ''}" | Telefon: "${row.Telefon || ''}"`,
+    );
+    this.logger.debug(
+      `  Webseite:         "${row.Webseite || ''}" | Detail-URL: "${row['Detail-URL'] || ''}"`,
+    );
     this.logger.debug(`  Bild-URL:         "${row['Bild-URL'] || ''}" (wird ignoriert)`);
     this.logger.debug(`  Social Media:     "${row['Social Media'] || ''}" (wird ignoriert)`);
     const errors: CsvRowError[] = [];
     // 1. Validierung der Pflichtfelder
     const validationErrors = this.validateRow(row, rowIndex);
     if (validationErrors.length > 0) {
-      this.logger.debug(`  Zeile ${rowIndex}: Validierung fehlgeschlagen mit ${validationErrors.length} Fehler(n)`);
+      this.logger.debug(
+        `  Zeile ${rowIndex}: Validierung fehlgeschlagen mit ${validationErrors.length} Fehler(n)`,
+      );
       validationErrors.forEach(err => this.logger.debug(`    -> ${err.field}: ${err.message}`));
       return {
         rowIndex,
@@ -156,13 +168,17 @@ export class CsvImportService {
     this.logger.debug(`  Zeile ${rowIndex}: Validierung OK`);
     // 2. dailyTimeSlots erstellen
     const dailyTimeSlots = this.buildDailyTimeSlots(row, rowIndex, errors);
-    this.logger.debug(`  Zeile ${rowIndex}: ${dailyTimeSlots.length} DailyTimeSlot(s) erstellt: ${dailyTimeSlots.map(s => `${s.date} ${s.from || '?'}-${s.to || '?'}`).join(', ')}`);
+    this.logger.debug(
+      `  Zeile ${rowIndex}: ${dailyTimeSlots.length} DailyTimeSlot(s) erstellt: ${dailyTimeSlots.map(s => `${s.date} ${s.from || '?'}-${s.to || '?'}`).join(', ')}`,
+    );
     // 3. Duplikatsprüfung
     const dates = dailyTimeSlots.map(slot => slot.date);
     try {
       const duplicate = await this.eventsService.findByTitleAndDate(row.Titel, dates);
       if (duplicate) {
-        this.logger.debug(`  Zeile ${rowIndex}: DUPLIKAT erkannt -> existierendes Event ID: ${duplicate.id}`);
+        this.logger.debug(
+          `  Zeile ${rowIndex}: DUPLIKAT erkannt -> existierendes Event ID: ${duplicate.id}`,
+        );
         return {
           rowIndex,
           success: false,
@@ -190,7 +206,9 @@ export class CsvImportService {
     if (row.Veranstaltungsort) {
       try {
         location = await this.resolveLocation(row.Veranstaltungsort);
-        this.logger.debug(`  Zeile ${rowIndex}: Location aufgelöst -> ${location.address} (${location.latitude}, ${location.longitude})`);
+        this.logger.debug(
+          `  Zeile ${rowIndex}: Location aufgelöst -> ${location.address} (${location.latitude}, ${location.longitude})`,
+        );
       } catch (error) {
         errors.push({
           rowIndex,
@@ -211,7 +229,9 @@ export class CsvImportService {
     if (row.Kategorien) {
       try {
         categoryId = await this.mapCategoryToId(row.Kategorien);
-        this.logger.debug(`  Zeile ${rowIndex}: Kategorie "${row.Kategorien}" -> ID: "${categoryId}"`);
+        this.logger.debug(
+          `  Zeile ${rowIndex}: Kategorie "${row.Kategorien}" -> ID: "${categoryId}"`,
+        );
       } catch (error) {
         errors.push({
           rowIndex,
@@ -223,7 +243,9 @@ export class CsvImportService {
     }
     // 6. Preis parsen
     const priceData = this.parsePrice(row.Preis);
-    this.logger.debug(`  Zeile ${rowIndex}: Preis "${row.Preis || ''}" -> price=${priceData.price}, priceString="${priceData.priceString || ''}"`);
+    this.logger.debug(
+      `  Zeile ${rowIndex}: Preis "${row.Preis || ''}" -> price=${priceData.price}, priceString="${priceData.priceString || ''}"`,
+    );
     // 7. Website bestimmen
     const website = row.Webseite || row['Detail-URL'] || '';
     this.logger.debug(`  Zeile ${rowIndex}: Website -> "${website}"`);
@@ -374,11 +396,7 @@ export class CsvImportService {
       });
       return [];
     }
-    for (
-      let current = new Date(start);
-      current <= end;
-      current.setDate(current.getDate() + 1)
-    ) {
+    for (let current = new Date(start); current <= end; current.setDate(current.getDate() + 1)) {
       const dateString = current.toISOString().split('T')[0];
       const slot: DailyTimeSlot = { date: dateString };
       if (startTime) {
@@ -450,9 +468,7 @@ export class CsvImportService {
     if (matchesWithPosition.length > 0) {
       return matchesWithPosition[0].category.id;
     }
-    this.logger.warn(
-      `Kategorie '${categoryName}' nicht gefunden, verwende 'default'`,
-    );
+    this.logger.warn(`Kategorie '${categoryName}' nicht gefunden, verwende 'default'`);
     return 'default';
   }
 

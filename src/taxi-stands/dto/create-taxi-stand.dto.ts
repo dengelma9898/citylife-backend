@@ -2,7 +2,10 @@ import { IsString, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTaxiStandDto {
-  @ApiProperty({ description: 'Adresse des Taxistandorts', example: 'Hauptmarkt 1, 90403 Nürnberg' })
+  @ApiProperty({
+    description: 'Adresse des Taxistandorts',
+    example: 'Hauptmarkt 1, 90403 Nürnberg',
+  })
   @IsString()
   @IsNotEmpty()
   readonly address: string;
@@ -26,7 +29,10 @@ export class CreateTaxiStandDto {
   @IsNotEmpty()
   readonly title?: string;
 
-  @ApiPropertyOptional({ description: 'Beschreibung des Taxistandorts', example: 'Vor dem Haupteingang' })
+  @ApiPropertyOptional({
+    description: 'Beschreibung des Taxistandorts',
+    example: 'Vor dem Haupteingang',
+  })
   @IsOptional()
   @IsString()
   readonly description?: string;

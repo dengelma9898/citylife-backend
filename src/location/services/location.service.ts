@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LocationResult } from '../interfaces/location-result.interface';
 import { HereApiResponse } from '../interfaces/here-api-response.interface';
-import fetch from 'node-fetch';
 
 @Injectable()
 export class LocationService {
@@ -45,7 +44,7 @@ export class LocationService {
       const data = (await response.json()) as HereApiResponse;
       const items = data.items || [];
       const filteredItems = items.filter(
-        (item) =>
+        item =>
           item.address?.countryCode?.toUpperCase() === this.COUNTRY_CODE_DE ||
           item.address?.countryCode === 'DEU',
       );

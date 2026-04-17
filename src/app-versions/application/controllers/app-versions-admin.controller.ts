@@ -110,9 +110,7 @@ export class AppVersionsAdminController {
     description: 'App-Version im Format X.Y.Z',
     example: '1.2.3',
   })
-  public async getChangelogByVersion(
-    @Param('version') version: string,
-  ): Promise<VersionChangelog> {
+  public async getChangelogByVersion(@Param('version') version: string): Promise<VersionChangelog> {
     this.logger.log(`GET /app-versions/admin/changelogs/${version}`);
     const changelog = await this.appVersionsService.getChangelogForVersion(version);
     if (!changelog) {

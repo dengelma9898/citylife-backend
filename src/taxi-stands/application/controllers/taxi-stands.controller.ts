@@ -59,7 +59,11 @@ export class TaxiStandsController {
   @Get()
   @UseGuards(TaxiStandsEnabledGuard)
   @ApiOperation({ summary: 'Gibt alle Taxistandorte zurück' })
-  @ApiResponse({ status: 200, description: 'Liste der Taxistandorte', type: [TaxiStandResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste der Taxistandorte',
+    type: [TaxiStandResponseDto],
+  })
   async getAll(): Promise<TaxiStandResponseDto[]> {
     this.logger.log('GET /taxi-stands');
     const taxiStands = await this.taxiStandService.getAll();
@@ -81,7 +85,11 @@ export class TaxiStandsController {
   @Post()
   @Roles('admin', 'super_admin')
   @ApiOperation({ summary: 'Erstellt einen neuen Taxistandort' })
-  @ApiResponse({ status: 201, description: 'Der erstellte Taxistandort', type: TaxiStandResponseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Der erstellte Taxistandort',
+    type: TaxiStandResponseDto,
+  })
   async create(@Body() dto: CreateTaxiStandDto): Promise<TaxiStandResponseDto> {
     this.logger.log('POST /taxi-stands');
     const taxiStand = await this.taxiStandService.create(dto);
@@ -92,7 +100,11 @@ export class TaxiStandsController {
   @Roles('admin', 'super_admin')
   @ApiOperation({ summary: 'Aktualisiert einen Taxistandort' })
   @ApiParam({ name: 'id', description: 'Die ID des Taxistandorts' })
-  @ApiResponse({ status: 200, description: 'Der aktualisierte Taxistandort', type: TaxiStandResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Der aktualisierte Taxistandort',
+    type: TaxiStandResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Taxistandort nicht gefunden' })
   async update(
     @Param('id') id: string,
@@ -121,7 +133,11 @@ export class TaxiStandsController {
   @UseGuards(TaxiStandsEnabledGuard)
   @ApiOperation({ summary: 'Trackt einen Telefon-Klick auf einen Taxistandort' })
   @ApiParam({ name: 'id', description: 'Die ID des Taxistandorts' })
-  @ApiResponse({ status: 200, description: 'Telefon-Klick erfolgreich getrackt', type: TaxiStandResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Telefon-Klick erfolgreich getrackt',
+    type: TaxiStandResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Taxistandort nicht gefunden' })
   async trackPhoneClick(@Param('id') id: string): Promise<TaxiStandResponseDto> {
     this.logger.log(`POST /taxi-stands/${id}/phone-click`);

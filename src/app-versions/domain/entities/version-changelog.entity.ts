@@ -24,7 +24,9 @@ export class VersionChangelog {
     this.createdBy = props.createdBy;
   }
 
-  static create(props: Omit<VersionChangelogProps, 'id' | 'createdAt' | 'updatedAt'>): VersionChangelog {
+  static create(
+    props: Omit<VersionChangelogProps, 'id' | 'createdAt' | 'updatedAt'>,
+  ): VersionChangelog {
     const now = new Date().toISOString();
     return new VersionChangelog({
       id: crypto.randomUUID(),
@@ -38,7 +40,9 @@ export class VersionChangelog {
     return new VersionChangelog(props);
   }
 
-  update(props: Partial<Omit<VersionChangelogProps, 'id' | 'version' | 'createdAt' | 'createdBy'>>): VersionChangelog {
+  update(
+    props: Partial<Omit<VersionChangelogProps, 'id' | 'version' | 'createdAt' | 'createdBy'>>,
+  ): VersionChangelog {
     return new VersionChangelog({
       ...this,
       ...props,

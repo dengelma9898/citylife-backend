@@ -3,16 +3,12 @@ import { LocationService } from './location.service';
 import { ConfigService } from '@nestjs/config';
 import { LocationResult } from '../interfaces/location-result.interface';
 
-// Mock node-fetch
 const mockFetch = jest.fn();
-jest.mock('node-fetch', () => ({
-  __esModule: true,
-  default: (...args: any[]) => mockFetch(...args),
-}));
 
 describe('LocationService', () => {
   let service: LocationService;
   let configService: ConfigService;
+  const originalFetch = globalThis.fetch;
 
   const mockConfigService = {
     get: jest.fn(),
@@ -65,12 +61,13 @@ describe('LocationService', () => {
       }
     });
 
-    // Reset fetch mock before each test
+    globalThis.fetch = mockFetch as unknown as typeof fetch;
     mockFetch.mockReset();
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+    globalThis.fetch = originalFetch;
   });
 
   describe('searchLocations', () => {

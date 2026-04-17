@@ -1,6 +1,9 @@
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { EasterEgg } from '../../domain/entities/easter-egg.entity';
-import { EasterEggRepository, EASTER_EGG_REPOSITORY } from '../../domain/repositories/easter-egg.repository';
+import {
+  EasterEggRepository,
+  EASTER_EGG_REPOSITORY,
+} from '../../domain/repositories/easter-egg.repository';
 import { CreateEasterEggDto } from '../../dto/create-easter-egg.dto';
 import { UpdateEasterEggDto } from '../../dto/update-easter-egg.dto';
 

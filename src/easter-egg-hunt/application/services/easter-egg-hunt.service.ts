@@ -1,6 +1,16 @@
-import { Injectable, Inject, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { EasterEgg } from '../../domain/entities/easter-egg.entity';
-import { EasterEggRepository, EASTER_EGG_REPOSITORY } from '../../domain/repositories/easter-egg.repository';
+import {
+  EasterEggRepository,
+  EASTER_EGG_REPOSITORY,
+} from '../../domain/repositories/easter-egg.repository';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { UsersService } from '../../../users/users.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
@@ -131,7 +141,10 @@ export class EasterEggHuntService {
     if (eligibleParticipants.length === 0) {
       throw new BadRequestException('All participants are already winners');
     }
-    const winnersToSelect = Math.min(numberOfWinners - egg.winners.length, eligibleParticipants.length);
+    const winnersToSelect = Math.min(
+      numberOfWinners - egg.winners.length,
+      eligibleParticipants.length,
+    );
     if (winnersToSelect <= 0) {
       throw new BadRequestException('Maximum number of winners already reached');
     }
@@ -188,9 +201,8 @@ export class EasterEggHuntService {
         return;
       }
       const preferences = userProfile.notificationPreferences;
-      const isEnabled = preferences?.easterEggHuntWinner !== undefined
-        ? preferences.easterEggHuntWinner
-        : false;
+      const isEnabled =
+        preferences?.easterEggHuntWinner !== undefined ? preferences.easterEggHuntWinner : false;
       if (!isEnabled) {
         return;
       }

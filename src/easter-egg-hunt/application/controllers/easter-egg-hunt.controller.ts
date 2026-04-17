@@ -18,7 +18,11 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { EasterEggHuntService, FeatureStatus, EasterEggHuntStatistics } from '../services/easter-egg-hunt.service';
+import {
+  EasterEggHuntService,
+  FeatureStatus,
+  EasterEggHuntStatistics,
+} from '../services/easter-egg-hunt.service';
 import { EasterEggService } from '../services/easter-egg.service';
 import { CreateEasterEggDto } from '../../dto/create-easter-egg.dto';
 import { UpdateEasterEggDto } from '../../dto/update-easter-egg.dto';
@@ -126,7 +130,11 @@ export class EasterEggHuntController {
   @Roles('admin', 'super_admin')
   @ApiOperation({ summary: 'Aktualisiert ein Osterei' })
   @ApiParam({ name: 'id', description: 'Die ID des Ostereis' })
-  @ApiResponse({ status: 200, description: 'Das aktualisierte Osterei', type: EasterEggResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Das aktualisierte Osterei',
+    type: EasterEggResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Osterei nicht gefunden' })
   async update(
     @Param('id') id: string,
@@ -156,7 +164,11 @@ export class EasterEggHuntController {
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Lädt ein Bild für ein Osterei hoch' })
   @ApiParam({ name: 'id', description: 'Die ID des Ostereis' })
-  @ApiResponse({ status: 200, description: 'Bild erfolgreich hochgeladen', type: EasterEggResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Bild erfolgreich hochgeladen',
+    type: EasterEggResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Osterei nicht gefunden' })
   async uploadImage(
     @Param('id') eggId: string,

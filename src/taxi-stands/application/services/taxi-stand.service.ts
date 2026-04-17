@@ -1,6 +1,9 @@
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { TaxiStand } from '../../domain/entities/taxi-stand.entity';
-import { TaxiStandRepository, TAXI_STAND_REPOSITORY } from '../../domain/repositories/taxi-stand.repository';
+import {
+  TaxiStandRepository,
+  TAXI_STAND_REPOSITORY,
+} from '../../domain/repositories/taxi-stand.repository';
 import { CreateTaxiStandDto } from '../../dto/create-taxi-stand.dto';
 import { UpdateTaxiStandDto } from '../../dto/update-taxi-stand.dto';
 

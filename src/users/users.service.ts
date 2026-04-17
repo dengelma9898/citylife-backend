@@ -392,7 +392,7 @@ export class UsersService {
       );
     } catch (error) {
       this.logger.error(`Error deleting business user ${id}: ${error.message}`);
-      throw new Error(`Failed to delete business user: ${error.message}`);
+      throw new Error(`Failed to delete business user: ${error.message}`, { cause: error });
     }
   }
 
@@ -570,7 +570,7 @@ export class UsersService {
       return updatedBusinessUser;
     } catch (error) {
       this.logger.error(`Fehler beim Hinzufügen des Businesses: ${error.message}`);
-      throw new Error('Fehler beim Hinzufügen des Businesses zum User');
+      throw new Error('Fehler beim Hinzufügen des Businesses zum User', { cause: error });
     }
   }
 

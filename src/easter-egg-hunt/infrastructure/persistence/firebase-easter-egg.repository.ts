@@ -49,9 +49,7 @@ export class FirebaseEasterEggRepository implements EasterEggRepository {
   async findAll(): Promise<EasterEgg[]> {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.COLLECTION).get();
-    return snapshot.docs.map(doc =>
-      EasterEgg.fromProps(this.toEasterEggProps(doc.data(), doc.id)),
-    );
+    return snapshot.docs.map(doc => EasterEgg.fromProps(this.toEasterEggProps(doc.data(), doc.id)));
   }
 
   async findById(id: string): Promise<EasterEgg | null> {

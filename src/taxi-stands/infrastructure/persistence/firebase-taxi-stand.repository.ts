@@ -45,9 +45,7 @@ export class FirebaseTaxiStandRepository implements TaxiStandRepository {
   async findAll(): Promise<TaxiStand[]> {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.COLLECTION).get();
-    return snapshot.docs.map(doc =>
-      TaxiStand.fromProps(this.toTaxiStandProps(doc.data(), doc.id)),
-    );
+    return snapshot.docs.map(doc => TaxiStand.fromProps(this.toTaxiStandProps(doc.data(), doc.id)));
   }
 
   async findById(id: string): Promise<TaxiStand | null> {

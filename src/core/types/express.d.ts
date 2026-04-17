@@ -1,3 +1,4 @@
+/// <reference types="multer" />
 import { Firestore } from 'firebase-admin/firestore';
 
 declare global {

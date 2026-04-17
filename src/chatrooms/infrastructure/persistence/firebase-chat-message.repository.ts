@@ -86,6 +86,7 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
       if (error.code === 'permission-denied') {
         throw new Error(
           `Berechtigungsfehler beim Zugriff auf Chat-Nachrichten: ${JSON.stringify(errorDetails)}`,
+          { cause: error },
         );
       }
 

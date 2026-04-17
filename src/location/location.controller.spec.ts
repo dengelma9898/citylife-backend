@@ -1,9 +1,3 @@
-// Mock node-fetch before any imports
-jest.mock('node-fetch', () => ({
-  __esModule: true,
-  default: jest.fn(),
-}));
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { LocationController } from './location.controller';
 import { LocationService } from './services/location.service';

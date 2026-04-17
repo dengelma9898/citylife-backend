@@ -2,7 +2,10 @@ import { IsBoolean, IsNotEmpty, IsOptional, IsString, Matches } from 'class-vali
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class SetFeatureStatusDto {
-  @ApiProperty({ description: 'Gibt an, ob das Easter Egg Hunt Feature aktiviert ist', example: true })
+  @ApiProperty({
+    description: 'Gibt an, ob das Easter Egg Hunt Feature aktiviert ist',
+    example: true,
+  })
   @IsBoolean()
   @IsNotEmpty()
   readonly isFeatureActive: boolean;

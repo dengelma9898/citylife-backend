@@ -1,5 +1,8 @@
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
-import { TaxiStandRepository, TAXI_STAND_REPOSITORY } from '../../domain/repositories/taxi-stand.repository';
+import {
+  TaxiStandRepository,
+  TAXI_STAND_REPOSITORY,
+} from '../../domain/repositories/taxi-stand.repository';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { TaxiStand } from '../../domain/entities/taxi-stand.entity';
 
