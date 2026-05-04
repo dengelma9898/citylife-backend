@@ -21,12 +21,7 @@ import { CsvImportService } from './application/services/csv-import.service';
     LocationModule,
   ],
   controllers: [EventsController],
-  providers: [
-    EventsService,
-    FirebaseStorageService,
-    IsValidCategoryConstraint,
-    CsvImportService,
-  ],
+  providers: [EventsService, FirebaseStorageService, IsValidCategoryConstraint, CsvImportService],
   exports: [EventsService],
 })
 export class EventsModule {}
