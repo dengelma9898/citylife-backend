@@ -7,18 +7,6 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
-import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  runTransaction,
-} from 'firebase/firestore';
 import { UserProfile, FcmToken } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';

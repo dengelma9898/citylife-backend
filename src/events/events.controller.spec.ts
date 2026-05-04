@@ -1,23 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
-import { ScraperService } from './infrastructure/scraping/scraper.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
-import { HybridExtractorService } from './infrastructure/llm/hybrid-extractor.service';
-import { CostTrackerService } from './infrastructure/llm/cost-tracker.service';
 import { CsvImportService } from './application/services/csv-import.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { NotFoundException } from '@nestjs/common';
 import { Event } from './interfaces/event.interface';
-import { ScraperType } from './infrastructure/scraping/base-scraper.interface';
 import { CsvImportResult } from './dto/csv-import-result.dto';
 
 describe('EventsController', () => {
   let controller: EventsController;
   let eventsService: EventsService;
-  let scraperService: ScraperService;
   let firebaseStorageService: FirebaseStorageService;
   let usersService: UsersService;
   let businessesService: BusinessesService;
@@ -29,13 +24,6 @@ describe('EventsController', () => {
     update: jest.fn(),
     delete: jest.fn(),
     getByIds: jest.fn(),
-    importEventsFromEventFinder: jest.fn().mockResolvedValue([]),
-  };
-
-  const mockScraperService = {
-    activateScraper: jest.fn(),
-    getScraper: jest.fn(),
-    getActiveScrapers: jest.fn(),
   };
 
   const mockFirebaseStorageService = {
@@ -51,16 +39,6 @@ describe('EventsController', () => {
   const mockBusinessesService = {
     getById: jest.fn(),
     addEventToBusiness: jest.fn(),
-  };
-
-  const mockHybridExtractorService = {
-    scrapeEventsFromUrl: jest.fn(),
-  };
-
-  const mockCostTrackerService = {
-    getMonthlyCosts: jest.fn().mockReturnValue({ costs: {}, total: 0, currency: 'USD' }),
-    getTokenUsage: jest.fn().mockReturnValue({ usage: {}, totals: { input: 0, output: 0, total: 0 } }),
-    trackUsage: jest.fn(),
   };
 
   const mockCsvImportService = {
@@ -92,10 +70,6 @@ describe('EventsController', () => {
           useValue: mockEventsService,
         },
         {
-          provide: ScraperService,
-          useValue: mockScraperService,
-        },
-        {
           provide: FirebaseStorageService,
           useValue: mockFirebaseStorageService,
         },
@@ -108,14 +82,6 @@ describe('EventsController', () => {
           useValue: mockBusinessesService,
         },
         {
-          provide: HybridExtractorService,
-          useValue: mockHybridExtractorService,
-        },
-        {
-          provide: CostTrackerService,
-          useValue: mockCostTrackerService,
-        },
-        {
           provide: CsvImportService,
           useValue: mockCsvImportService,
         },
@@ -124,7 +90,6 @@ describe('EventsController', () => {
 
     controller = module.get<EventsController>(EventsController);
     eventsService = module.get<EventsService>(EventsService);
-    scraperService = module.get<ScraperService>(ScraperService);
     firebaseStorageService = module.get<FirebaseStorageService>(FirebaseStorageService);
     usersService = module.get<UsersService>(UsersService);
     businessesService = module.get<BusinessesService>(BusinessesService);

@@ -3,8 +3,6 @@ import { Event, DailyTimeSlot } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 import { FirebaseService } from '../firebase/firebase.service';
 import { DateTimeUtils } from '../utils/date-time.utils';
-import { ScraperService } from './infrastructure/scraping/scraper.service';
-import { EventCategory } from './enums/event-category.enum';
 import { NotificationService } from '../notifications/application/services/notification.service';
 import { UsersService } from '../users/users.service';
 
@@ -15,7 +13,6 @@ export class EventsService {
 
   constructor(
     private readonly firebaseService: FirebaseService,
-    private readonly scraperService: ScraperService,
     private readonly notificationService: NotificationService,
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,

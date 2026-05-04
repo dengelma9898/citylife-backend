@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export interface AppSettingsProps {
   id: string;
   preferences: string[];
@@ -14,7 +16,7 @@ export class AppSettings {
 
   static create(props: Omit<AppSettingsProps, 'id'>): AppSettings {
     return new AppSettings({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
     });
   }

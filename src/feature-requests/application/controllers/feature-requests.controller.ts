@@ -5,7 +5,6 @@ import {
   Delete,
   Body,
   Param,
-  Query,
   Logger,
   UseInterceptors,
   UploadedFiles,

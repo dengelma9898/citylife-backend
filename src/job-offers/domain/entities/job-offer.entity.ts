@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { CreateJobOfferDto } from '../../dto/create-job-offer.dto';
 
 interface Location {
@@ -102,7 +103,7 @@ export class JobOffer {
   static create(props: CreateJobOfferDto): JobOffer {
     const now = new Date();
     return new JobOffer({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       createdAt: now,
       updatedAt: now,

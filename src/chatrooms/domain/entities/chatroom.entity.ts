@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export interface ChatroomProps {
   id: string;
   title: string;
@@ -55,7 +57,7 @@ export class Chatroom {
   ): Chatroom {
     const participantCount = props.participants?.length || 0;
     return new Chatroom({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       participantCount,
       createdAt: new Date().toISOString(),

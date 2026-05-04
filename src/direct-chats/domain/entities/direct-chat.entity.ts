@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export type DirectChatStatus = 'pending' | 'active';
 
 export interface LastMessage {
@@ -51,7 +53,7 @@ export class DirectChat {
     >,
   ): DirectChat {
     return new DirectChat({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       creatorConfirmed: true,
       invitedConfirmed: false,

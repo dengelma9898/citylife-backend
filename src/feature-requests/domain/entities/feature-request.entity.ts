@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { FeatureRequestStatus } from '../enums/feature-request-status.enum';
 
 export interface FeatureRequestVoteProps {
@@ -57,7 +58,7 @@ export class FeatureRequest {
   ): FeatureRequest {
     const now = new Date().toISOString();
     return new FeatureRequest({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       status: FeatureRequestStatus.OPEN,
       votes: [],

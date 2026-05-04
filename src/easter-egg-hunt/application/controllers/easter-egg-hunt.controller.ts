@@ -14,7 +14,6 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
-  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';

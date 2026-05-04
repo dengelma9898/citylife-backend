@@ -38,11 +38,13 @@ module.exports = [
         Request: 'readonly',
         Response: 'readonly',
         NextFunction: 'readonly',
+        // Node 18+ (u. a. LocationService, HTTP-Clients)
+        fetch: 'readonly',
       },
     },
     plugins: {
       '@typescript-eslint': tseslint,
-      'prettier': prettier,
+      prettier: prettier,
     },
     rules: {
       ...tseslint.configs.recommended.rules,
@@ -50,18 +52,21 @@ module.exports = [
       'prettier/prettier': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { 
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_',
-        destructuredArrayIgnorePattern: '^_',
-        ignoreRestSiblings: true,
-        vars: 'all',
-        args: 'after-used',
-        caughtErrors: 'none',
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+          vars: 'all',
+          args: 'after-used',
+          caughtErrors: 'none',
+        },
+      ],
       '@typescript-eslint/no-require-imports': 'warn',
       'no-undef': 'warn',
     },
   },
-]; 
+];

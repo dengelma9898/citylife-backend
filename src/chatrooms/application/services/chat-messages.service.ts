@@ -1,17 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { ChatMessage } from '../../domain/entities/chat-message.entity';
 import { DateTimeUtils } from '../../../utils/date-time.utils';
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  updateDoc,
-  deleteDoc,
-  query,
-  orderBy,
-  limit,
-} from 'firebase/firestore';
 import { UpdateChatMessageReactionDto } from '../dtos/update-message-reaction.dto';
 import { CreateMessageDto } from '../dtos/create-message.dto';
 import { UpdateMessageDto } from '../dtos/update-message.dto';

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export interface VersionChangelogProps {
   id: string;
   version: string;
@@ -29,7 +31,7 @@ export class VersionChangelog {
   ): VersionChangelog {
     const now = new Date().toISOString();
     return new VersionChangelog({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       createdAt: now,
       updatedAt: now,

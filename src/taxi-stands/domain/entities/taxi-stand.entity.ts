@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export interface TaxiStandLocation {
   address: string;
   latitude: number;
@@ -44,7 +46,7 @@ export class TaxiStand {
   ): TaxiStand {
     const now = new Date().toISOString();
     return new TaxiStand({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       phoneClickTimestamps: [],
       createdAt: now,

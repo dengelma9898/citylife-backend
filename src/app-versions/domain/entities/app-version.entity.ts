@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export interface AppVersionProps {
   id: string;
   minimumVersion: string;
@@ -21,7 +23,7 @@ export class AppVersion {
   static create(props: Omit<AppVersionProps, 'id' | 'createdAt' | 'updatedAt'>): AppVersion {
     const now = new Date().toISOString();
     return new AppVersion({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       createdAt: now,
       updatedAt: now,

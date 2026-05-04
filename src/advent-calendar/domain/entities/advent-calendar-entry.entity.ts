@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export interface AdventCalendarEntryProps {
   id: string;
   number: number;
@@ -53,7 +55,7 @@ export class AdventCalendarEntry {
   ): AdventCalendarEntry {
     const now = new Date().toISOString();
     return new AdventCalendarEntry({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       participants: [],
       winners: [],

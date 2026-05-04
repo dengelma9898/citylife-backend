@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export enum LegalDocumentType {
   IMPRESSUM = 'impressum',
   DATENSCHUTZ = 'datenschutz',
@@ -37,7 +39,7 @@ export class LegalDocument {
     props: Omit<LegalDocumentProps, 'id' | 'version' | 'createdAt' | 'isActive'>,
   ): LegalDocument {
     return new LegalDocument({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       version: 1,
       createdAt: new Date().toISOString(),
       isActive: true,
@@ -49,7 +51,7 @@ export class LegalDocument {
     props: Omit<LegalDocumentProps, 'id' | 'createdAt' | 'isActive'>,
   ): LegalDocument {
     return new LegalDocument({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       createdAt: new Date().toISOString(),
       isActive: true,
       ...props,
@@ -62,7 +64,7 @@ export class LegalDocument {
 
   createNewVersion(content: string, createdBy: string): LegalDocument {
     return new LegalDocument({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       type: this.type,
       content,
       version: this.version + 1,

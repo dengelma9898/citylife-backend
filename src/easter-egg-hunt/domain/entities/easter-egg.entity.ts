@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export interface EasterEggLocation {
   address: string;
   latitude: number;
@@ -56,7 +58,7 @@ export class EasterEgg {
   ): EasterEgg {
     const now = new Date().toISOString();
     return new EasterEgg({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       participants: [],
       winners: [],

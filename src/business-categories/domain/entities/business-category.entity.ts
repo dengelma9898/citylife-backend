@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export interface BusinessCategoryProps {
   id: string;
   name: string;
@@ -35,7 +37,7 @@ export class BusinessCategory {
   ): BusinessCategory {
     const now = new Date().toISOString();
     return new BusinessCategory({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       createdAt: now,
       updatedAt: now,

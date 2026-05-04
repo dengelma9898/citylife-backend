@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export interface Reaction {
   userId: string;
   type: string;
@@ -51,7 +53,7 @@ export class ChatMessage {
     props: Omit<ChatMessageProps, 'id' | 'createdAt' | 'updatedAt' | 'isEditable'>,
   ): ChatMessage {
     return new ChatMessage({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       isEditable: false, // Will be set by service based on current user
       createdAt: new Date().toISOString(),

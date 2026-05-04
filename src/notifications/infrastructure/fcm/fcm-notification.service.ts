@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { getMessaging, Messaging } from 'firebase-admin/messaging';
+import { getMessaging } from 'firebase-admin/messaging';
 import { NotificationService } from '../../application/services/notification.service';
 import { NotificationPayload } from '../../domain/interfaces/notification-payload.interface';
 import { UsersService } from '../../../users/users.service';
@@ -14,21 +14,6 @@ export class FcmNotificationService extends NotificationService {
 
   async sendToUser(userId: string, payload: NotificationPayload): Promise<void> {
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'fcm-notification.service.ts:15',
-          message: 'FcmNotificationService.sendToUser called',
-          data: { userId, payloadType: payload.data?.type },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'C',
-        }),
-      }).catch(() => {});
-      // #endregion
       this.logger.log(`[FCM] Sending notification to user ${userId}`);
       this.logger.debug(`[FCM] Payload: ${JSON.stringify(payload)}`);
       const fcmTokens = await this.usersService.getFcmTokens(userId);
@@ -37,44 +22,10 @@ export class FcmNotificationService extends NotificationService {
         return;
       }
       this.logger.debug(`[FCM] Found ${fcmTokens.length} FCM tokens for user ${userId}`);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: 'fcm-notification.service.ts:24',
-          message: 'FCM tokens retrieved',
-          data: {
-            userId,
-            tokenCount: fcmTokens.length,
-            tokenDeviceIds: fcmTokens.map(t => t.deviceId),
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A',
-        }),
-      }).catch(() => {});
-      // #endregion
       const invalidTokens: string[] = [];
       let successCount = 0;
       const sendPromises = fcmTokens.map(async token => {
         try {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              location: 'fcm-notification.service.ts:27',
-              message: 'Sending notification to FCM token',
-              data: { userId, deviceId: token.deviceId, platform: token.platform },
-              timestamp: Date.now(),
-              sessionId: 'debug-session',
-              runId: 'run1',
-              hypothesisId: 'A',
-            }),
-          }).catch(() => {});
-          // #endregion
           this.logger.debug(
             `[FCM] Sending to device ${token.deviceId} (token: ${token.token.substring(0, 20)}...)`,
           );
@@ -102,21 +53,6 @@ export class FcmNotificationService extends NotificationService {
             },
           });
           successCount++;
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/348fd923-c5d7-4f25-b5ad-db7afba331f0', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              location: 'fcm-notification.service.ts:55',
-              message: 'Notification sent successfully to device',
-              data: { userId, deviceId: token.deviceId, successCount },
-              timestamp: Date.now(),
-              sessionId: 'debug-session',
-              runId: 'run1',
-              hypothesisId: 'A',
-            }),
-          }).catch(() => {});
-          // #endregion
           this.logger.debug(`[FCM] Notification sent successfully to device ${token.deviceId}`);
         } catch (error: any) {
           this.logger.error(

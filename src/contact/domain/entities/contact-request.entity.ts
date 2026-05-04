@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { ContactMessage, ContactMessageProps } from './contact-message.entity';
 
 export enum ContactRequestType {
@@ -62,7 +63,7 @@ export class ContactRequest {
   ): ContactRequest {
     const now = new Date().toISOString();
     return new ContactRequest({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       createdAt: now,
       updatedAt: now,

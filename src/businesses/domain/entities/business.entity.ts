@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { NuernbergspotsReview } from '../../interfaces/business.interface';
 import { BusinessStatus } from '../enums/business-status.enum';
 
@@ -209,7 +210,7 @@ export class Business {
   ): Business {
     const now = new Date().toISOString();
     return new Business({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       createdAt: now,
       updatedAt: now,

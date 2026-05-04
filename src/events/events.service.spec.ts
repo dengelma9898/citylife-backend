@@ -6,7 +6,6 @@ import { EventCategoriesService } from '../event-categories/services/event-categ
 import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 import { NotFoundException } from '@nestjs/common';
-import { ScraperService } from './infrastructure/scraping/scraper.service';
 import { NotificationService } from '../notifications/application/services/notification.service';
 
 describe('EventsService', () => {
@@ -57,10 +56,6 @@ describe('EventsService', () => {
     getById: jest.fn(),
   };
 
-  const mockScraperService = {
-    scrapeEvent: jest.fn(),
-  };
-
   const mockNotificationService = {
     sendToUser: jest.fn(),
   };
@@ -96,10 +91,6 @@ describe('EventsService', () => {
         {
           provide: EventCategoriesService,
           useValue: mockEventCategoriesService,
-        },
-        {
-          provide: ScraperService,
-          useValue: mockScraperService,
         },
         {
           provide: NotificationService,

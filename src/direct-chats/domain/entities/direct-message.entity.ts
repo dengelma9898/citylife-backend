@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export interface Reaction {
   userId: string;
   type: string;
@@ -48,7 +50,7 @@ export class DirectMessage {
     props: Omit<DirectMessageProps, 'id' | 'createdAt' | 'updatedAt' | 'isEditable'>,
   ): DirectMessage {
     return new DirectMessage({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...props,
       isEditable: false,
       createdAt: new Date().toISOString(),
