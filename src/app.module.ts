@@ -29,6 +29,7 @@ import { AppVersionsModule } from './app-versions/app-versions.module';
 import { HealthModule } from './health/health.module';
 import { EasterEggHuntModule } from './easter-egg-hunt/easter-egg-hunt.module';
 import { TaxiStandsModule } from './taxi-stands/taxi-stands.module';
+import { CuratedSpotsModule } from './curated-spots/curated-spots.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { TaxiStandsModule } from './taxi-stands/taxi-stands.module';
     HealthModule,
     EasterEggHuntModule,
     TaxiStandsModule,
+    CuratedSpotsModule,
   ],
 })
 export class AppModule {}
