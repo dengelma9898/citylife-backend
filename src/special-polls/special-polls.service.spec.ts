@@ -4,20 +4,15 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { UsersService } from '../users/users.service';
 import { NotificationService } from '../notifications/application/services/notification.service';
 import {
-  getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-} from 'firebase/firestore';
-import {
   SpecialPoll,
   SpecialPollStatus,
   SpecialPollResponse,
+  LEGACY_SPECIAL_POLL_STATUS_CLOSED,
+  LEGACY_SPECIAL_POLL_STATUS_PENDING,
 } from './interfaces/special-poll.interface';
 import { CreateSpecialPollDto } from './dto/create-special-poll.dto';
 import { UpdateSpecialPollStatusDto } from './dto/update-special-poll-status.dto';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
@@ -33,26 +28,54 @@ jest.mock('firebase/firestore', () => ({
 
 describe('SpecialPollsService', () => {
   let service: SpecialPollsService;
-  let firebaseService: FirebaseService;
-  let usersService: UsersService;
-  let notificationService: jest.Mocked<NotificationService>;
+  let mockFirebaseService: { getFirestore: jest.Mock };
+  let mockUsersService: { getById: jest.Mock; getAllUserProfilesWithIds: jest.Mock };
+  let mockNotificationService: jest.Mocked<NotificationService>;
 
-  const createFirestoreMock = (mockData: any = {}) => {
-    const mockDoc = {
-      id: 'mock-id',
-      exists: true,
-      data: () => mockData,
-      get: jest.fn().mockResolvedValue({
-        exists: true,
-        data: () => mockData,
-      }),
-      set: jest.fn().mockResolvedValue(undefined),
-      update: jest.fn().mockResolvedValue(undefined),
-      delete: jest.fn().mockResolvedValue(undefined),
-    };
+  const rawPollDoc = {
+    title: 'Test Poll',
+    responses: [] as unknown[],
+    status: LEGACY_SPECIAL_POLL_STATUS_PENDING,
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+  };
+
+  const expectedPoll = (id: string, overrides: Partial<SpecialPoll> = {}): SpecialPoll => ({
+    id,
+    title: 'Test Poll',
+    responses: [],
+    status: SpecialPollStatus.ACTIVE,
+    isHighlighted: false,
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    ...overrides,
+  });
+
+  const createFirestoreMock = (mockData: Record<string, unknown> = { ...rawPollDoc }) => {
+    const docRefs: Record<
+      string,
+      {
+        get: jest.Mock;
+        update: jest.Mock;
+        delete: jest.Mock;
+      }
+    > = {};
 
     const mockCollection = {
-      doc: jest.fn().mockReturnValue(mockDoc),
+      doc: jest.fn().mockImplementation((docId: string) => {
+        if (!docRefs[docId]) {
+          docRefs[docId] = {
+            get: jest.fn().mockResolvedValue({
+              exists: true,
+              id: docId,
+              data: () => mockData,
+            }),
+            update: jest.fn().mockResolvedValue(undefined),
+            delete: jest.fn().mockResolvedValue(undefined),
+          };
+        }
+        return docRefs[docId];
+      }),
       add: jest.fn().mockResolvedValue({ id: 'mock-id' }),
       where: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
@@ -66,29 +89,21 @@ describe('SpecialPollsService', () => {
     };
   };
 
-  const mockFirebaseService = {
-    getFirestore: jest.fn().mockReturnValue(createFirestoreMock()),
-  };
-
-  const mockUsersService = {
-    getById: jest.fn(),
-    getAllUserProfilesWithIds: jest.fn(),
-  };
-
-  const mockNotificationService = {
-    sendToUser: jest.fn(),
-  };
-
-  const mockSpecialPoll: SpecialPoll = {
-    id: 'poll1',
-    title: 'Test Poll',
-    responses: [],
-    status: SpecialPollStatus.PENDING,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  };
-
   beforeEach(async () => {
+    mockFirebaseService = {
+      getFirestore: jest.fn().mockReturnValue(createFirestoreMock()),
+    };
+
+    mockUsersService = {
+      getById: jest.fn(),
+      getAllUserProfilesWithIds: jest.fn(),
+    };
+
+    mockNotificationService = {
+      sendToUser: jest.fn(),
+      sendToUsers: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SpecialPollsService,
@@ -108,50 +123,139 @@ describe('SpecialPollsService', () => {
     }).compile();
 
     service = module.get<SpecialPollsService>(SpecialPollsService);
-    firebaseService = module.get<FirebaseService>(FirebaseService);
-    usersService = module.get<UsersService>(UsersService);
-    notificationService = module.get(NotificationService);
-
     jest.clearAllMocks();
   });
 
   describe('findAll', () => {
     it('should return an array of special polls', async () => {
-      const mockFirestore = createFirestoreMock(mockSpecialPoll);
+      const mockFirestore = createFirestoreMock({ ...rawPollDoc });
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const result = await service.findAll();
 
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('poll1');
-      expect(result[0].title).toBe('Test Poll');
+      expect(result[0]).toEqual(expectedPoll('mock-id'));
+    });
+
+    it('should filter highlighted polls when highlightedOnly is true', async () => {
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        isHighlighted: true,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.findAll(true);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isHighlighted).toBe(true);
+    });
+
+    it('should exclude non-highlighted when highlightedOnly is true', async () => {
+      const mockFirestore = createFirestoreMock({ ...rawPollDoc, isHighlighted: false });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.findAll(true);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should exclude INACTIVE polls when includeInactivePolls is false', async () => {
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        status: SpecialPollStatus.INACTIVE,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.findAll(false, false);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should include INACTIVE polls when includeInactivePolls is true', async () => {
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        status: SpecialPollStatus.INACTIVE,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.findAll(false, true);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].status).toBe(SpecialPollStatus.INACTIVE);
     });
   });
 
   describe('findOne', () => {
     it('should return a special poll by id', async () => {
-      const mockFirestore = createFirestoreMock(mockSpecialPoll);
+      const mockFirestore = createFirestoreMock({ ...rawPollDoc });
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const result = await service.findOne('poll1');
 
-      expect(result).toBeDefined();
-      expect(result.id).toBe('poll1');
-      expect(result.title).toBe('Test Poll');
+      expect(result).toEqual(expectedPoll('poll1'));
+    });
+
+    it('should normalize legacy CLOSED status to ACTIVE', async () => {
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        status: LEGACY_SPECIAL_POLL_STATUS_CLOSED,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.findOne('poll1');
+
+      expect(result.status).toBe(SpecialPollStatus.ACTIVE);
+    });
+
+    it('should normalize legacy PENDING in storage to ACTIVE in API', async () => {
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        status: LEGACY_SPECIAL_POLL_STATUS_PENDING,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.findOne('poll1');
+
+      expect(result.status).toBe(SpecialPollStatus.ACTIVE);
+    });
+
+    it('should throw NotFoundException for INACTIVE when includeInactivePolls is false', async () => {
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        status: SpecialPollStatus.INACTIVE,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      await expect(service.findOne('poll1', false)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return INACTIVE poll when includeInactivePolls is true', async () => {
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        status: SpecialPollStatus.INACTIVE,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const result = await service.findOne('poll1', true);
+
+      expect(result.status).toBe(SpecialPollStatus.INACTIVE);
     });
 
     it('should throw NotFoundException if poll not found', async () => {
       const mockFirestore = createFirestoreMock();
-      const mockDoc = {
-        exists: false,
-        data: () => null,
-      };
-      mockFirestore.collection().doc().get.mockResolvedValue(mockDoc);
+      const col = mockFirestore.collection();
+      col.doc.mockImplementation((docId: string) => ({
+        get: jest.fn().mockResolvedValue({
+          exists: false,
+          id: docId,
+          data: () => null,
+        }),
+        update: jest.fn().mockResolvedValue(undefined),
+        delete: jest.fn().mockResolvedValue(undefined),
+      }));
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      await expect(service.findOne('nonexistent')).rejects.toThrow(
-        new Error('Special poll not found'),
-      );
+      await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -167,10 +271,24 @@ describe('SpecialPollsService', () => {
 
       const result = await service.create(createDto);
 
-      expect(result).toBeDefined();
       expect(result.title).toBe(createDto.title);
-      expect(result.status).toBe(SpecialPollStatus.PENDING);
-      expect(mockFirestore.collection().add).toHaveBeenCalled();
+      expect(result.status).toBe(SpecialPollStatus.ACTIVE);
+      expect(result.isHighlighted).toBe(false);
+      expect(mockFirestore.collection().add).toHaveBeenCalledWith(
+        expect.objectContaining({ status: SpecialPollStatus.ACTIVE }),
+      );
+    });
+
+    it('should persist isHighlighted when provided', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
+
+      await service.create({ title: 'New Poll', isHighlighted: true });
+
+      expect(mockFirestore.collection().add).toHaveBeenCalledWith(
+        expect.objectContaining({ isHighlighted: true }),
+      );
     });
 
     it('should send notification when preference is enabled', async () => {
@@ -233,7 +351,6 @@ describe('SpecialPollsService', () => {
 
       await service.create(createDto);
 
-      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
 
@@ -259,7 +376,6 @@ describe('SpecialPollsService', () => {
 
       await service.create(createDto);
 
-      expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
 
@@ -295,29 +411,33 @@ describe('SpecialPollsService', () => {
 
   describe('updateStatus', () => {
     it('should update the status of a special poll', async () => {
-      const mockFirestore = createFirestoreMock(mockSpecialPoll);
+      const mockFirestore = createFirestoreMock({ ...rawPollDoc });
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const updateStatusDto: UpdateSpecialPollStatusDto = {
-        status: SpecialPollStatus.ACTIVE,
+        status: SpecialPollStatus.INACTIVE,
       };
 
-      const result = await service.updateStatus('poll1', updateStatusDto);
+      await service.updateStatus('poll1', updateStatusDto);
 
-      expect(result).toBeDefined();
-      expect(mockFirestore.collection().doc().update).toHaveBeenCalledWith({
-        status: updateStatusDto.status,
+      expect(mockFirestore.collection().doc('poll1').update).toHaveBeenCalledWith({
+        status: SpecialPollStatus.INACTIVE,
         updatedAt: expect.any(String),
       });
     });
 
     it('should throw NotFoundException if poll not found', async () => {
       const mockFirestore = createFirestoreMock();
-      const mockDoc = {
-        exists: false,
-        data: () => null,
-      };
-      mockFirestore.collection().doc().get.mockResolvedValue(mockDoc);
+      const col = mockFirestore.collection();
+      col.doc.mockImplementation((docId: string) => ({
+        get: jest.fn().mockResolvedValue({
+          exists: false,
+          id: docId,
+          data: () => null,
+        }),
+        update: jest.fn().mockResolvedValue(undefined),
+        delete: jest.fn().mockResolvedValue(undefined),
+      }));
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const updateStatusDto: UpdateSpecialPollStatusDto = {
@@ -325,15 +445,29 @@ describe('SpecialPollsService', () => {
       };
 
       await expect(service.updateStatus('nonexistent', updateStatusDto)).rejects.toThrow(
-        new Error('Special poll not found'),
+        NotFoundException,
       );
+    });
+  });
+
+  describe('updateHighlight', () => {
+    it('should update isHighlighted', async () => {
+      const mockFirestore = createFirestoreMock({ ...rawPollDoc });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      await service.updateHighlight('poll1', true);
+
+      expect(mockFirestore.collection().doc('poll1').update).toHaveBeenCalledWith({
+        isHighlighted: true,
+        updatedAt: expect.any(String),
+      });
     });
   });
 
   describe('addResponse', () => {
     it('should add a response to a special poll', async () => {
       const mockFirestore = createFirestoreMock({
-        ...mockSpecialPoll,
+        ...rawPollDoc,
         status: SpecialPollStatus.ACTIVE,
       });
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
@@ -343,98 +477,191 @@ describe('SpecialPollsService', () => {
         name: 'Test User',
       });
 
-      const result = await service.addResponse('poll1', 'user1', 'Test Response');
+      await service.addResponse('poll1', 'user1', 'Test Response');
 
-      expect(result).toBeDefined();
-      expect(mockFirestore.collection().doc().update).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc('poll1').update).toHaveBeenCalled();
+      const updatePayload = mockFirestore.collection().doc('poll1').update.mock.calls[0][0];
+      expect(updatePayload.responses).toHaveLength(1);
+      expect(updatePayload.responses[0].userId).toBe('user1');
+      expect(updatePayload.responses[0].id).toBeDefined();
+      expect(updatePayload.responses[0].upvotedUserIds).toEqual([]);
     });
 
-    it('should throw BadRequestException if poll is not active', async () => {
+    it('should allow response when legacy status is CLOSED', async () => {
       const mockFirestore = createFirestoreMock({
-        ...mockSpecialPoll,
-        status: SpecialPollStatus.CLOSED,
+        ...rawPollDoc,
+        status: LEGACY_SPECIAL_POLL_STATUS_CLOSED,
       });
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        name: 'Test User',
+      });
+
+      await expect(service.addResponse('poll1', 'user1', 'Test Response')).resolves.toBeDefined();
+      expect(mockFirestore.collection().doc('poll1').update).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when poll is INACTIVE', async () => {
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        status: SpecialPollStatus.INACTIVE,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getById.mockResolvedValue({
+        id: 'user1',
+        name: 'Test User',
+      });
+
       await expect(service.addResponse('poll1', 'user1', 'Test Response')).rejects.toThrow(
-        BadRequestException,
+        NotFoundException,
       );
     });
 
     it('should throw NotFoundException if user not found', async () => {
       const mockFirestore = createFirestoreMock({
-        ...mockSpecialPoll,
+        ...rawPollDoc,
         status: SpecialPollStatus.ACTIVE,
       });
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
       mockUsersService.getById.mockResolvedValue(null);
 
       await expect(service.addResponse('poll1', 'user1', 'Test Response')).rejects.toThrow(
-        new Error('User not found'),
+        NotFoundException,
       );
+    });
+  });
+
+  describe('toggleResponseUpvote', () => {
+    it('should add upvote when not present', async () => {
+      const responseId = 'resp-1';
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        responses: [
+          {
+            id: responseId,
+            userId: 'author1',
+            userName: 'Author',
+            response: 'Hi',
+            createdAt: '2024-01-01T00:00:00.000Z',
+          },
+        ],
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      await service.toggleResponseUpvote('poll1', responseId, 'voter1');
+
+      const updatePayload = mockFirestore.collection().doc('poll1').update.mock.calls[0][0];
+      expect(updatePayload.responses[0].upvotedUserIds).toContain('voter1');
+    });
+
+    it('should remove upvote when already present', async () => {
+      const responseId = 'resp-1';
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        responses: [
+          {
+            id: responseId,
+            userId: 'author1',
+            userName: 'Author',
+            response: 'Hi',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            upvotedUserIds: ['voter1'],
+          },
+        ],
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      await service.toggleResponseUpvote('poll1', responseId, 'voter1');
+
+      const updatePayload = mockFirestore.collection().doc('poll1').update.mock.calls[0][0];
+      expect(updatePayload.responses[0].upvotedUserIds).not.toContain('voter1');
+    });
+
+    it('should throw NotFoundException when response id unknown', async () => {
+      const mockFirestore = createFirestoreMock({ ...rawPollDoc, responses: [] });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      await expect(
+        service.toggleResponseUpvote('poll1', 'missing', 'voter1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('updateResponses', () => {
     it('should update responses of a special poll', async () => {
-      const mockFirestore = createFirestoreMock(mockSpecialPoll);
+      const mockFirestore = createFirestoreMock({ ...rawPollDoc });
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const responses: SpecialPollResponse[] = [
         {
+          id: 'r1',
           userId: 'user1',
           userName: 'Test User',
           response: 'Test Response',
           createdAt: '2024-01-01T00:00:00.000Z',
+          upvotedUserIds: [],
         },
       ];
 
-      const result = await service.updateResponses('poll1', responses);
+      await service.updateResponses('poll1', responses as any);
 
-      expect(result).toBeDefined();
-      expect(mockFirestore.collection().doc().update).toHaveBeenCalledWith({
-        responses,
+      expect(mockFirestore.collection().doc('poll1').update).toHaveBeenCalledWith({
+        responses: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'r1',
+            userId: 'user1',
+            upvotedUserIds: [],
+          }),
+        ]),
         updatedAt: expect.any(String),
       });
     });
 
     it('should throw NotFoundException if poll not found', async () => {
       const mockFirestore = createFirestoreMock();
-      const mockDoc = {
-        exists: false,
-        data: () => null,
-      };
-      mockFirestore.collection().doc().get.mockResolvedValue(mockDoc);
+      const col = mockFirestore.collection();
+      col.doc.mockImplementation((docId: string) => ({
+        get: jest.fn().mockResolvedValue({
+          exists: false,
+          id: docId,
+          data: () => null,
+        }),
+        update: jest.fn().mockResolvedValue(undefined),
+        delete: jest.fn().mockResolvedValue(undefined),
+      }));
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      await expect(service.updateResponses('nonexistent', [])).rejects.toThrow(
-        new Error('Special poll not found'),
-      );
+      await expect(service.updateResponses('nonexistent', [])).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('remove', () => {
     it('should remove a special poll', async () => {
-      const mockFirestore = createFirestoreMock(mockSpecialPoll);
+      const mockFirestore = createFirestoreMock({ ...rawPollDoc });
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       await service.remove('poll1');
 
-      expect(mockFirestore.collection().doc().delete).toHaveBeenCalled();
+      expect(mockFirestore.collection().doc('poll1').delete).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if poll not found', async () => {
       const mockFirestore = createFirestoreMock();
-      const mockDoc = {
-        exists: false,
-        data: () => null,
-      };
-      mockFirestore.collection().doc().get.mockResolvedValue(mockDoc);
+      const col = mockFirestore.collection();
+      col.doc.mockImplementation((docId: string) => ({
+        get: jest.fn().mockResolvedValue({
+          exists: false,
+          id: docId,
+          data: () => null,
+        }),
+        update: jest.fn().mockResolvedValue(undefined),
+        delete: jest.fn().mockResolvedValue(undefined),
+      }));
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
-      await expect(service.remove('nonexistent')).rejects.toThrow(
-        new Error('Special poll not found'),
-      );
+      await expect(service.remove('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 });

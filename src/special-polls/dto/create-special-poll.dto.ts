@@ -1,5 +1,5 @@
-import { IsString, IsNotEmpty } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, IsBoolean, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateSpecialPollDto {
   @ApiProperty({
@@ -9,4 +9,12 @@ export class CreateSpecialPollDto {
   @IsString()
   @IsNotEmpty()
   readonly title: string;
+
+  @ApiPropertyOptional({
+    description: 'Hervorgehobene Umfrage (Standard: false)',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  readonly isHighlighted?: boolean;
 }
