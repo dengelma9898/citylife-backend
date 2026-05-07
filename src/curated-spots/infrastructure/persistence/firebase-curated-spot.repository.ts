@@ -46,6 +46,17 @@ export class FirebaseCuratedSpotRepository implements CuratedSpotRepository {
   private toProps(data: Record<string, unknown>, id: string): ReturnType<CuratedSpot['toJSON']> {
     const imageUrls = Array.isArray(data.imageUrls) ? data.imageUrls.map(String) : [];
     const keywordIds = Array.isArray(data.keywordIds) ? data.keywordIds.map(String) : [];
+    const adminRating = this.readOptionalRating(data.adminRating);
+    const userRatingAverage = this.readOptionalAverage(data.userRatingAverage);
+    const userRatingCountRaw = data.userRatingCount;
+    const userRatingCount =
+      typeof userRatingCountRaw === 'number'
+        ? userRatingCountRaw
+        : Number(userRatingCountRaw) || 0;
+    const adminRatedAt =
+      data.adminRatedAt === null || data.adminRatedAt === undefined
+        ? null
+        : String(data.adminRatedAt);
     return {
       id,
       name: String(data.name ?? ''),
@@ -65,7 +76,27 @@ export class FirebaseCuratedSpotRepository implements CuratedSpotRepository {
         data.createdByUserId === null || data.createdByUserId === undefined
           ? null
           : String(data.createdByUserId),
+      adminRating,
+      adminRatedAt,
+      userRatingAverage,
+      userRatingCount,
     };
+  }
+
+  private readOptionalRating(value: unknown): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    const n = typeof value === 'number' ? value : Number(value);
+    return Number.isNaN(n) ? null : n;
+  }
+
+  private readOptionalAverage(value: unknown): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    const n = typeof value === 'number' ? value : Number(value);
+    return Number.isNaN(n) ? null : n;
   }
 
   async findAll(): Promise<CuratedSpot[]> {

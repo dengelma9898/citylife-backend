@@ -2,16 +2,21 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUrl,
+  Max,
   MaxLength,
+  Min,
+  Validate,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CuratedSpotStatus } from '../domain/enums/curated-spot-status.enum';
 import { CuratedSpotAddressDto } from './curated-spot-address.dto';
+import { IsHttpUrlAllowingSpacesInPathConstraint } from './is-http-url-allowing-spaces.constraint';
 
 export class UpdateCuratedSpotDto {
   @IsOptional()
@@ -43,13 +48,11 @@ export class UpdateCuratedSpotDto {
   readonly newKeywordNames?: string[];
 
   @IsOptional()
-  @IsUrl()
-  @MaxLength(2000)
+  @Validate(IsHttpUrlAllowingSpacesInPathConstraint)
   readonly videoUrl?: string | null;
 
   @IsOptional()
-  @IsUrl()
-  @MaxLength(2000)
+  @Validate(IsHttpUrlAllowingSpacesInPathConstraint)
   readonly instagramUrl?: string | null;
 
   @IsOptional()
@@ -59,4 +62,11 @@ export class UpdateCuratedSpotDto {
   @IsOptional()
   @IsBoolean()
   readonly isDeleted?: boolean;
+
+  @IsOptional()
+  @ValidateIf(o => o.adminRating !== null && o.adminRating !== undefined)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  readonly adminRating?: number | null;
 }

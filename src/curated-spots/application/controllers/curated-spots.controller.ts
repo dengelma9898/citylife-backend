@@ -17,9 +17,15 @@ import {
 import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CuratedSpotsService } from '../services/curated-spots.service';
+import { CuratedSpotsUserRatingsSettingsService } from '../services/curated-spots-user-ratings-settings.service';
+import { CuratedSpotUserRatingsService } from '../services/curated-spot-user-ratings.service';
+import { CuratedSpotsUserRatingsEnabledGuard } from '../guards/curated-spots-user-ratings-enabled.guard';
 import { CuratedSpot } from '../../domain/entities/curated-spot.entity';
+import { CuratedSpotUserRatingView } from '../services/curated-spot-user-ratings.service';
 import { CreateCuratedSpotDto } from '../../dto/create-curated-spot.dto';
 import { UpdateCuratedSpotDto } from '../../dto/update-curated-spot.dto';
+import { UpdateCuratedSpotsUserRatingsSettingsDto } from '../../dto/update-curated-spots-user-ratings-settings.dto';
+import { SubmitCuratedSpotUserRatingDto } from '../../dto/submit-curated-spot-user-rating.dto';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 import { Roles } from '../../../core/decorators/roles.decorator';
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
@@ -37,6 +43,8 @@ export class CuratedSpotsController {
   constructor(
     private readonly curatedSpotsService: CuratedSpotsService,
     private readonly firebaseStorageService: FirebaseStorageService,
+    private readonly curatedSpotsUserRatingsSettingsService: CuratedSpotsUserRatingsSettingsService,
+    private readonly curatedSpotUserRatingsService: CuratedSpotUserRatingsService,
   ) {}
 
   @Get('admin')
@@ -66,6 +74,24 @@ export class CuratedSpotsController {
     this.logger.log('GET /curated-spots/search');
     const ids = CuratedSpotsService.parseKeywordIdsFromQuery(keywordIds);
     return this.curatedSpotsService.searchActive(namePrefix, ids);
+  }
+
+  @Get('settings/user-ratings')
+  @ApiOperation({ summary: 'Get curated spots user ratings feature settings' })
+  public async getUserRatingsSettings() {
+    this.logger.log('GET /curated-spots/settings/user-ratings');
+    return this.curatedSpotsUserRatingsSettingsService.getSettings();
+  }
+
+  @Patch('settings/user-ratings')
+  @Roles('admin', 'super_admin')
+  @ApiOperation({ summary: 'Update curated spots user ratings feature toggle (admin)' })
+  public async patchUserRatingsSettings(
+    @Body() dto: UpdateCuratedSpotsUserRatingsSettingsDto,
+    @CurrentUser() userId: string,
+  ) {
+    this.logger.log('PATCH /curated-spots/settings/user-ratings');
+    return this.curatedSpotsUserRatingsSettingsService.updateSettings(dto.isEnabled, userId);
   }
 
   @Get()
@@ -141,6 +167,29 @@ export class CuratedSpotsController {
     const path = `curated-spots/${spotId}/video/${Date.now()}-${file.originalname}`;
     const videoUrl = await this.firebaseStorageService.uploadFile(file, path);
     return this.curatedSpotsService.update(spotId, { videoUrl });
+  }
+
+  @Get(':id/my-user-rating')
+  @UseGuards(CuratedSpotsUserRatingsEnabledGuard)
+  @ApiOperation({ summary: 'Get current user rating for this spot (feature toggle)' })
+  public async getMyUserRating(
+    @Param('id') spotId: string,
+    @CurrentUser() userId: string,
+  ): Promise<CuratedSpotUserRatingView | null> {
+    this.logger.log(`GET /curated-spots/${spotId}/my-user-rating`);
+    return this.curatedSpotUserRatingsService.getMyRating(spotId, userId);
+  }
+
+  @Post(':id/my-user-rating')
+  @UseGuards(CuratedSpotsUserRatingsEnabledGuard)
+  @ApiOperation({ summary: 'Submit one-time user rating for this spot (feature toggle)' })
+  public async postMyUserRating(
+    @Param('id') spotId: string,
+    @Body() dto: SubmitCuratedSpotUserRatingDto,
+    @CurrentUser() userId: string,
+  ): Promise<CuratedSpotUserRatingView> {
+    this.logger.log(`POST /curated-spots/${spotId}/my-user-rating`);
+    return this.curatedSpotUserRatingsService.submitOnce(spotId, userId, dto.score);
   }
 
   @Get(':id')

@@ -5,6 +5,7 @@ import { CURATED_SPOT_REPOSITORY } from '../../domain/repositories/curated-spot.
 import { SpotKeywordsService } from './spot-keywords.service';
 import { CuratedSpot } from '../../domain/entities/curated-spot.entity';
 import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
+import { UpdateCuratedSpotDto } from '../../dto/update-curated-spot.dto';
 
 describe('CuratedSpotsService', () => {
   let service: CuratedSpotsService;
@@ -104,6 +105,31 @@ describe('CuratedSpotsService', () => {
       await service.update('s1', { address: newAddr });
       const updated = mockSpotRepository.update.mock.calls[0][1] as CuratedSpot;
       expect(updated.address.street).toBe('Neue Straße');
+    });
+
+    it('should set adminRating and adminRatedAt once', async () => {
+      mockSpotRepository.findById.mockResolvedValue(activeSpotA);
+      mockSpotRepository.update.mockImplementation((_id: string, s: CuratedSpot) => Promise.resolve(s));
+      await service.update('s1', { adminRating: 4 });
+      const updated = mockSpotRepository.update.mock.calls[0][1] as CuratedSpot;
+      expect(updated.adminRating).toBe(4);
+      expect(updated.adminRatedAt).toMatch(/^\d{4}-/);
+    });
+
+    it('should throw Conflict when changing existing admin rating', async () => {
+      const rated = activeSpotA.update({ adminRating: 4, adminRatedAt: '2026-01-02T00:00:00.000Z' });
+      mockSpotRepository.findById.mockResolvedValue(rated);
+      await expect(service.update('s1', { adminRating: 5 })).rejects.toThrow('Admin rating');
+    });
+
+    it('should normalize videoUrl with spaces on update', async () => {
+      mockSpotRepository.findById.mockResolvedValue(activeSpotA);
+      mockSpotRepository.update.mockImplementation((_id: string, s: CuratedSpot) => Promise.resolve(s));
+      await service.update('s1', {
+        videoUrl: 'https://storage.test/x/Video File Name.mp4',
+      } as UpdateCuratedSpotDto);
+      const updated = mockSpotRepository.update.mock.calls[0][1] as CuratedSpot;
+      expect(updated.videoUrl).toBe('https://storage.test/x/Video%20File%20Name.mp4');
     });
   });
 

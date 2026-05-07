@@ -6,6 +6,9 @@ import { FirebaseStorageService } from '../../../firebase/firebase-storage.servi
 import { CuratedSpot } from '../../domain/entities/curated-spot.entity';
 import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
 import { RolesGuard } from '../../../core/guards/roles.guard';
+import { CuratedSpotsUserRatingsSettingsService } from '../services/curated-spots-user-ratings-settings.service';
+import { CuratedSpotUserRatingsService } from '../services/curated-spot-user-ratings.service';
+import { CuratedSpotsUserRatingsEnabledGuard } from '../guards/curated-spots-user-ratings-enabled.guard';
 
 describe('CuratedSpotsController', () => {
   let controller: CuratedSpotsController;
@@ -54,14 +57,27 @@ describe('CuratedSpotsController', () => {
       uploadFile: jest.fn(),
       deleteFile: jest.fn(),
     };
+    const mockUserRatingsSettingsService = {
+      getSettings: jest.fn(),
+      isFeatureEnabled: jest.fn(),
+      updateSettings: jest.fn(),
+    };
+    const mockCuratedSpotUserRatingsService = {
+      getMyRating: jest.fn(),
+      submitOnce: jest.fn(),
+    };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CuratedSpotsController],
       providers: [
         { provide: CuratedSpotsService, useValue: mockCuratedSpotsService },
         { provide: FirebaseStorageService, useValue: mockFirebaseStorageService },
+        { provide: CuratedSpotsUserRatingsSettingsService, useValue: mockUserRatingsSettingsService },
+        { provide: CuratedSpotUserRatingsService, useValue: mockCuratedSpotUserRatingsService },
       ],
     })
       .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(CuratedSpotsUserRatingsEnabledGuard)
       .useValue({ canActivate: () => true })
       .compile();
     controller = module.get<CuratedSpotsController>(CuratedSpotsController);

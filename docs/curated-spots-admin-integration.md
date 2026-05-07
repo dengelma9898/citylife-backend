@@ -52,7 +52,11 @@ Das Backend nutzt einen **globalen Response-Interceptor**. Antworten sind **nich
       "isDeleted": false,
       "createdAt": "…",
       "updatedAt": "…",
-      "createdByUserId": "…"
+      "createdByUserId": "…",
+      "adminRating": null,
+      "adminRatedAt": null,
+      "userRatingAverage": null,
+      "userRatingCount": 0
     }
   ],
   "timestamp": "…"
@@ -69,7 +73,9 @@ Interaktive Doku: **`GET /api`** (Swagger UI), Tag-Gruppen u. a. `curated-spot
 
 | Collection (Firestore) | Inhalt |
 |------------------------|--------|
-| `curatedSpots` | Spot-Dokumente |
+| `curatedSpots` | Spot-Dokumente (inkl. `adminRating` / Nutzer-Aggregate `userRatingAverage`, `userRatingCount`) |
+| `curatedSpots/{spotId}/userRatings/{userId}` | Einmalige Endnutzer-Bewertung pro User (`score`, `ratedAt`) – nur wenn Feature aktiv |
+| `settings/curated_spots_user_ratings_settings` | Feature-Toggle `isEnabled` für Endnutzer-Bewertungen (Default **false**) |
 | `spotKeywords` | Tag-Keywords nur für Spots (nicht `keywords` für Businesses) |
 
 Bei neuen zusammengesetzten Firestore-Queries können in der **Firebase Console** **Composite Indexes** nötig werden (Fehlermeldung mit Link kommt von Firebase).
@@ -199,6 +205,52 @@ Präfix wie `/dev` oder `/prd` hängt von eurer Deployment-Konfiguration ab (sie
 | `isDeleted` | boolean | Soft-Delete |
 | `createdAt` / `updatedAt` | string (ISO) | vom Server gesetzt |
 | `createdByUserId` | string \| null | Firebase-UID des Erstellers bei `POST` |
+| `adminRating` | number \| null | Redaktionsbewertung **1–5**; nach erster Setzung **unveränderlich** (`409`, wenn Änderung oder Reset) |
+| `adminRatedAt` | string \| null | ISO-Zeit der ersten Admin-Bewertung; **nur serverseitig**, nie im Request-Body |
+| `userRatingAverage` | number \| null | Durchschnitt aller abgegebenen Nutzerbewertungen (nur lesen; wird bei Nutzer-`POST` aktualisiert) |
+| `userRatingCount` | number | Anzahl abgegebener Nutzerbewertungen (Start **0**) |
+
+---
+
+## Bewertungen und Feature-Toggle (Endnutzer)
+
+> **Web-Admin-UI** (Redaktionssterne + Toggle im Browser): [curated-spots-ratings-web-integration.md](./curated-spots-ratings-web-integration.md) · **Flutter** (Anzeige + Nutzerbewertung): [curated-spots-ratings-flutter-integration.md](./curated-spots-ratings-flutter-integration.md)
+
+### GET `/curated-spots/settings/user-ratings`
+
+**Zweck:** Status des Features **Endnutzer-Bewertungen** lesen (`isEnabled`).
+
+**Auth:** jeder authentifizierte User.
+
+**Response `data`:** `{ "id": "curated_spots_user_ratings_settings", "isEnabled": boolean, "updatedAt": string, "updatedBy"?: string }`
+
+---
+
+### PATCH `/curated-spots/settings/user-ratings`
+
+**Zweck:** Feature ein- oder ausschalten.
+
+**Auth:** **admin** oder **super_admin**
+
+**Body:**
+
+```json
+{ "isEnabled": true }
+```
+
+---
+
+### POST `/curated-spots/:id/my-user-rating` / GET `/curated-spots/:id/my-user-rating`
+
+**Zweck:** Endnutzer legt **einmalig** Sterne **1–5** ab bzw. liest die eigene Abgabe. Nur wenn `isEnabled === true`; sonst **503**.
+
+**Auth:** jeder authentifizierte User.
+
+**POST Body:** `{ "score": 3 }` (Ganzzahl 1–5).
+
+**Fehler:** **409**, wenn dieser User den Spot bereits bewertet hat. **404**, wenn Spot für die App nicht sichtbar (nicht aktiv oder gelöscht).
+
+Details zur App-Integration: [flutter-curated-spots-read-integration.md](./flutter-curated-spots-read-integration.md).
 
 ---
 
@@ -239,6 +291,7 @@ Präfix wie `/dev` oder `/prd` hängt von eurer Deployment-Konfiguration ab (sie
 | `newKeywordNames` | Nein | Strings max. 120 Zeichen; Server legt fehlende Keywords an und **merged** die IDs in `keywordIds` |
 | `videoUrl` / `instagramUrl` | Nein | müssen gültige URLs sein, wenn gesetzt |
 | `status` | Nein | Default **`PENDING`**, wenn weggelassen |
+| `adminRating` | Nein | optional **1–5**; setzt gleichzeitig `adminRatedAt` (wie bei PATCH, nur **einmal** änderbar) |
 
 **Response `data`:** angelegter `CuratedSpot` (inkl. `id`).
 
@@ -258,6 +311,8 @@ Präfix wie `/dev` oder `/prd` hängt von eurer Deployment-Konfiguration ab (sie
 **Auth:** **admin** oder **super_admin**
 
 **Body:** alle Felder optional; nur gesendete Felder ändern sich logisch. **`address`:** wenn gesetzt, wird das komplette Adressobjekt ersetzt (gleiche Pflichtfelder wie bei `POST`).
+
+**Admin-Bewertung (`adminRating`):** optional **1–5**. Sobald am Spot einmal gesetzt, ist sie **fix**; erneutes `PATCH` mit anderem Wert oder `null` → **409 Conflict**. Derselbe Wert wie bereits gespeichert ist erlaubt (idempotent). **`adminRatedAt`** wird nur beim **ersten** Setzen gesetzt und kommt nicht in den Request.
 
 **Keywords – Semantik:**
 

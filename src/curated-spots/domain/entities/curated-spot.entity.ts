@@ -75,6 +75,10 @@ export interface CuratedSpotProps {
   createdAt: string;
   updatedAt: string;
   createdByUserId?: string | null;
+  adminRating?: number | null;
+  adminRatedAt?: string | null;
+  userRatingAverage?: number | null;
+  userRatingCount?: number;
 }
 
 /**
@@ -95,6 +99,10 @@ export class CuratedSpot {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly createdByUserId?: string | null;
+  readonly adminRating: number | null;
+  readonly adminRatedAt: string | null;
+  readonly userRatingAverage: number | null;
+  readonly userRatingCount: number;
 
   private constructor(
     props: Omit<CuratedSpotProps, 'address'> & { readonly address: CuratedSpotAddress },
@@ -113,6 +121,10 @@ export class CuratedSpot {
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
     this.createdByUserId = props.createdByUserId;
+    this.adminRating = props.adminRating ?? null;
+    this.adminRatedAt = props.adminRatedAt ?? null;
+    this.userRatingAverage = props.userRatingAverage ?? null;
+    this.userRatingCount = props.userRatingCount ?? 0;
   }
 
   static normalizeNameLower(name: string): string {
@@ -122,13 +134,25 @@ export class CuratedSpot {
   static create(
     props: Omit<
       CuratedSpotProps,
-      'id' | 'createdAt' | 'updatedAt' | 'isDeleted' | 'nameLower' | 'imageUrls' | 'keywordIds'
+      | 'id'
+      | 'createdAt'
+      | 'updatedAt'
+      | 'isDeleted'
+      | 'nameLower'
+      | 'imageUrls'
+      | 'keywordIds'
+      | 'adminRatedAt'
+      | 'userRatingAverage'
+      | 'userRatingCount'
     > & {
       imageUrls?: string[];
       keywordIds?: string[];
+      adminRating?: number | null;
     },
   ): CuratedSpot {
     const now = new Date().toISOString();
+    const adminRating = props.adminRating ?? null;
+    const adminRatedAt = adminRating !== null ? now : null;
     return new CuratedSpot({
       id: randomUUID(),
       name: props.name.trim(),
@@ -144,6 +168,10 @@ export class CuratedSpot {
       createdAt: now,
       updatedAt: now,
       createdByUserId: props.createdByUserId ?? null,
+      adminRating,
+      adminRatedAt,
+      userRatingAverage: null,
+      userRatingCount: 0,
     });
   }
 
@@ -180,6 +208,11 @@ export class CuratedSpot {
       updatedAt: new Date().toISOString(),
       createdByUserId:
         props.createdByUserId !== undefined ? props.createdByUserId : this.createdByUserId,
+      adminRating: props.adminRating !== undefined ? props.adminRating : this.adminRating,
+      adminRatedAt: props.adminRatedAt !== undefined ? props.adminRatedAt : this.adminRatedAt,
+      userRatingAverage:
+        props.userRatingAverage !== undefined ? props.userRatingAverage : this.userRatingAverage,
+      userRatingCount: props.userRatingCount !== undefined ? props.userRatingCount : this.userRatingCount,
     });
   }
 
@@ -199,6 +232,10 @@ export class CuratedSpot {
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       createdByUserId: this.createdByUserId,
+      adminRating: this.adminRating,
+      adminRatedAt: this.adminRatedAt,
+      userRatingAverage: this.userRatingAverage,
+      userRatingCount: this.userRatingCount,
     };
   }
 }

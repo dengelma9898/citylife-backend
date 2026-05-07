@@ -83,6 +83,10 @@ class CuratedSpot {
     required this.createdAt,
     required this.updatedAt,
     this.createdByUserId,
+    this.adminRating,
+    this.adminRatedAt,
+    this.userRatingAverage,
+    required this.userRatingCount,
   });
 
   final String id;
@@ -99,6 +103,12 @@ class CuratedSpot {
   final String createdAt;
   final String updatedAt;
   final String? createdByUserId;
+  /// Redaktion 1–5, oder null
+  final int? adminRating;
+  final String? adminRatedAt;
+  /// Aggregate aller Nutzerbewertungen
+  final double? userRatingAverage;
+  final int userRatingCount;
 
   static CuratedSpot fromJson(Map<String, dynamic> json) {
     return CuratedSpot(
@@ -118,6 +128,10 @@ class CuratedSpot {
       createdAt: json['createdAt'] as String? ?? '',
       updatedAt: json['updatedAt'] as String? ?? '',
       createdByUserId: json['createdByUserId'] as String?,
+      adminRating: (json['adminRating'] as num?)?.toInt(),
+      adminRatedAt: json['adminRatedAt'] as String?,
+      userRatingAverage: (json['userRatingAverage'] as num?)?.toDouble(),
+      userRatingCount: (json['userRatingCount'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -258,7 +272,19 @@ Future<CuratedSpot> fetchCuratedSpotById(String baseUrl, String id) async {
 }
 ```
 
-### 4.4 Keyword-Vorschläge (Autocomplete)
+### 4.6 Nutzer-Bewertungen (Feature-Toggle)
+
+Ausführlicher Flutter-Guide (Modelle, POST, Fehlerfälle): [curated-spots-ratings-flutter-integration.md](./curated-spots-ratings-flutter-integration.md).
+
+- Zuerst **GET** `{baseUrl}/curated-spots/settings/user-ratings` → `data.isEnabled`. Nur bei `true` Abgabe-UI anzeigen.
+- **GET** `{baseUrl}/curated-spots/{id}/my-user-rating` → `data` ist `null` oder `{ "score": int, "ratedAt": string }`.
+- **POST** `{baseUrl}/curated-spots/{id}/my-user-rating` mit JSON `{"score": 3}` (1–5). **Pro User und Spot nur einmal**; zweiter Versuch → **409**.
+- Wenn Feature aus: **503** auf GET/POST der Nutzer-Bewertung.
+- Listen/Detail (`GET /curated-spots`, …) enthalten `userRatingAverage`, `userRatingCount`, `adminRating`, `adminRatedAt` für die Anzeige (z. B. Sterne + „X Bewertungen“).
+
+---
+
+### 4.7 Keyword-Vorschläge (Autocomplete)
 
 - **GET** `{baseUrl}/spot-keywords/suggest?q={prefix}&limit=20`
 - **`q`:** Pflicht, nicht leer/Whitespace → sonst **400**.
@@ -281,7 +307,7 @@ Future<List<SpotKeyword>> suggestSpotKeywords(
 }
 ```
 
-### 4.5 Keyword nach ID (Anzeigenamen für Chips)
+### 4.8 Keyword nach ID (Anzeigenamen für Chips)
 
 - **GET** `{baseUrl}/spot-keywords/{id}`
 - Nutzen: aus `CuratedSpot.keywordIds` die **Namen** für die UI laden (parallel mit `Future.wait`).
@@ -315,6 +341,7 @@ Future<SpotKeyword?> fetchSpotKeywordById(String baseUrl, String id) async {
 - **Karte / Navigation:** `address.latitude` / `address.longitude` und formatierte Zeile aus Straße, Hausnummer, PLZ, Ort.
 - **Bilder / Video:** `imageUrls` als Galerie; `videoUrl` mit eurem Video-Player (externe URL).
 - **Caching:** optional `cached_network_image`; Cache-Invalidierung bei Pull-to-refresh über erneuten `GET /curated-spots`.
+- **Bewertungen:** `adminRating` / Nutzer-Schnitt (`userRatingAverage`, `userRatingCount`) nach Freigabe des Features anzeigen; Nutzerabgabe nur bei `settings/user-ratings.isEnabled`.
 
 ---
 
@@ -325,9 +352,8 @@ Future<SpotKeyword?> fetchSpotKeywordById(String baseUrl, String id) async {
 | 401 | Kein oder abgelaufenes Firebase-Token |
 | 400 | `spot-keywords/suggest` ohne gültiges `q` |
 | 404 | `GET /curated-spots/:id` – Spot nicht öffentlich sichtbar |
-| 404 | `GET /spot-keywords/:id` – Keyword fehlt |
-
----
+| 503 | `…/my-user-rating` bei ausgeschaltetem Feature |
+| 409 | erneute Nutzer-Bewertung desselben Spots |
 
 ## 7. Nächster Schritt
 

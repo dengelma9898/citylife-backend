@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { CuratedSpot, CuratedSpotProps } from '../../domain/entities/curated-spot.entity';
 import {
   CuratedSpotRepository,
@@ -8,6 +8,7 @@ import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
 import { CreateCuratedSpotDto } from '../../dto/create-curated-spot.dto';
 import { UpdateCuratedSpotDto } from '../../dto/update-curated-spot.dto';
 import { SpotKeywordsService } from './spot-keywords.service';
+import { normalizeHttpUrlSpaces } from '../../dto/normalize-http-url-spaces';
 
 @Injectable()
 export class CuratedSpotsService {
@@ -100,10 +101,11 @@ export class CuratedSpotsService {
       keywordIds: mergedKeywordIds,
       imageUrls: [],
       address: dto.address,
-      videoUrl: dto.videoUrl ?? null,
-      instagramUrl: dto.instagramUrl ?? null,
+      videoUrl: dto.videoUrl !== undefined ? normalizeHttpUrlSpaces(dto.videoUrl) : null,
+      instagramUrl: dto.instagramUrl !== undefined ? normalizeHttpUrlSpaces(dto.instagramUrl) : null,
       status: dto.status ?? CuratedSpotStatus.PENDING,
       createdByUserId,
+      adminRating: dto.adminRating ?? null,
     });
     return this.curatedSpotRepository.create(spot);
   }
@@ -140,16 +142,26 @@ export class CuratedSpotsService {
       patch.keywordIds = mergedKeywordIds;
     }
     if (dto.videoUrl !== undefined) {
-      patch.videoUrl = dto.videoUrl;
+      patch.videoUrl = dto.videoUrl === null ? null : normalizeHttpUrlSpaces(dto.videoUrl);
     }
     if (dto.instagramUrl !== undefined) {
-      patch.instagramUrl = dto.instagramUrl;
+      patch.instagramUrl = dto.instagramUrl === null ? null : normalizeHttpUrlSpaces(dto.instagramUrl);
     }
     if (dto.status !== undefined) {
       patch.status = dto.status;
     }
     if (dto.isDeleted !== undefined) {
       patch.isDeleted = dto.isDeleted;
+    }
+    if (dto.adminRating !== undefined) {
+      if (existing.adminRating !== null) {
+        if (dto.adminRating === null || dto.adminRating !== existing.adminRating) {
+          throw new ConflictException('Admin rating is already set and cannot be changed');
+        }
+      } else if (dto.adminRating !== null) {
+        patch.adminRating = dto.adminRating;
+        patch.adminRatedAt = new Date().toISOString();
+      }
     }
     const updated = existing.update(patch);
     return this.curatedSpotRepository.update(id, updated);
