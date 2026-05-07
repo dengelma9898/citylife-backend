@@ -8,16 +8,20 @@ import {
   Delete,
   UseGuards,
   Logger,
+  Query,
 } from '@nestjs/common';
 import { SpecialPollsService } from './special-polls.service';
 import { CreateSpecialPollDto } from './dto/create-special-poll.dto';
 import { UpdateSpecialPollStatusDto } from './dto/update-special-poll-status.dto';
+import { UpdateSpecialPollHighlightDto } from './dto/update-special-poll-highlight.dto';
 import { UpdateSpecialPollResponsesDto } from './dto/update-special-poll-responses.dto';
 import { SpecialPoll } from './interfaces/special-poll.interface';
 import { RolesGuard } from '../core/guards/roles.guard';
 import { Roles } from '../core/decorators/roles.decorator';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { CurrentUser } from '../core/decorators/current-user.decorator';
+import { UsersService } from '../users/users.service';
+import { UserType } from '../users/enums/user-type.enum';
 
 @ApiTags('special-polls')
 @Controller('special-polls')
@@ -25,7 +29,21 @@ import { CurrentUser } from '../core/decorators/current-user.decorator';
 export class SpecialPollsController {
   private readonly logger = new Logger(SpecialPollsController.name);
 
-  constructor(private readonly specialPollsService: SpecialPollsService) {}
+  constructor(
+    private readonly specialPollsService: SpecialPollsService,
+    private readonly usersService: UsersService,
+  ) {}
+
+  /**
+   * Admin und Super-Admin sehen auch INACTIVE-Umfragen in Listen und Detail.
+   */
+  private async resolveIncludeInactivePolls(userId: string): Promise<boolean> {
+    const data = await this.usersService.getById(userId);
+    if (!data || 'businessIds' in data) {
+      return false;
+    }
+    return data.userType === UserType.ADMIN || data.userType === UserType.SUPER_ADMIN;
+  }
 
   @Post()
   @Roles('super_admin')
@@ -42,20 +60,39 @@ export class SpecialPollsController {
 
   @Get()
   @Roles('user', 'admin', 'super_admin')
-  @ApiOperation({ summary: 'Gibt alle Special Polls zurück' })
+  @ApiQuery({
+    name: 'highlighted',
+    required: false,
+    description: 'Wenn true, nur hervorgehobene Umfragen',
+  })
+  @ApiOperation({
+    summary: 'Gibt alle Special Polls zurück',
+    description:
+      'Standard: ohne INACTIVE. Admin/Super-Admin erhalten alle Status inkl. INACTIVE.',
+  })
   @ApiResponse({ status: 200, description: 'Liste aller Special Polls' })
-  async findAll(): Promise<SpecialPoll[]> {
+  async findAll(
+    @CurrentUser() userId: string,
+    @Query('highlighted') highlighted?: string,
+  ): Promise<SpecialPoll[]> {
     this.logger.log('GET /special-polls');
-    return this.specialPollsService.findAll();
+    const highlightedOnly = highlighted === 'true';
+    const includeInactivePolls = await this.resolveIncludeInactivePolls(userId);
+    return this.specialPollsService.findAll(highlightedOnly, includeInactivePolls);
   }
 
   @Get(':id')
   @Roles('user', 'admin', 'super_admin')
-  @ApiOperation({ summary: 'Gibt eine bestimmte Special Poll zurück' })
+  @ApiOperation({
+    summary: 'Gibt eine bestimmte Special Poll zurück',
+    description:
+      'INACTIVE-Umfragen liefern 404 für normale Nutzer; Admin/Super-Admin erhalten das Dokument.',
+  })
   @ApiResponse({ status: 200, description: 'Die angeforderte Special Poll' })
-  async findOne(@Param('id') id: string): Promise<SpecialPoll> {
+  async findOne(@Param('id') id: string, @CurrentUser() userId: string): Promise<SpecialPoll> {
     this.logger.log(`GET /special-polls/${id}`);
-    return this.specialPollsService.findOne(id);
+    const includeInactivePolls = await this.resolveIncludeInactivePolls(userId);
+    return this.specialPollsService.findOne(id, includeInactivePolls);
   }
 
   @Patch(':id/status')
@@ -70,6 +107,31 @@ export class SpecialPollsController {
     return this.specialPollsService.updateStatus(id, updateStatusDto);
   }
 
+  @Patch(':id/highlight')
+  @Roles('super_admin')
+  @ApiOperation({ summary: 'Setzt die Hervorhebung einer Special Poll' })
+  @ApiResponse({ status: 200, description: 'Highlight wurde aktualisiert' })
+  async updateHighlight(
+    @Param('id') id: string,
+    @Body() dto: UpdateSpecialPollHighlightDto,
+  ): Promise<SpecialPoll> {
+    this.logger.log(`PATCH /special-polls/${id}/highlight`);
+    return this.specialPollsService.updateHighlight(id, dto.isHighlighted);
+  }
+
+  @Post(':id/responses/:responseId/upvote')
+  @Roles('user', 'admin', 'super_admin')
+  @ApiOperation({ summary: 'Upvote auf eine Antwort togglen (Zustimmung)' })
+  @ApiResponse({ status: 200, description: 'Aktualisierte Special Poll' })
+  async toggleResponseUpvote(
+    @Param('id') id: string,
+    @Param('responseId') responseId: string,
+    @CurrentUser() userId: string,
+  ): Promise<SpecialPoll> {
+    this.logger.log(`POST /special-polls/${id}/responses/${responseId}/upvote`);
+    return this.specialPollsService.toggleResponseUpvote(id, responseId, userId);
+  }
+
   @Post(':id/responses')
   @Roles('user', 'admin', 'super_admin')
   @ApiOperation({ summary: 'Fügt eine Antwort zu einer Special Poll hinzu' })
@@ -81,6 +143,20 @@ export class SpecialPollsController {
   ): Promise<SpecialPoll> {
     this.logger.log(`POST /special-polls/${id}/responses`);
     return this.specialPollsService.addResponse(id, userId, response);
+  }
+
+  @Delete(':id/responses/me')
+  @Roles('user', 'admin', 'super_admin')
+  @ApiOperation({
+    summary: 'Entfernt alle Antworten des aktuellen Nutzers zu dieser Umfrage',
+  })
+  @ApiResponse({ status: 200, description: 'Aktualisierte Special Poll' })
+  async removeMyResponses(
+    @Param('id') id: string,
+    @CurrentUser() userId: string,
+  ): Promise<SpecialPoll> {
+    this.logger.log(`DELETE /special-polls/${id}/responses/me`);
+    return this.specialPollsService.removeResponse(id, userId);
   }
 
   @Patch(':id/responses')
