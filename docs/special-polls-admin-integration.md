@@ -55,8 +55,10 @@ Präfixe wie `/dev` oder `/prd` hängen von der Deployment-Konfiguration ab ([RE
 | Methode | Pfad | Erlaubte Rollen |
 |---------|------|------------------|
 | `POST` | `/special-polls` | `super_admin` |
-| `GET` | `/special-polls` | `user`, `admin`, `super_admin` |
+| `GET` | `/special-polls` | `user`, `admin`, `super_admin`, `anonymous_firebase_user`¹ |
 | `GET` | `/special-polls/:id` | `user`, `admin`, `super_admin` |
+
+¹ **Anonym:** Firebase `sign_in_provider === anonymous` und **kein** `users`-Dokument – nur **Liste**, kein `GET …/:id` (dort **403**).
 | `PATCH` | `/special-polls/:id/status` | `super_admin` |
 | `PATCH` | `/special-polls/:id/highlight` | `super_admin` |
 | `POST` | `/special-polls/:id/responses/:responseId/upvote` | `user`, `admin`, `super_admin` |
@@ -225,13 +227,13 @@ Erlaubte Werte: **`ACTIVE`**, **`INACTIVE`** (kein `PENDING` / `CLOSED` als neue
 |-----------|------|--------|
 | `highlighted` | `true` | Nur Umfragen mit `isHighlighted === true` |
 
-**Sichtbarkeit:** Nutzer mit **`admin`** oder **`super_admin`** erhalten **alle** Einträge inkl. **`INACTIVE`**. Reine **`user`**-Konten erhalten **keine** `INACTIVE`-Umfragen in dieser Liste.
+**Sichtbarkeit:** Nutzer mit **`admin`** oder **`super_admin`** erhalten **alle** Einträge inkl. **`INACTIVE`**. Reine **`user`**-Konten erhalten **keine** `INACTIVE`-Umfragen in dieser Liste. **Firebase-Anonymous ohne Profil** dürfen nur diese Liste (ohne Antwortinhalte in `responses`); kein Einzelabruf `GET …/:id`.
 
 **Response `data`:** `SpecialPoll[]`, sortiert absteigend nach `createdAt` (Backend).
 
 ### `GET /special-polls/:id`
 
-**Sichtbarkeit:** Für **`user`** liefert das Backend **404**, wenn die Umfrage (nach Normalisierung) **`INACTIVE`** ist. **`admin`** / **`super_admin`** erhalten die Ressource.
+**Sichtbarkeit:** Für **`user`** liefert das Backend **404**, wenn die Umfrage (nach Normalisierung) **`INACTIVE`** ist. **`admin`** / **`super_admin`** erhalten die Ressource. **Firebase-Anonymous ohne `users`-Dokument:** **403** (kein Zugriff auf Einzel-Umfrage).
 
 **Response `data`:** eine `SpecialPoll`.
 

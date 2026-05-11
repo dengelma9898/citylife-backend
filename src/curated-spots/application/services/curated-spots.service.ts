@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CuratedSpot, CuratedSpotProps } from '../../domain/entities/curated-spot.entity';
 import {
   CuratedSpotRepository,
@@ -153,15 +153,10 @@ export class CuratedSpotsService {
     if (dto.isDeleted !== undefined) {
       patch.isDeleted = dto.isDeleted;
     }
-    if (dto.adminRating !== undefined) {
-      if (existing.adminRating !== null) {
-        if (dto.adminRating === null || dto.adminRating !== existing.adminRating) {
-          throw new ConflictException('Admin rating is already set and cannot be changed');
-        }
-      } else if (dto.adminRating !== null) {
-        patch.adminRating = dto.adminRating;
-        patch.adminRatedAt = new Date().toISOString();
-      }
+    if (dto.adminRating !== undefined && dto.adminRating !== existing.adminRating) {
+      patch.adminRating = dto.adminRating;
+      patch.adminRatedAt =
+        dto.adminRating === null ? null : new Date().toISOString();
     }
     const updated = existing.update(patch);
     return this.curatedSpotRepository.update(id, updated);

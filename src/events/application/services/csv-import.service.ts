@@ -7,6 +7,7 @@ import { CsvRow } from '../../dto/csv-row.dto';
 import { CsvImportResult, CsvRowResult, CsvRowError } from '../../dto/csv-import-result.dto';
 import { CreateEventDto } from '../../dto/create-event.dto';
 import { DailyTimeSlot } from '../../interfaces/event.interface';
+import { EventStatus } from '../../enums/event-status.enum';
 import { EventCategory } from '../../../event-categories/interfaces/event-category.interface';
 
 /** Erwartete Spalten im CsvRow-Interface */
@@ -267,7 +268,7 @@ export class CsvImportService {
         dailyTimeSlots,
       };
       this.logger.debug(`  Zeile ${rowIndex}: Event wird erstellt...`);
-      const event = await this.eventsService.create(createEventDto);
+      const event = await this.eventsService.create(createEventDto, EventStatus.ACTIVE);
       this.logger.debug(`  Zeile ${rowIndex}: Event erfolgreich erstellt -> ID: ${event.id}`);
       if (errors.length > 0) {
         this.logger.debug(`  Zeile ${rowIndex}: Erfolgreich mit ${errors.length} Warnung(en)`);

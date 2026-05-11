@@ -14,8 +14,12 @@ import {
   Inject,
   forwardRef,
   Query,
+  Req,
+  ForbiddenException,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Request } from 'express';
 import { EventsService } from './events.service';
 import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -27,7 +31,19 @@ import { BusinessesService } from '../businesses/application/services/businesses
 import { CsvImportService } from './application/services/csv-import.service';
 import { CsvImportResult } from './dto/csv-import-result.dto';
 import { CsvFileValidationPipe } from '../core/pipes/csv-file-validation.pipe';
+import { UserType } from '../users/enums/user-type.enum';
+import { EventStatus } from './enums/event-status.enum';
+import { RolesGuard } from '../core/guards/roles.guard';
+import { Roles } from '../core/decorators/roles.decorator';
 
+function isFirebaseAnonymousUser(
+  user?: { firebase?: { sign_in_provider?: string } },
+): boolean {
+  return user?.firebase?.sign_in_provider === 'anonymous';
+}
+
+@ApiTags('events')
+@ApiBearerAuth()
 @Controller('events')
 export class EventsController {
   private readonly logger = new Logger(EventsController.name);
@@ -43,16 +59,153 @@ export class EventsController {
     this.logger.log('EventsController initialized');
   }
 
+  private assertNotAnonymous(req: Request): void {
+    if (isFirebaseAnonymousUser(req.user)) {
+      throw new ForbiddenException('Anonymous users cannot create or modify events');
+    }
+  }
+
+  private async isActorAdmin(actorUid: string): Promise<boolean> {
+    const profile = await this.usersService.getUserProfile(actorUid);
+    return (
+      profile?.userType === UserType.ADMIN || profile?.userType === UserType.SUPER_ADMIN
+    );
+  }
+
+  /**
+   * Admin-created events are ACTIVE immediately; all other registered users get PENDING.
+   */
+  private async resolveInitialEventStatus(actorUid: string): Promise<EventStatus> {
+    if (await this.isActorAdmin(actorUid)) {
+      return EventStatus.ACTIVE;
+    }
+    return EventStatus.PENDING;
+  }
+
+  private async userOwnsEvent(actorUid: string, eventId: string): Promise<boolean> {
+    const profile = await this.usersService.getUserProfile(actorUid);
+    if (profile?.createdEventIds?.includes(eventId)) {
+      return true;
+    }
+    const businessUser = await this.usersService.getBusinessUser(actorUid);
+    if (businessUser?.eventIds?.includes(eventId)) {
+      return true;
+    }
+    if (businessUser?.businessIds?.length) {
+      for (const bid of businessUser.businessIds) {
+        const business = await this.businessesService.getById(bid);
+        if (business?.eventIds?.includes(eventId)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private async assertCanModifyIfPending(actorUid: string, event: Event): Promise<void> {
+    if (event.status !== EventStatus.PENDING) {
+      return;
+    }
+    if (await this.isActorAdmin(actorUid)) {
+      return;
+    }
+    if (await this.userOwnsEvent(actorUid, event.id)) {
+      return;
+    }
+    throw new ForbiddenException('Not allowed to modify this event');
+  }
+
+  private async canManageBusinessEvents(actorUid: string, businessId: string): Promise<boolean> {
+    if (await this.isActorAdmin(actorUid)) {
+      return true;
+    }
+    const businessUser = await this.usersService.getBusinessUser(actorUid);
+    return businessUser?.businessIds?.includes(businessId) ?? false;
+  }
+
   @Get()
   public async getAll(): Promise<Event[]> {
     this.logger.log('GET /events');
     return this.eventsService.getAll();
   }
 
+  @Get('pending')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'super_admin')
+  public async getPendingEvents(): Promise<Event[]> {
+    this.logger.log('GET /events/pending');
+    return this.eventsService.getPendingEvents();
+  }
+
+  @Get('by-ids')
+  public async getByIdsQuery(@Query('ids') idsString: string): Promise<Event[]> {
+    this.logger.log(`GET /events/by-ids?ids=${idsString}`);
+    if (!idsString) {
+      return [];
+    }
+    const ids = idsString
+      .split(',')
+      .map(id => id.trim())
+      .filter(id => id);
+    if (ids.length === 0) {
+      return [];
+    }
+    return this.eventsService.getByIds(ids, { includeAllStatuses: false });
+  }
+
+  @Get('users/:id')
+  public async getEventsByUserId(
+    @Param('id') userId: string,
+    @Req() req: Request,
+  ): Promise<Event[]> {
+    this.logger.log(`GET /events/users/${userId}`);
+    const actorUid = req.user?.uid;
+    if (!actorUid) {
+      throw new ForbiddenException();
+    }
+    if (userId !== actorUid && !(await this.isActorAdmin(actorUid))) {
+      throw new ForbiddenException();
+    }
+    const businessUser = await this.usersService.getBusinessUser(userId);
+    const profile = await this.usersService.getUserProfile(userId);
+    if (!businessUser && !profile) {
+      throw new NotFoundException(`Benutzer mit ID ${userId} wurde nicht gefunden`);
+    }
+    const fromBusiness = businessUser?.eventIds || [];
+    const fromProfile = profile?.createdEventIds || [];
+    const uniqueIds = [...new Set([...fromBusiness, ...fromProfile])];
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+    return this.eventsService.getByIds(uniqueIds, { includeAllStatuses: true });
+  }
+
+  @Get('businesses/:id')
+  public async getEventsByBusinessId(
+    @Param('id') businessId: string,
+    @Req() req: Request,
+  ): Promise<Event[]> {
+    this.logger.log(`GET /events/businesses/${businessId}`);
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
+      throw new NotFoundException(`Business mit ID ${businessId} wurde nicht gefunden`);
+    }
+    if (!business.eventIds || business.eventIds.length === 0) {
+      return [];
+    }
+    const uid = req.user?.uid;
+    const includeAll = uid ? await this.canManageBusinessEvents(uid, businessId) : false;
+    return this.eventsService.getByIds(business.eventIds, {
+      includeAllStatuses: includeAll,
+    });
+  }
+
   @Get(':id')
-  public async getById(@Param('id') id: string): Promise<Event> {
+  public async getById(@Param('id') id: string, @Req() req: Request): Promise<Event> {
     this.logger.log(`GET /events/${id}`);
-    const event = await this.eventsService.getById(id);
+    const uid = req.user?.uid;
+    const allowPending = uid ? await this.isActorAdmin(uid) : false;
+    const event = await this.eventsService.getById(id, { includePendingInResult: allowPending });
     if (!event) {
       throw new NotFoundException('Event not found');
     }
@@ -60,17 +213,89 @@ export class EventsController {
   }
 
   @Post()
-  public async create(@Body() createEventDto: CreateEventDto): Promise<Event> {
+  public async create(
+    @Req() req: Request,
+    @Body() createEventDto: CreateEventDto,
+  ): Promise<Event> {
     this.logger.log('POST /events');
-    return this.eventsService.create(createEventDto);
+    this.assertNotAnonymous(req);
+    const actorUid = req.user!.uid;
+    const initialStatus = await this.resolveInitialEventStatus(actorUid);
+    return this.eventsService.create(createEventDto, initialStatus);
+  }
+
+  @Post('users/:id')
+  public async createEventForUser(
+    @Param('id') userId: string,
+    @Req() req: Request,
+    @Body() createEventDto: CreateEventDto,
+  ): Promise<Event> {
+    this.logger.log(`POST /events/users/${userId}`);
+    this.assertNotAnonymous(req);
+    const actorUid = req.user!.uid;
+    if (userId !== actorUid && !(await this.isActorAdmin(actorUid))) {
+      throw new ForbiddenException();
+    }
+    const businessUser = await this.usersService.getBusinessUser(userId);
+    const profile = await this.usersService.getUserProfile(userId);
+    if (!businessUser && !profile) {
+      throw new NotFoundException(`Benutzer mit ID ${userId} wurde nicht gefunden`);
+    }
+    const initialStatus = await this.resolveInitialEventStatus(actorUid);
+    const createdEvent = await this.eventsService.create(createEventDto, initialStatus);
+    if (businessUser) {
+      await this.usersService.addEventToUser(userId, createdEvent.id);
+    } else if (profile) {
+      await this.usersService.addCreatedEventToUserProfile(userId, createdEvent.id);
+    }
+    return createdEvent;
+  }
+
+  @Post('businesses/:id')
+  public async createEventForBusiness(
+    @Param('id') businessId: string,
+    @Req() req: Request,
+    @Body() createEventDto: CreateEventDto,
+  ): Promise<Event> {
+    this.logger.log(`POST /events/businesses/${businessId}`);
+    this.assertNotAnonymous(req);
+    const actorUid = req.user!.uid;
+    const business = await this.businessesService.getById(businessId);
+    if (!business) {
+      throw new NotFoundException(`Business mit ID ${businessId} wurde nicht gefunden`);
+    }
+    if (!(await this.canManageBusinessEvents(actorUid, businessId))) {
+      throw new ForbiddenException();
+    }
+    const initialStatus = await this.resolveInitialEventStatus(actorUid);
+    const createdEvent = await this.eventsService.create(createEventDto, initialStatus);
+    const eventIds = [...(business.eventIds || []), createdEvent.id];
+    await this.businessesService.update(businessId, { eventIds });
+    return createdEvent;
+  }
+
+  @Patch(':id/approve')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'super_admin')
+  public async approveEvent(@Param('id') id: string): Promise<Event> {
+    this.logger.log(`PATCH /events/${id}/approve`);
+    return this.eventsService.approveEvent(id);
   }
 
   @Patch(':id')
   public async update(
     @Param('id') id: string,
+    @Req() req: Request,
     @Body() updateEventDto: Partial<Event>,
   ): Promise<Event> {
     this.logger.log(`PATCH /events/${id}`);
+    this.assertNotAnonymous(req);
+    const actorUid = req.user!.uid;
+    const current = await this.eventsService.getById(id, { includePendingInResult: true });
+    if (!current) {
+      throw new NotFoundException('Event not found');
+    }
+    await this.assertCanModifyIfPending(actorUid, current);
     return this.eventsService.update(id, updateEventDto);
   }
 
@@ -78,68 +303,53 @@ export class EventsController {
   @UseInterceptors(FileInterceptor('file'))
   public async updateTitleImage(
     @Param('id') eventId: string,
+    @Req() req: Request,
     @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File,
   ): Promise<Event> {
     this.logger.log(`PATCH /events/${eventId}/title-image`);
-
-    // Get current event to check for existing title image
-    const currentEvent = await this.eventsService.getById(eventId);
+    this.assertNotAnonymous(req);
+    const actorUid = req.user!.uid;
+    const currentEvent = await this.eventsService.getById(eventId, { includePendingInResult: true });
     if (!currentEvent) {
       throw new NotFoundException('Event not found');
     }
-
-    // Delete old title image if it exists
+    await this.assertCanModifyIfPending(actorUid, currentEvent);
     if (currentEvent.titleImageUrl) {
       this.logger.debug('Deleting old title image');
       await this.firebaseStorageService.deleteFile(currentEvent.titleImageUrl);
     }
-
-    // Upload the new title image
     const path = `events/title-images/${eventId}/${Date.now()}-${file.originalname}`;
     const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
-
-    // Update the event with the new title image URL
     return this.eventsService.update(eventId, { titleImageUrl: imageUrl });
   }
 
   @Delete(':id')
-  public async delete(@Param('id') id: string): Promise<void> {
+  public async delete(@Param('id') id: string, @Req() req: Request): Promise<void> {
     this.logger.log(`DELETE /events/${id}`);
-
-    // Get current event to check for existing images
-    const currentEvent = await this.eventsService.getById(id);
+    this.assertNotAnonymous(req);
+    const actorUid = req.user!.uid;
+    const currentEvent = await this.eventsService.getById(id, { includePendingInResult: true });
     if (!currentEvent) {
       throw new NotFoundException('Event not found');
     }
-
-    // Array to collect all delete promises
+    await this.assertCanModifyIfPending(actorUid, currentEvent);
     const deletePromises: Promise<void>[] = [];
-
-    // Delete title image if it exists
     if (currentEvent.titleImageUrl) {
       this.logger.debug(`Deleting title image: ${currentEvent.titleImageUrl}`);
       deletePromises.push(this.firebaseStorageService.deleteFile(currentEvent.titleImageUrl));
     }
-
-    // Delete all additional images if they exist
     if (currentEvent.imageUrls && currentEvent.imageUrls.length > 0) {
       this.logger.debug(
         `Deleting ${currentEvent.imageUrls.length} additional images for event ${id}`,
       );
-
-      // Add each image deletion to the promises array
       currentEvent.imageUrls.forEach(imageUrl => {
         this.logger.debug(`Deleting image: ${imageUrl}`);
         deletePromises.push(this.firebaseStorageService.deleteFile(imageUrl));
       });
     }
-
-    // Wait for all images to be deleted
     if (deletePromises.length > 0) {
       await Promise.all(deletePromises);
     }
-
-    // Delete the event
     return this.eventsService.delete(id);
   }
 
@@ -147,23 +357,20 @@ export class EventsController {
   @UseInterceptors(FilesInterceptor('images'))
   public async addImages(
     @Param('id') eventId: string,
+    @Req() req: Request,
     @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[],
   ): Promise<Event> {
     this.logger.log(`PATCH /events/${eventId}/images`);
-
-    // Get current event
-    const currentEvent = await this.eventsService.getById(eventId);
+    this.assertNotAnonymous(req);
+    const actorUid = req.user!.uid;
+    const currentEvent = await this.eventsService.getById(eventId, { includePendingInResult: true });
     if (!currentEvent) {
       throw new NotFoundException('Event not found');
     }
-
-    // Initialize imageUrls array if it doesn't exist
+    await this.assertCanModifyIfPending(actorUid, currentEvent);
     let imageUrls = currentEvent.imageUrls || [];
-
     if (files && files.length > 0) {
       this.logger.debug(`Uploading ${files.length} new images for event ${eventId}`);
-
-      // Upload each file and collect URLs
       for (const file of files) {
         const path = `events/images/${eventId}/${Date.now()}-${file.originalname}`;
         const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
@@ -172,185 +379,36 @@ export class EventsController {
     } else {
       this.logger.debug('No new images provided for event update');
     }
-
-    // Update the event with the new image URLs
     return this.eventsService.update(eventId, { imageUrls });
   }
 
   @Patch(':id/images/remove')
   public async removeImage(
     @Param('id') eventId: string,
+    @Req() req: Request,
     @Body('imageUrl') imageUrl: string,
   ): Promise<Event> {
     this.logger.log(`PATCH /events/${eventId}/images/remove`);
-
     if (!imageUrl) {
       throw new NotFoundException('imageUrl is required');
     }
-
-    // Get current event
-    const currentEvent = await this.eventsService.getById(eventId);
+    this.assertNotAnonymous(req);
+    const actorUid = req.user!.uid;
+    const currentEvent = await this.eventsService.getById(eventId, { includePendingInResult: true });
     if (!currentEvent) {
       throw new NotFoundException('Event not found');
     }
-
-    // Check if the image exists in the event
+    await this.assertCanModifyIfPending(actorUid, currentEvent);
     if (!currentEvent.imageUrls || !currentEvent.imageUrls.includes(imageUrl)) {
       throw new NotFoundException('Image not found in event');
     }
-
-    // Delete the image from Firebase Storage
     await this.firebaseStorageService.deleteFile(imageUrl);
-
-    // Remove the URL from the event's imageUrls array
     const updatedImageUrls = currentEvent.imageUrls.filter(url => url !== imageUrl);
-
-    // Update the event
     return this.eventsService.update(eventId, { imageUrls: updatedImageUrls });
   }
 
   /**
-   * Erstellt ein neues Event für einen bestimmten Business-User
-   *
-   * @param userId - Die ID des Business-Users, für den das Event erstellt werden soll
-   * @param createEventDto - Die Daten für das neue Event
-   * @returns Das erstellte Event
-   */
-  @Post('users/:id')
-  public async createEventForUser(
-    @Param('id') userId: string,
-    @Body() createEventDto: CreateEventDto,
-  ): Promise<Event> {
-    this.logger.log(`POST /events/users/${userId}`);
-
-    // Überprüfen, ob der User existiert
-    const businessUser = await this.usersService.getBusinessUser(userId);
-    if (!businessUser) {
-      throw new NotFoundException(`Geschäftsbenutzer mit ID ${userId} wurde nicht gefunden`);
-    }
-
-    // Event erstellen
-    const createdEvent = await this.eventsService.create(createEventDto);
-
-    // Event-ID zum User hinzufügen
-    await this.usersService.addEventToUser(userId, createdEvent.id);
-
-    return createdEvent;
-  }
-
-  /**
-   * Gibt alle Events eines Business-Users zurück
-   *
-   * @param userId - Die ID des Business-Users
-   * @returns Array von Events, die dem Business-User zugeordnet sind
-   */
-  @Get('users/:id')
-  public async getEventsByUserId(@Param('id') userId: string): Promise<Event[]> {
-    this.logger.log(`GET /events/users/${userId}`);
-
-    // Überprüfen, ob der User existiert
-    const businessUser = await this.usersService.getBusinessUser(userId);
-    if (!businessUser) {
-      throw new NotFoundException(`Geschäftsbenutzer mit ID ${userId} wurde nicht gefunden`);
-    }
-
-    // Wenn keine Events vorhanden sind, geben wir ein leeres Array zurück
-    if (!businessUser.eventIds || businessUser.eventIds.length === 0) {
-      return [];
-    }
-
-    // Events basierend auf den IDs im Benutzer-Dokument abrufen
-    return this.eventsService.getByIds(businessUser.eventIds);
-  }
-
-  /**
-   * Gibt Events basierend auf einer Liste von IDs zurück
-   *
-   * @param ids - Durch Komma getrennte Liste von Event-IDs
-   * @returns Array von Events, die den angegebenen IDs entsprechen
-   */
-  @Get('by-ids')
-  public async getByIds(@Query('ids') idsString: string): Promise<Event[]> {
-    this.logger.log(`GET /events/by-ids?ids=${idsString}`);
-
-    if (!idsString) {
-      return [];
-    }
-
-    // Durch Komma getrennte IDs in ein Array umwandeln
-    const ids = idsString
-      .split(',')
-      .map(id => id.trim())
-      .filter(id => id);
-
-    if (ids.length === 0) {
-      return [];
-    }
-
-    return this.eventsService.getByIds(ids);
-  }
-
-  /**
-   * Erstellt ein neues Event für ein bestimmtes Business
-   *
-   * @param businessId - Die ID des Businesses, für das das Event erstellt werden soll
-   * @param createEventDto - Die Daten für das neue Event
-   * @returns Das erstellte Event
-   */
-  @Post('businesses/:id')
-  public async createEventForBusiness(
-    @Param('id') businessId: string,
-    @Body() createEventDto: CreateEventDto,
-  ): Promise<Event> {
-    this.logger.log(`POST /events/businesses/${businessId}`);
-
-    // Überprüfen, ob das Business existiert
-    const business = await this.businessesService.getById(businessId);
-    if (!business) {
-      throw new NotFoundException(`Business mit ID ${businessId} wurde nicht gefunden`);
-    }
-
-    // Event erstellen
-    const createdEvent = await this.eventsService.create(createEventDto);
-
-    // Event-ID zum Business hinzufügen
-    const eventIds = [...(business.eventIds || []), createdEvent.id];
-    await this.businessesService.update(businessId, { eventIds });
-
-    return createdEvent;
-  }
-
-  /**
-   * Gibt alle Events eines Businesses zurück
-   *
-   * @param businessId - Die ID des Businesses
-   * @returns Array von Events, die dem Business zugeordnet sind
-   */
-  @Get('businesses/:id')
-  public async getEventsByBusinessId(@Param('id') businessId: string): Promise<Event[]> {
-    this.logger.log(`GET /events/businesses/${businessId}`);
-
-    // Überprüfen, ob das Business existiert
-    const business = await this.businessesService.getById(businessId);
-    if (!business) {
-      throw new NotFoundException(`Business mit ID ${businessId} wurde nicht gefunden`);
-    }
-
-    // Wenn keine Events vorhanden sind, geben wir ein leeres Array zurück
-    if (!business.eventIds || business.eventIds.length === 0) {
-      return [];
-    }
-
-    // Events basierend auf den IDs im Business-Dokument abrufen
-    return this.eventsService.getByIds(business.eventIds);
-  }
-
-  /**
    * Importiert Events aus einer CSV-Datei
-   * Verarbeitet jede Zeile einzeln, prüft auf Duplikate und löst Locations auf
-   *
-   * @param file - CSV-Datei mit Event-Daten
-   * @returns Detailliertes Import-Ergebnis mit Erfolgen, Fehlern und übersprungenen Duplikaten
    */
   @Post('import/csv')
   @UseInterceptors(FileInterceptor('file'))
@@ -365,9 +423,11 @@ export class EventsController {
   })
   @ApiResponse({ status: 400, description: 'Ungültige CSV-Datei' })
   public async importFromCsv(
+    @Req() req: Request,
     @UploadedFile(new CsvFileValidationPipe()) file: Express.Multer.File,
   ): Promise<CsvImportResult> {
     this.logger.log('POST /events/import/csv');
+    this.assertNotAnonymous(req);
     return this.csvImportService.importFromCsv(file);
   }
 }

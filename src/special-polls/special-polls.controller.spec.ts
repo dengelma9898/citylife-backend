@@ -11,6 +11,13 @@ import { RolesGuard } from '../core/guards/roles.guard';
 import { UsersService } from '../users/users.service';
 import { UserType } from '../users/enums/user-type.enum';
 import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
+
+function requestWithSignInProvider(provider: string): Request {
+  return {
+    user: { uid: 'test-uid', firebase: { sign_in_provider: provider } },
+  } as unknown as Request;
+}
 
 describe('SpecialPollsController', () => {
   let controller: SpecialPollsController;
@@ -97,27 +104,43 @@ describe('SpecialPollsController', () => {
       const polls = [mockSpecialPoll];
       mockSpecialPollsService.findAll.mockResolvedValue(polls);
 
-      const result = await controller.findAll('caller', undefined);
+      const result = await controller.findAll(
+        'caller',
+        requestWithSignInProvider('password'),
+        undefined,
+      );
 
       expect(result).toEqual(polls);
-      expect(service.findAll).toHaveBeenCalledWith(false, false);
+      expect(service.findAll).toHaveBeenCalledWith(false, false, false);
     });
 
     it('should pass highlightedOnly when query highlighted=true', async () => {
       mockSpecialPollsService.findAll.mockResolvedValue([mockSpecialPoll]);
 
-      await controller.findAll('caller', 'true');
+      await controller.findAll('caller', requestWithSignInProvider('password'), 'true');
 
-      expect(service.findAll).toHaveBeenCalledWith(true, false);
+      expect(service.findAll).toHaveBeenCalledWith(true, false, false);
     });
 
     it('should include inactive polls for admin', async () => {
       mockUsersService.getById.mockResolvedValueOnce({ userType: UserType.ADMIN });
       mockSpecialPollsService.findAll.mockResolvedValue([mockSpecialPoll]);
 
-      await controller.findAll('admin1', undefined);
+      await controller.findAll('admin1', requestWithSignInProvider('password'), undefined);
 
-      expect(service.findAll).toHaveBeenCalledWith(false, true);
+      expect(service.findAll).toHaveBeenCalledWith(false, true, false);
+    });
+
+    it('should strip responses for anonymous Firebase callers', async () => {
+      mockSpecialPollsService.findAll.mockResolvedValue([mockSpecialPoll]);
+
+      await controller.findAll(
+        'anon-uid',
+        requestWithSignInProvider('anonymous'),
+        undefined,
+      );
+
+      expect(service.findAll).toHaveBeenCalledWith(false, false, true);
     });
   });
 
@@ -128,7 +151,7 @@ describe('SpecialPollsController', () => {
       const result = await controller.findOne('poll1', 'caller');
 
       expect(result).toEqual(mockSpecialPoll);
-      expect(service.findOne).toHaveBeenCalledWith('poll1', false);
+      expect(service.findOne).toHaveBeenCalledWith('poll1', false, false);
     });
 
     it('should pass includeInactive for super_admin', async () => {
@@ -137,13 +160,15 @@ describe('SpecialPollsController', () => {
 
       await controller.findOne('poll1', 'admin');
 
-      expect(service.findOne).toHaveBeenCalledWith('poll1', true);
+      expect(service.findOne).toHaveBeenCalledWith('poll1', true, false);
     });
 
     it('should throw NotFoundException if poll not found', async () => {
       mockSpecialPollsService.findOne.mockRejectedValue(new NotFoundException());
 
-      await expect(controller.findOne('nonexistent', 'caller')).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.findOne('nonexistent', 'caller'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

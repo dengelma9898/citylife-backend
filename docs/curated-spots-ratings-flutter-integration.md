@@ -21,7 +21,7 @@ Erweitert eure `CuratedSpot`-Klasse (siehe Lesen-Guide), falls noch nicht gesche
 | Feld | Dart-Typ | Nutzen |
 |------|----------|--------|
 | `adminRating` | `int?` | Redaktion 1–5, `null` = nicht vergeben |
-| `adminRatedAt` | `String?` | ISO-Zeit der ersten Vergabe |
+| `adminRatedAt` | `String?` | ISO-Zeit der letzten Änderung an `adminRating` |
 | `userRatingAverage` | `double?` | Schnitt aller Nutzerstimmen |
 | `userRatingCount` | `int` | Anzahl Nutzerstimmen (Default `0`) |
 

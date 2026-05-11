@@ -183,6 +183,31 @@ describe('SpecialPollsService', () => {
       expect(result).toHaveLength(1);
       expect(result[0].status).toBe(SpecialPollStatus.INACTIVE);
     });
+
+    it('should clear responses when stripResponses is true', async () => {
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        responses: [
+          {
+            id: 'r1',
+            userId: 'u1',
+            userName: 'User',
+            response: 'secret',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            upvotedUserIds: [],
+          },
+        ] as SpecialPollResponse[],
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const stripped = await service.findAll(false, false, true);
+      expect(stripped).toHaveLength(1);
+      expect(stripped[0].responses).toEqual([]);
+
+      const full = await service.findAll(false, false, false);
+      expect(full[0].responses).toHaveLength(1);
+      expect(full[0].responses[0].response).toBe('secret');
+    });
   });
 
   describe('findOne', () => {
@@ -193,6 +218,30 @@ describe('SpecialPollsService', () => {
       const result = await service.findOne('poll1');
 
       expect(result).toEqual(expectedPoll('poll1'));
+    });
+
+    it('should clear responses when stripResponses is true (findOne)', async () => {
+      const mockFirestore = createFirestoreMock({
+        ...rawPollDoc,
+        responses: [
+          {
+            id: 'r1',
+            userId: 'u1',
+            userName: 'User',
+            response: 'secret',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            upvotedUserIds: [],
+          },
+        ] as SpecialPollResponse[],
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+
+      const stripped = await service.findOne('poll1', false, true);
+      expect(stripped.responses).toEqual([]);
+
+      const full = await service.findOne('poll1', false, false);
+      expect(full.responses).toHaveLength(1);
+      expect(full.responses[0].response).toBe('secret');
     });
 
     it('should normalize legacy CLOSED status to ACTIVE', async () => {

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventStatus } from '../../enums/event-status.enum';
 import { CsvImportService } from './csv-import.service';
 import { EventsService } from '../../events.service';
 import { LocationService } from '../../../location/services/location.service';
@@ -460,6 +461,7 @@ Event,Beschreibung,2026-02-09,2026-02-09,20:00,,Location,Konzert,Kostenlos,,,,,,
           price: 0,
           priceString: 'Kostenlos',
         }),
+        EventStatus.ACTIVE,
       );
     });
 
@@ -485,6 +487,7 @@ Event,Beschreibung,2026-02-09,2026-02-09,20:00,,Location,Konzert,,,,,,,,`;
         expect.objectContaining({
           price: null,
         }),
+        EventStatus.ACTIVE,
       );
     });
   });
@@ -524,6 +527,7 @@ Event,Beschreibung,2026-02-09,2026-02-09,19:00,21:00,Location,Konzert,,,,,,,,`;
         expect.objectContaining({
           dailyTimeSlots: [{ date: '2026-02-09', from: '19:00', to: '21:00' }],
         }),
+        EventStatus.ACTIVE,
       );
     });
 
@@ -552,6 +556,7 @@ Event,Beschreibung,2026-02-09,2026-02-11,10:00,,Location,Konzert,,,,,,,,`;
             { date: '2026-02-11', from: '10:00' },
           ],
         }),
+        EventStatus.ACTIVE,
       );
     });
 
@@ -576,6 +581,7 @@ Event,Beschreibung,2026-02-09,,19:45,,Location,Konzert,,,,,,,,`;
         expect.objectContaining({
           dailyTimeSlots: [{ date: '2026-02-09', from: '19:45' }],
         }),
+        EventStatus.ACTIVE,
       );
     });
   });

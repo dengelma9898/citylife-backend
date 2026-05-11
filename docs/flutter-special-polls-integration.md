@@ -38,10 +38,18 @@ In Dart nach `jsonDecode` immer **`body['data']`** verwenden.
 
 Für die hier beschriebenen **GET**- und **POST**-Routen reicht die normale Nutzerrolle (`user`) zusammen mit Admin/Super-Admin laut Backend.
 
+### Anonyme Firebase-Nutzer (nur Liste lesen)
+
+- **`GET /special-polls`** (optional `?highlighted=true`) ist mit gültigem **anonymem** Firebase-Token erlaubt, wenn **kein** Firestore-`users`-Dokument existiert (Rolle `anonymous_firebase_user` im `RolesGuard`, siehe [`.cursorrules`](../.cursorrules)).
+- **`GET /special-polls/:id`** ist für solche Sessions **nicht** erlaubt (**403**); Umfrage-Details und Antworten nur mit Profil (`user` / `admin` / `super_admin`).
+- In der **Listen**-Antwort sind **`responses` immer ein leeres Array** – keine fremden Antworttexte oder Upvote-Listen für Gäste.
+- **Schreibende** Routen (`POST …/responses`, Upvote, `DELETE …/responses/me`) bleiben wie bisher nur für **registrierte** Nutzer mit Profil/`user`-Rolle.
+
 ### Sichtbarkeit (`ACTIVE` / `INACTIVE`)
 
-- **`GET /special-polls`** und **`GET /special-polls/:id`** liefern für reine **App-Nutzer** (`user`) **nur** Umfragen mit Status **`ACTIVE`** (nach Normalisierung). **`INACTIVE`** erscheint nicht in Listen; Einzelabruf antwortet mit **404**.
-- Mit einem **Admin-** oder **Super-Admin-Token** kommen **alle** Umfragen inkl. `INACTIVE` zurück (gleiche URLs, keine Extra-Parameter).
+- **`GET /special-polls`:** für **`user`** und **anonyme Firebase-Sessions** (siehe oben) nur Umfragen mit Status **`ACTIVE`**; **`INACTIVE`** erscheint in der Liste nicht.
+- **`GET /special-polls/:id`:** für **`user`** liefert das Backend **404**, wenn die Umfrage **`INACTIVE`** ist. **Anonyme Firebase-Sessions:** **403** (Einzelabruf nicht erlaubt).
+- Mit **Admin-** oder **Super-Admin-Token** kommen **alle** Umfragen inkl. **`INACTIVE`** zurück (gleiche URLs, keine Extra-Parameter).
 
 ---
 
@@ -229,7 +237,7 @@ Authorization: Bearer <token>
 - **Highlight-Bereich:** `GET …?highlighted=true` für eine „Frage der Woche“-Kachel; vollständige Historie mit `GET /special-polls`.
 - **Antworten sortieren:** z. B. nach `upvoteCount` absteigend, sekundär nach `createdAt`.
 - **Upvote-Button:** Zustand aus `isUpvotedBy(currentUserId)`; nach erfolgreichem POST die zurückgegebene `SpecialPoll` in den State übernehmen (oder Detail neu laden).
-- **Deep-Link aus Push:** Bei `NEW_SURVEY` liefert FCM `surveyId` und `surveyTitle` ([notification-suggestions.md](./notification-suggestions.md)) – Navigation zu `GET /special-polls/{surveyId}`.
+- **Deep-Link aus Push:** Bei `NEW_SURVEY` liefert FCM `surveyId` und `surveyTitle` ([notification-suggestions.md](./notification-suggestions.md)) – bei **angemeldetem Profil** Navigation zu `GET /special-polls/{surveyId}`; **anonyme** Nutzer: nur Liste/Titel aus Push nutzen oder zum Login führen, bis `GET …/:id` mit **403** vermieden wird.
 
 ---
 
@@ -238,7 +246,7 @@ Authorization: Bearer <token>
 | HTTP | Bedeutung |
 |------|-----------|
 | **401** | Token erneuern / erneut anmelden |
-| **403** | Rolle (selten bei normalen User-Routen) |
+| **403** | Rolle passt nicht; **Einzelabruf** mit reiner Firebase-Anonymous-Session (ohne `users`-Dokument) |
 | **404** | Umfrage unsichtbar (**`INACTIVE`** für `user`), falsche ID, oder Antwort-ID ungültig |
 | **400** | Body ungültig (z. B. `response` fehlt/leer) |
 

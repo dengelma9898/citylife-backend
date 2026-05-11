@@ -36,6 +36,10 @@ export interface UserProfile {
   currentCityId?: string;
   businessHistory: BusinessHistory[];
   favoriteEventIds?: string[];
+  /**
+   * Event-IDs, die der User als registrierter Endnutzer erstellt hat (Einbindung ohne business_users).
+   */
+  createdEventIds?: string[];
   favoriteBusinessIds?: string[];
   contactRequestIds?: string[];
   directChatIds?: string[];

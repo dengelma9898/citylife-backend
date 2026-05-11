@@ -494,6 +494,28 @@ export class UsersService {
     }
   }
 
+  /**
+   * Verknüpft ein erstelltes Event mit einem normalen User-Profil (users-Collection).
+   */
+  public async addCreatedEventToUserProfile(userId: string, eventId: string): Promise<UserProfile> {
+    try {
+      this.logger.debug(`Adding created event ${eventId} to user profile ${userId}`);
+      const userProfile = await this.getUserProfile(userId);
+      if (!userProfile) {
+        throw new NotFoundException('User not found');
+      }
+      const current = userProfile.createdEventIds || [];
+      if (current.includes(eventId)) {
+        return userProfile;
+      }
+      const createdEventIds = [...current, eventId];
+      return this.update(userId, { createdEventIds });
+    } catch (error) {
+      this.logger.error(`Error adding created event to user profile ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
   public async getAllBusinessUsers(): Promise<BusinessUser[]> {
     try {
       this.logger.debug('Getting all business users');

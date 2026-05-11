@@ -9,7 +9,10 @@ import {
   UseGuards,
   Logger,
   Query,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
+import { DecodedIdToken } from 'firebase-admin/auth';
 import { SpecialPollsService } from './special-polls.service';
 import { CreateSpecialPollDto } from './dto/create-special-poll.dto';
 import { UpdateSpecialPollStatusDto } from './dto/update-special-poll-status.dto';
@@ -17,11 +20,16 @@ import { UpdateSpecialPollHighlightDto } from './dto/update-special-poll-highlig
 import { UpdateSpecialPollResponsesDto } from './dto/update-special-poll-responses.dto';
 import { SpecialPoll } from './interfaces/special-poll.interface';
 import { RolesGuard } from '../core/guards/roles.guard';
-import { Roles } from '../core/decorators/roles.decorator';
+import { Roles, ANONYMOUS_FIREBASE_APP_ROLE } from '../core/decorators/roles.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { CurrentUser } from '../core/decorators/current-user.decorator';
 import { UsersService } from '../users/users.service';
 import { UserType } from '../users/enums/user-type.enum';
+
+function isFirebaseAnonymousRequest(req: Request): boolean {
+  const decoded = req.user as DecodedIdToken | undefined;
+  return decoded?.firebase?.sign_in_provider === 'anonymous';
+}
 
 @ApiTags('special-polls')
 @Controller('special-polls')
@@ -59,7 +67,7 @@ export class SpecialPollsController {
   }
 
   @Get()
-  @Roles('user', 'admin', 'super_admin')
+  @Roles('user', 'admin', 'super_admin', ANONYMOUS_FIREBASE_APP_ROLE)
   @ApiQuery({
     name: 'highlighted',
     required: false,
@@ -73,12 +81,18 @@ export class SpecialPollsController {
   @ApiResponse({ status: 200, description: 'Liste aller Special Polls' })
   async findAll(
     @CurrentUser() userId: string,
+    @Req() req: Request,
     @Query('highlighted') highlighted?: string,
   ): Promise<SpecialPoll[]> {
     this.logger.log('GET /special-polls');
     const highlightedOnly = highlighted === 'true';
     const includeInactivePolls = await this.resolveIncludeInactivePolls(userId);
-    return this.specialPollsService.findAll(highlightedOnly, includeInactivePolls);
+    const stripResponses = isFirebaseAnonymousRequest(req);
+    return this.specialPollsService.findAll(
+      highlightedOnly,
+      includeInactivePolls,
+      stripResponses,
+    );
   }
 
   @Get(':id')
@@ -86,13 +100,17 @@ export class SpecialPollsController {
   @ApiOperation({
     summary: 'Gibt eine bestimmte Special Poll zurück',
     description:
-      'INACTIVE-Umfragen liefern 404 für normale Nutzer; Admin/Super-Admin erhalten das Dokument.',
+      'Nur Nutzer mit Firestore-Profil (`user`/`admin`/`super_admin`). Reine Firebase-Anonymous ohne Profil: **403** – nutze `GET /special-polls` für die Übersicht. INACTIVE-Umfragen: 404 für `user`; Admin/Super-Admin erhalten das Dokument.',
   })
   @ApiResponse({ status: 200, description: 'Die angeforderte Special Poll' })
+  @ApiResponse({
+    status: 403,
+    description: 'Kein Profil / anonyme Firebase-Session (Einzelabruf nicht erlaubt)',
+  })
   async findOne(@Param('id') id: string, @CurrentUser() userId: string): Promise<SpecialPoll> {
     this.logger.log(`GET /special-polls/${id}`);
     const includeInactivePolls = await this.resolveIncludeInactivePolls(userId);
-    return this.specialPollsService.findOne(id, includeInactivePolls);
+    return this.specialPollsService.findOne(id, includeInactivePolls, false);
   }
 
   @Patch(':id/status')

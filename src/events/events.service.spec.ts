@@ -7,6 +7,7 @@ import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 import { NotFoundException } from '@nestjs/common';
 import { NotificationService } from '../notifications/application/services/notification.service';
+import { EventStatus } from './enums/event-status.enum';
 
 describe('EventsService', () => {
   let service: EventsService;
@@ -165,7 +166,7 @@ describe('EventsService', () => {
         },
       ]);
 
-      await service.create(mockCreateEventDto);
+      await service.create(mockCreateEventDto, EventStatus.ACTIVE);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
@@ -198,7 +199,7 @@ describe('EventsService', () => {
         },
       ]);
 
-      await service.create(mockCreateEventDto);
+      await service.create(mockCreateEventDto, EventStatus.ACTIVE);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
@@ -220,7 +221,7 @@ describe('EventsService', () => {
         },
       ]);
 
-      await service.create(mockCreateEventDto);
+      await service.create(mockCreateEventDto, EventStatus.ACTIVE);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).toHaveBeenCalled();
@@ -256,7 +257,7 @@ describe('EventsService', () => {
         },
       ]);
 
-      await service.create(mockCreateEventDto);
+      await service.create(mockCreateEventDto, EventStatus.ACTIVE);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
@@ -281,7 +282,7 @@ describe('EventsService', () => {
       ]);
       mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification error'));
 
-      const result = await service.create(mockCreateEventDto);
+      const result = await service.create(mockCreateEventDto, EventStatus.ACTIVE);
 
       expect(result).toBeDefined();
       expect(mockNotificationService.sendToUser).toHaveBeenCalled();
@@ -309,7 +310,7 @@ describe('EventsService', () => {
         monthYear,
       };
 
-      const result = await service.create(createEventDto);
+      const result = await service.create(createEventDto, EventStatus.ACTIVE);
 
       expect(result).toBeDefined();
       expect(result.monthYear).toBe(monthYear);
@@ -335,7 +336,7 @@ describe('EventsService', () => {
         dailyTimeSlots: [{ date: dateStr, from: '18:00', to: '22:00' }],
       };
 
-      const result = await service.create(createEventDto);
+      const result = await service.create(createEventDto, EventStatus.ACTIVE);
 
       expect(result).toBeDefined();
       expect(result.monthYear).toBeUndefined();
@@ -357,7 +358,7 @@ describe('EventsService', () => {
         monthYear,
       };
 
-      const result = await service.create(createEventDto);
+      const result = await service.create(createEventDto, EventStatus.ACTIVE);
 
       expect(result).toBeDefined();
       expect(result.monthYear).toBe(monthYear);
@@ -624,6 +625,96 @@ describe('EventsService', () => {
 
       expect(result).toBeDefined();
       expect(mockNotificationService.sendToUser).toHaveBeenCalled();
+    });
+  });
+
+  describe('event status and visibility', () => {
+    const pendingCreateDto: CreateEventDto = {
+      title: 'Test Event',
+      description: 'Test Description',
+      address: 'Test Location',
+      latitude: 0,
+      longitude: 0,
+      categoryId: 'category1',
+      dailyTimeSlots: [],
+    };
+
+    it('should not send NEW_EVENT when creating PENDING', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      await service.create(pendingCreateDto, EventStatus.PENDING);
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockUsersService.getAllUserProfilesWithIds).not.toHaveBeenCalled();
+    });
+
+    it('should hide PENDING in getById by default', async () => {
+      const pendingPayload = {
+        title: 'P',
+        description: 'd',
+        categoryId: 'cat',
+        location: { address: 'a', latitude: 1, longitude: 2 },
+        dailyTimeSlots: [],
+        status: EventStatus.PENDING,
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+        imageUrls: [],
+        titleImageUrl: '',
+      };
+      const mockFirestore = createFirestoreMock(pendingPayload);
+      mockFirestore.collection().doc().get.mockResolvedValue({
+        exists: true,
+        data: () => pendingPayload,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      const result = await service.getById('e1');
+      expect(result).toBeNull();
+    });
+
+    it('should return PENDING in getById when includePendingInResult is true', async () => {
+      const pendingPayload = {
+        title: 'P',
+        description: 'd',
+        categoryId: 'cat',
+        location: { address: 'a', latitude: 1, longitude: 2 },
+        dailyTimeSlots: [],
+        status: EventStatus.PENDING,
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+      };
+      const mockFirestore = createFirestoreMock(pendingPayload);
+      mockFirestore.collection().doc().get.mockResolvedValue({
+        exists: true,
+        data: () => pendingPayload,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      const result = await service.getById('e1', { includePendingInResult: true });
+      expect(result?.status).toBe(EventStatus.PENDING);
+    });
+
+    it('should not send FAV_EVENT_UPDATE when old event is PENDING', async () => {
+      const pendingOld = {
+        id: 'event1',
+        title: 'Old Event Title',
+        description: 'Old Description',
+        location: { address: 'Old Location', latitude: 0, longitude: 0 },
+        categoryId: 'category1',
+        createdAt: '2024-01-01',
+        updatedAt: '2024-01-01',
+        dailyTimeSlots: [],
+        status: EventStatus.PENDING,
+      };
+      const mockFirestore = createFirestoreMock(pendingOld);
+      mockFirestore.collection().doc().get.mockResolvedValueOnce({
+        exists: true,
+        data: () => pendingOld,
+      });
+      mockFirestore.collection().doc().get.mockResolvedValueOnce({
+        exists: true,
+        data: () => ({ ...pendingOld, title: 'New Event Title' }),
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      await service.update('event1', { title: 'New Event Title' });
+      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
   });
 });

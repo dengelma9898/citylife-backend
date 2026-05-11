@@ -75,7 +75,9 @@ export interface CuratedSpotProps {
   createdAt: string;
   updatedAt: string;
   createdByUserId?: string | null;
+  /** Editorial score 1–5, or null if unset. */
   adminRating?: number | null;
+  /** ISO time of last adminRating change; null when adminRating is null. */
   adminRatedAt?: string | null;
   userRatingAverage?: number | null;
   userRatingCount?: number;

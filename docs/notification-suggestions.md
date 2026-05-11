@@ -114,8 +114,11 @@ Notification wird gesendet, wenn ein Admin auf eine Contact Request antwortet.
 Notification wird gesendet, wenn ein neues Event erstellt wird (analog zu `NEW_BUSINESS`).
 
 **Trigger:**  
-- `POST /events` wird aufgerufen
-- Event wird erfolgreich erstellt
+- Event wird mit Status `ACTIVE` erstellt (z. B. durch Admin/Super Admin oder CSV-Import), **oder**
+- Ein zuvor `PENDING`-Event wird per `PATCH /events/:id/approve` freigegeben
+
+**Nicht ausgelöst bei:**  
+- Erstellung mit Status `PENDING` (reguläre Nutzer / Businesses)
 
 **Empfänger:**  
 - Alle User mit aktivierter Präferenz
@@ -140,11 +143,12 @@ Notification wird gesendet, wenn ein neues Event erstellt wird (analog zu `NEW_B
 - Default: `true`
 
 **Implementierung:**
-- ✅ Service: `EventsService.create()`
+- ✅ Service: `EventsService.create()` (nur wenn `initialStatus === ACTIVE`), `EventsService.approveEvent()`
 - ✅ Notification Interface: `EventNotificationData`
 - ✅ Module: `EventsModule` importiert bereits `NotificationsModule`
 
 **Besonderheiten:**
+- Kein Push, wenn das Event nur mit Status `PENDING` erstellt wurde; nach Freigabe (`PATCH /events/:id/approve`) wird `NEW_EVENT` gesendet
 - Optional: Filterung nach Stadt
 - Optional: Filterung nach Event-Kategorie basierend auf User-Präferenzen
 
@@ -190,6 +194,7 @@ Notification wird gesendet, wenn ein favorisiertes Event aktualisiert wird.
 **Besonderheiten:**
 - ✅ Nur für favorisierte Events
 - ✅ Unterscheidung nach Update-Typ (TIME, LOCATION, DESCRIPTION, OTHER)
+- Keine Benachrichtigung, wenn vor oder nach dem Update das Event nicht öffentlich sichtbar ist (z. B. `status: PENDING`)
 
 ---
 

@@ -63,7 +63,56 @@ Map<String, dynamic> addressToJson(CuratedSpotAddress a) => {
     };
 ```
 
+### Adresse einpflegen: `/location/search` und `/location/reverse`
+
+Für Spot-Formulare nutzt ihr dieselbe HERE-Anbindung wie in der gemeinsamen `LocationSearchWidget`-Logik (**Vorwärtssuche**) und ergänzend den neuen **Reverse**-Endpunkt, wenn Nutzer einen Pin per Karte/Long-Press setzt.
+
+**Auth:** Wie bei jedem Backend-GET: Header `Authorization: Bearer <idToken>`. Diese beiden Routen **erfordern keine** Admin-Rolle (nur ein gültiger Firebase-User).
+
+**Vorwärtssuche (Text → Liste):**
+
+```text
+GET {baseUrl}/location/search?query=<url-kodierter Suchtext>
+Accept: application/json
+```
+
+- `response['data']` ist eine **Liste** gleich strukturierter HERE-Treffer.
+- Parsing pro Eintrag: `HereLocationResult.fromJson(e as Map<String, dynamic>)` (analog zur bestehenden App).
+
+**Reverse-Geocoding (Lat/Lng → ein Treffer):**
+
+```text
+GET {baseUrl}/location/reverse?latitude=<double>&longitude=<double>
+Accept: application/json
+```
+
+Beispiel `Uri` mit sauber kodiererten Query-Parametern:
+
+```dart
+final uri = Uri.parse('$baseUrl/location/reverse').replace(
+  queryParameters: {
+    'latitude': pinLatitude.toString(),
+    'longitude': pinLongitude.toString(),
+  },
+);
+```
+
+- `response['data']` ist **ein** Map (HERE-Shape wie ein Listeneintrag der Vorwärtssuche) oder **`null`**, wenn kein deutscher Treffer gefunden wird. Im Client **immer** gegen `null` prüfen, bevor ihr `HereLocationResult.fromJson` aufruft.
+
+```dart
+final envelope = jsonDecode(res.body) as Map<String, dynamic>;
+final payload = envelope['data'];
+final HereLocationResult? result = payload == null
+    ? null
+    : HereLocationResult.fromJson(payload as Map<String, dynamic>);
+```
+
+**Pin vs. Persistenz:** Die Koordinaten aus der Karte (Long-Press) sind die **Quelle der Wahrheit** für `CuratedSpotAddress.latitude` und `longitude` im `POST`/`PATCH`-Body. Nutzt Reverse-Geocoding, um **Textfelder** (Straße, Hausnummer, PLZ, Stadt – je nach Mapping aus dem HERE-Objekt in eurer App) zu füllen. Die HERE-Position im Ergebnis (`position`) **nicht** zwingend statt der Pin-Koordinaten speichern, sonst verschiebt sich der Kartenausschnitt bei kleinen HERE-Abweichungen.
+
+Vollständige Tabellen zu Query-Parametern und Backend-Verhalten: [location-api.md](./location-api.md).
+
 ---
+
 
 ## 3. Admin-Lesezugriff (Entwürfe & alle Status)
 
@@ -295,7 +344,7 @@ Future<CuratedSpot> softDeleteCuratedSpot(String baseUrl, String id) async {
 
 ## 10. Empfohlener Ablauf in der App
 
-1. **`POST /curated-spots`** mit Text, **Pflicht-Adresse**, Keywords (IDs und/oder `newKeywordNames`).
+1. **`POST /curated-spots`** mit Text, **Pflicht-Adresse** (Textsuche über `GET /location/search` und/oder Karte mit optionalem **`GET /location/reverse`** für die Adressfelder; Koordinaten aus der Karte konsistent zum Pin), Keywords (IDs und/oder `newKeywordNames`).
 2. Mit zurückgegebener **`id`:** **`POST …/images`** (eine oder mehrere Runden bis zur gewünschten Galerie).
 3. Optional: **`POST …/video`** oder URLs per **`PATCH`**.
 4. Wenn inhaltlich fertig: **`PATCH`** mit `{ "status": "ACTIVE" }` zur Freigabe in der öffentlichen Liste (`GET /curated-spots` aus dem Lese-Guide).
@@ -316,5 +365,6 @@ Future<CuratedSpot> softDeleteCuratedSpot(String baseUrl, String id) async {
 ## 12. Querverweise
 
 - Öffentliche Anzeige (Listen, Suche, Detail): [flutter-curated-spots-read-integration.md](./flutter-curated-spots-read-integration.md)
-- HTTP-Details & Tabellen: [curated-spots-admin-integration.md](./curated-spots-admin-integration.md)
+- HTTP-Details & Tabellen zu Spots und Keywords: [curated-spots-admin-integration.md](./curated-spots-admin-integration.md)
+- HERE Adress-Suche und Reverse für Formulare: [location-api.md](./location-api.md)
 - Projektregeln (Tests, Guards): [.cursorrules](../.cursorrules)

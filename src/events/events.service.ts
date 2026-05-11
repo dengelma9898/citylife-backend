@@ -1,10 +1,18 @@
-import { Injectable, Inject, Logger, NotFoundException, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  NotFoundException,
+  forwardRef,
+  BadRequestException,
+} from '@nestjs/common';
 import { Event, DailyTimeSlot } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 import { FirebaseService } from '../firebase/firebase.service';
 import { DateTimeUtils } from '../utils/date-time.utils';
 import { NotificationService } from '../notifications/application/services/notification.service';
 import { UsersService } from '../users/users.service';
+import { EventStatus } from './enums/event-status.enum';
 
 @Injectable()
 export class EventsService {
@@ -17,6 +25,13 @@ export class EventsService {
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
   ) {}
+
+  /**
+   * Documents without `status` are treated as public (backwards compatibility).
+   */
+  private isPubliclyVisibleStatus(status?: EventStatus): boolean {
+    return status === undefined || status === EventStatus.ACTIVE;
+  }
 
   private removeUndefined(obj: any): any {
     if (obj === null || obj === undefined) return null;
@@ -73,7 +88,7 @@ export class EventsService {
       this.logger.debug('Getting all events');
       const db = this.firebaseService.getFirestore();
       const snapshot = await db.collection(this.collection).get();
-      return snapshot.docs.map(doc => {
+      const mapped = snapshot.docs.map(doc => {
         const data = doc.data();
         const { startDate, endDate, ...rest } = data;
 
@@ -89,13 +104,21 @@ export class EventsService {
           dailyTimeSlots,
         } as Event;
       });
+      return mapped.filter(e => this.isPubliclyVisibleStatus(e.status));
     } catch (error) {
       this.logger.error(`Error getting all events: ${error.message}`);
       throw error;
     }
   }
 
-  public async getById(id: string): Promise<Event | null> {
+  /**
+   * @param includePendingInResult When false, events with status PENDING are hidden (returns null).
+   */
+  public async getById(
+    id: string,
+    options: { includePendingInResult?: boolean } = {},
+  ): Promise<Event | null> {
+    const { includePendingInResult = false } = options;
     try {
       this.logger.debug(`Getting event ${id}`);
       const db = this.firebaseService.getFirestore();
@@ -114,23 +137,78 @@ export class EventsService {
         data.dailyTimeSlots,
       );
 
-      return {
+      const event = {
         id: doc.id,
         ...rest,
         dailyTimeSlots,
       } as Event;
+      if (!includePendingInResult && !this.isPubliclyVisibleStatus(event.status)) {
+        return null;
+      }
+      return event;
     } catch (error) {
       this.logger.error(`Error getting event ${id}: ${error.message}`);
       throw error;
     }
   }
 
-  public async create(data: CreateEventDto): Promise<Event> {
+  public async getPendingEvents(): Promise<Event[]> {
+    try {
+      this.logger.debug('Getting pending events');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db
+        .collection(this.collection)
+        .where('status', '==', EventStatus.PENDING)
+        .get();
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        const { startDate, endDate, ...rest } = data;
+        const dailyTimeSlots = this.convertDateRangeToDailyTimeSlots(
+          startDate,
+          endDate,
+          data.dailyTimeSlots,
+        );
+        return {
+          id: doc.id,
+          ...rest,
+          dailyTimeSlots,
+        } as Event;
+      });
+    } catch (error) {
+      this.logger.error(`Error getting pending events: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Freigabe: PENDING → ACTIVE und einmalige NEW_EVENT-Benachrichtigung.
+   */
+  public async approveEvent(id: string): Promise<Event> {
+    const event = await this.getById(id, { includePendingInResult: true });
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+    if (event.status !== EventStatus.PENDING) {
+      throw new BadRequestException('Event is not pending approval');
+    }
+    await this.update(id, { status: EventStatus.ACTIVE });
+    const active = await this.getById(id, { includePendingInResult: true });
+    if (!active) {
+      throw new NotFoundException('Event not found');
+    }
+    await this.sendNewEventNotification(active).catch(error => {
+      this.logger.error(`Error sending new event notification: ${error.message}`, error.stack);
+    });
+    return active;
+  }
+
+  public async create(data: CreateEventDto, initialStatus: EventStatus): Promise<Event> {
     try {
       this.logger.debug('Creating event');
       const db = this.firebaseService.getFirestore();
 
       const eventData: Omit<Event, 'id'> = {
+        status: initialStatus,
         title: data.title,
         description: data.description,
         location: {
@@ -166,9 +244,11 @@ export class EventsService {
         ...eventData,
       };
 
-      await this.sendNewEventNotification(createdEvent).catch(error => {
-        this.logger.error(`Error sending new event notification: ${error.message}`, error.stack);
-      });
+      if (initialStatus === EventStatus.ACTIVE) {
+        await this.sendNewEventNotification(createdEvent).catch(error => {
+          this.logger.error(`Error sending new event notification: ${error.message}`, error.stack);
+        });
+      }
 
       return createdEvent;
     } catch (error) {
@@ -221,9 +301,17 @@ export class EventsService {
         dailyTimeSlots: newDailyTimeSlots,
       } as Event;
 
-      await this.sendEventUpdateNotification(updatedEvent, oldEvent).catch(error => {
-        this.logger.error(`Error sending event update notification: ${error.message}`, error.stack);
-      });
+      const shouldNotifyFavorites =
+        this.isPubliclyVisibleStatus(oldEvent.status) &&
+        this.isPubliclyVisibleStatus(updatedEvent.status);
+      if (shouldNotifyFavorites) {
+        await this.sendEventUpdateNotification(updatedEvent, oldEvent).catch(error => {
+          this.logger.error(
+            `Error sending event update notification: ${error.message}`,
+            error.stack,
+          );
+        });
+      }
 
       return updatedEvent;
     } catch (error) {
@@ -312,7 +400,11 @@ export class EventsService {
     }
   }
 
-  public async getByIds(ids: string[]): Promise<Event[]> {
+  public async getByIds(
+    ids: string[],
+    options: { includeAllStatuses?: boolean } = {},
+  ): Promise<Event[]> {
+    const { includeAllStatuses = false } = options;
     try {
       this.logger.debug(`Getting events by IDs: ${ids.join(', ')}`);
 
@@ -320,7 +412,9 @@ export class EventsService {
         return [];
       }
 
-      const eventPromises = ids.map(id => this.getById(id));
+      const eventPromises = ids.map(id =>
+        this.getById(id, { includePendingInResult: includeAllStatuses }),
+      );
       const events = await Promise.all(eventPromises);
 
       return events.filter((event): event is Event => event !== null);

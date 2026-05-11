@@ -121,6 +121,7 @@ export class SpecialPollsService {
   async findAll(
     highlightedOnly?: boolean,
     includeInactivePolls = false,
+    stripResponses = false,
   ): Promise<SpecialPoll[]> {
     try {
       this.logger.debug('Getting all special polls');
@@ -135,6 +136,9 @@ export class SpecialPollsService {
       if (highlightedOnly === true) {
         polls = polls.filter(p => p.isHighlighted);
       }
+      if (stripResponses) {
+        polls = polls.map(p => ({ ...p, responses: [] }));
+      }
       return polls;
     } catch (error) {
       this.logger.error(`Error getting all special polls: ${error.message}`);
@@ -142,7 +146,11 @@ export class SpecialPollsService {
     }
   }
 
-  async findOne(id: string, includeInactivePolls = false): Promise<SpecialPoll> {
+  async findOne(
+    id: string,
+    includeInactivePolls = false,
+    stripResponses = false,
+  ): Promise<SpecialPoll> {
     try {
       this.logger.debug(`Getting special poll ${id}`);
       const db = this.firebaseService.getFirestore();
@@ -153,6 +161,9 @@ export class SpecialPollsService {
       const poll = this.mapDocumentToSpecialPoll(doc.id, doc.data() as Record<string, unknown>);
       if (!includeInactivePolls && poll.status === SpecialPollStatus.INACTIVE) {
         throw new NotFoundException('Special poll not found');
+      }
+      if (stripResponses) {
+        return { ...poll, responses: [] };
       }
       return poll;
     } catch (error) {

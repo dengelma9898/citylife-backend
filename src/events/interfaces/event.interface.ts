@@ -1,3 +1,5 @@
+import { EventStatus } from '../enums/event-status.enum';
+
 /**
  * Täglicher Zeitslot für ein Event
  */
@@ -18,6 +20,10 @@ export interface DailyTimeSlot {
 
 export interface Event {
   id: string;
+  /**
+   * Optional for backwards compatibility: missing or ACTIVE means publicly visible in listings.
+   */
+  status?: EventStatus;
   title: string;
   description: string;
   location: {

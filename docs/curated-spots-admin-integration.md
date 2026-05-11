@@ -91,6 +91,24 @@ Bei neuen zusammengesetzten Firestore-Queries können in der **Firebase Console*
 
 Präfix wie `/dev` oder `/prd` hängt von eurer Deployment-Konfiguration ab (siehe [README.md](../README.md) zu `BASE_URL`).
 
+| Hilfs-Endpunkt | Pfad |
+|----------------|------|
+| Adress-/HERE-Hilfen | `/location` (siehe unten) |
+
+### Location API (Autocomplete & Reverse für Adresseingaben)
+
+Für **„Adresse beim Spot anlegen“** (Autocomplete aus Text oder Vorbefüllung nach Karten-Pin) stellt das Backend HERE-basierte Routen bereit:
+
+| Zweck | HTTP | Feld `data` im Envelope |
+|-------|------|--------------------------|
+| Text → Liste von Treffern | `GET /location/search?query=…` | JSON-Array (`LocationResult[]`) |
+| Koordinaten → ein Treffer | `GET /location/reverse?latitude=…&longitude=…` | ein Objekt (`LocationResult`) oder **`null`** |
+
+- **Auth:** wie überall gültiges Firebase-Bearer-Token (**keine** Admin-Rolle nötig für `/location`).
+- **Reverse:** Bei `null` existiert kein passender deutscher Treffer; Clients sollen Pins/Koordinaten trotzdem speichern können und Textfelder ggf. manuell ergänzen.
+- **Flutter-Admin-Implementierung:** Schrittfolge, Dart-Hinweise (Envelope, Null-Check) und Pin-vs.-Koordinaten-Verhalten: [flutter-curated-spots-create-integration.md](./flutter-curated-spots-create-integration.md) („Adresse einpflegen: `/location/search` und `/location/reverse`“).
+- **Technische Detail-Doku:** [location-api.md](./location-api.md).
+
 ---
 
 ## 1. Spot-Keywords (Autocomplete + manuelles Anlegen)
@@ -205,8 +223,8 @@ Präfix wie `/dev` oder `/prd` hängt von eurer Deployment-Konfiguration ab (sie
 | `isDeleted` | boolean | Soft-Delete |
 | `createdAt` / `updatedAt` | string (ISO) | vom Server gesetzt |
 | `createdByUserId` | string \| null | Firebase-UID des Erstellers bei `POST` |
-| `adminRating` | number \| null | Redaktionsbewertung **1–5**; nach erster Setzung **unveränderlich** (`409`, wenn Änderung oder Reset) |
-| `adminRatedAt` | string \| null | ISO-Zeit der ersten Admin-Bewertung; **nur serverseitig**, nie im Request-Body |
+| `adminRating` | number \| null | Redaktionsbewertung **1–5**; **admin**/**super_admin** dürfen sie per `PATCH` jederzeit ändern oder mit `null` entfernen |
+| `adminRatedAt` | string \| null | ISO-Zeitpunkt der **letzten** Änderung an `adminRating` (bei Wert `null` ebenfalls `null`); **nur serverseitig**, nie im Request-Body |
 | `userRatingAverage` | number \| null | Durchschnitt aller abgegebenen Nutzerbewertungen (nur lesen; wird bei Nutzer-`POST` aktualisiert) |
 | `userRatingCount` | number | Anzahl abgegebener Nutzerbewertungen (Start **0**) |
 
@@ -291,7 +309,7 @@ Details zur App-Integration: [flutter-curated-spots-read-integration.md](./flutt
 | `newKeywordNames` | Nein | Strings max. 120 Zeichen; Server legt fehlende Keywords an und **merged** die IDs in `keywordIds` |
 | `videoUrl` / `instagramUrl` | Nein | müssen gültige URLs sein, wenn gesetzt |
 | `status` | Nein | Default **`PENDING`**, wenn weggelassen |
-| `adminRating` | Nein | optional **1–5**; setzt gleichzeitig `adminRatedAt` (wie bei PATCH, nur **einmal** änderbar) |
+| `adminRating` | Nein | optional **1–5**; setzt gleichzeitig `adminRatedAt` (wie bei PATCH, später per `PATCH` änderbar) |
 
 **Response `data`:** angelegter `CuratedSpot` (inkl. `id`).
 
@@ -312,7 +330,7 @@ Details zur App-Integration: [flutter-curated-spots-read-integration.md](./flutt
 
 **Body:** alle Felder optional; nur gesendete Felder ändern sich logisch. **`address`:** wenn gesetzt, wird das komplette Adressobjekt ersetzt (gleiche Pflichtfelder wie bei `POST`).
 
-**Admin-Bewertung (`adminRating`):** optional **1–5**. Sobald am Spot einmal gesetzt, ist sie **fix**; erneutes `PATCH` mit anderem Wert oder `null` → **409 Conflict**. Derselbe Wert wie bereits gespeichert ist erlaubt (idempotent). **`adminRatedAt`** wird nur beim **ersten** Setzen gesetzt und kommt nicht in den Request.
+**Admin-Bewertung (`adminRating`):** optional **1–5** oder **`null`** (Bewertung entfernen). Jede **inhaltliche** Änderung setzt **`adminRatedAt`** neu auf die aktuelle Serverzeit; derselbe Wert wie bereits gespeichert ändert nichts (idempotent). **`adminRatedAt`** kommt nicht in den Request.
 
 **Keywords – Semantik:**
 
@@ -451,6 +469,7 @@ Nur **ACTIVE** und nicht gelöscht; sonst **404** (gleiches Verhalten wie in der
 - [ ] HTTP-Client liest immer **`response.data`** (Interceptor).
 - [ ] Admin-Routen nur für Nutzer mit Admin/Super-Admin anzeigen.
 - [ ] Formular „Neuer Spot“: Pflichtfelder **`name`**, **`descriptionMarkdown`**, **`address`** (Straße, Hausnummer, PLZ, Stadt, Koordinaten) → `POST /curated-spots` → dann optional `images` / `video` Uploads.
+- [ ] Optional **Adresseingabe:** Textsuche **`GET /location/search`**, aus Karte/Pin zusätzlich **`GET /location/reverse`** (`data` kann `null` sein); Detail-Doku: [location-api.md](./location-api.md), Flutter-Anleitung: [flutter-curated-spots-create-integration.md](./flutter-curated-spots-create-integration.md).
 - [ ] Keyword-Auswahl: `GET /spot-keywords/suggest?q=…` → gespeicherte Werte sind **`id`**, nicht der Anzeigename.
 - [ ] Spot bearbeiten: Nach `GET /curated-spots/admin/:id` die **`keywordIds`** per **`GET /spot-keywords/:id`** (parallel, `encodeURIComponent`) in Namen auflösen; bei **404** z. B. Chip-Label „Unbekannt“, **`id`** für Speichern beibehalten.
 - [ ] Zusätzliche freie Tags: `newKeywordNames` im Create/Patch mitschicken, wenn der User Text eintippt, der noch kein Keyword ist.
@@ -463,7 +482,8 @@ Nur **ACTIVE** und nicht gelöscht; sonst **404** (gleiches Verhalten wie in der
 
 - **Flutter-App:** getrennte Integrationsguides – zuerst Anzeige testen, dann Schreibzugriff:
   - [flutter-curated-spots-read-integration.md](./flutter-curated-spots-read-integration.md) (nur Lesen)
-  - [flutter-curated-spots-create-integration.md](./flutter-curated-spots-create-integration.md) (Spots anlegen/pflegen, Admin-Rolle)
+  - [flutter-curated-spots-create-integration.md](./flutter-curated-spots-create-integration.md) (Spots anlegen/pflegen, Admin-Rolle; inkl. `GET /location/reverse` neben Vorwärtssuche für Adresseingaben)
+- **Adresse / HERE (`/location/search`, `/location/reverse`):** [location-api.md](./location-api.md)
 - Architektur & Firebase-Konventionen: [architecture.md](./architecture.md)
 - Projektweite Regeln (Tests, Guards, Notifications): [.cursorrules](../.cursorrules)
 - Vergleichbares Admin-Pattern (CRUD + Auth): [taxi-stands-admin-integration.md](./taxi-stands-admin-integration.md)

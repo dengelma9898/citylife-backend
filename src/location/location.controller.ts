@@ -2,6 +2,7 @@ import { Controller, Get, Query, Logger, ValidationPipe, UsePipes } from '@nestj
 import { LocationService } from './services/location.service';
 import { LocationResult } from './interfaces/location-result.interface';
 import { LocationSearchDto } from './dto/location-search.dto';
+import { LocationReverseDto } from './dto/location-reverse.dto';
 
 @Controller('location')
 export class LocationController {
@@ -23,5 +24,16 @@ export class LocationController {
   ): Promise<LocationResult[]> {
     this.logger.log(`GET /location/search?query=${locationSearchDto.query}`);
     return this.locationService.searchLocations(locationSearchDto.query);
+  }
+
+  /**
+   * Reverse-Geocoding: Koordinaten → Adresse (HERE), gleicher JSON-Shape-Eintrag wie bei search.
+   * Endpunkt: GET /location/reverse?latitude=...&longitude=...
+   */
+  @Get('reverse')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  public async reverseGeocode(@Query() dto: LocationReverseDto): Promise<LocationResult | null> {
+    this.logger.log(`GET /location/reverse?latitude=${dto.latitude}&longitude=${dto.longitude}`);
+    return this.locationService.reverseGeocode(dto.latitude, dto.longitude);
   }
 }

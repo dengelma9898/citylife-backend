@@ -105,6 +105,7 @@ class CuratedSpot {
   final String? createdByUserId;
   /// Redaktion 1–5, oder null
   final int? adminRating;
+  /// ISO-Zeitpunkt der letzten Änderung an adminRating (null wenn keine Bewertung)
   final String? adminRatedAt;
   /// Aggregate aller Nutzerbewertungen
   final double? userRatingAverage;

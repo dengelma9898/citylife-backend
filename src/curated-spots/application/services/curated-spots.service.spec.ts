@@ -107,7 +107,7 @@ describe('CuratedSpotsService', () => {
       expect(updated.address.street).toBe('Neue Straße');
     });
 
-    it('should set adminRating and adminRatedAt once', async () => {
+    it('should set adminRating and adminRatedAt on first assign', async () => {
       mockSpotRepository.findById.mockResolvedValue(activeSpotA);
       mockSpotRepository.update.mockImplementation((_id: string, s: CuratedSpot) => Promise.resolve(s));
       await service.update('s1', { adminRating: 4 });
@@ -116,10 +116,36 @@ describe('CuratedSpotsService', () => {
       expect(updated.adminRatedAt).toMatch(/^\d{4}-/);
     });
 
-    it('should throw Conflict when changing existing admin rating', async () => {
+    it('should update adminRating and refresh adminRatedAt when value changes', async () => {
       const rated = activeSpotA.update({ adminRating: 4, adminRatedAt: '2026-01-02T00:00:00.000Z' });
       mockSpotRepository.findById.mockResolvedValue(rated);
-      await expect(service.update('s1', { adminRating: 5 })).rejects.toThrow('Admin rating');
+      mockSpotRepository.update.mockImplementation((_id: string, s: CuratedSpot) => Promise.resolve(s));
+      await service.update('s1', { adminRating: 5 });
+      const updated = mockSpotRepository.update.mock.calls[0][1] as CuratedSpot;
+      expect(updated.adminRating).toBe(5);
+      expect(updated.adminRatedAt).not.toBe('2026-01-02T00:00:00.000Z');
+      expect(updated.adminRatedAt).toMatch(/^\d{4}-/);
+    });
+
+    it('should clear adminRating and adminRatedAt when PATCH sends null', async () => {
+      const rated = activeSpotA.update({ adminRating: 4, adminRatedAt: '2026-01-02T00:00:00.000Z' });
+      mockSpotRepository.findById.mockResolvedValue(rated);
+      mockSpotRepository.update.mockImplementation((_id: string, s: CuratedSpot) => Promise.resolve(s));
+      await service.update('s1', { adminRating: null });
+      const updated = mockSpotRepository.update.mock.calls[0][1] as CuratedSpot;
+      expect(updated.adminRating).toBeNull();
+      expect(updated.adminRatedAt).toBeNull();
+    });
+
+    it('should not touch admin fields when adminRating equals existing (idempotent)', async () => {
+      const rated = activeSpotA.update({ adminRating: 4, adminRatedAt: '2026-01-02T00:00:00.000Z' });
+      mockSpotRepository.findById.mockResolvedValue(rated);
+      mockSpotRepository.update.mockImplementation((_id: string, s: CuratedSpot) => Promise.resolve(s));
+      await service.update('s1', { name: 'Renamed', adminRating: 4 });
+      const updated = mockSpotRepository.update.mock.calls[0][1] as CuratedSpot;
+      expect(updated.name).toBe('Renamed');
+      expect(updated.adminRating).toBe(4);
+      expect(updated.adminRatedAt).toBe('2026-01-02T00:00:00.000Z');
     });
 
     it('should normalize videoUrl with spaces on update', async () => {

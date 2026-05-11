@@ -43,7 +43,7 @@ Im Frontend immer **`body.data`** (nicht die Root) auswerten.
 | Feld | Typ | Anzeige |
 |------|-----|---------|
 | `adminRating` | `number \| null` | `null` → „noch nicht vergeben“; sonst **1–5** Sterne |
-| `adminRatedAt` | `string \| null` | ISO-Zeitpunkt der **ersten** Vergabe (z. B. formatiert als Datum/Uhrzeit) |
+| `adminRatedAt` | `string \| null` | ISO-Zeitpunkt der **letzten** Änderung an `adminRating` (z. B. formatiert als Datum/Uhrzeit); `null`, wenn keine Redaktionsbewertung |
 | `userRatingAverage` | `number \| null` | optional: Durchschnitt Nutzerbewertungen (read-only im Admin) |
 | `userRatingCount` | `number` | optional: Anzahl Nutzerstimmen |
 
@@ -60,10 +60,10 @@ Keine zusätzlichen Endpunkte nötig; die Felder liegen direkt am Spot.
 
 ### Regeln (wichtig für die UI)
 
-- **Nur einmal** schreibbar: Sobald `adminRating` **nicht** `null` ist, lehnt das Backend eine **Änderung** oder einen **Reset** mit **HTTP 409** ab.
-- **Idempotent:** Sendet ihr im `PATCH` **dieselbe** Zahl wie bereits gespeichert, ist das **erlaubt** (kein Fehler).
-- **`adminRatedAt` nie mitsenden** – setzt nur das Backend beim ersten erfolgreichen Setzen.
-- Gültige Werte: Ganzzahl **1–5** (entspricht Backend-Validierung).
+- **Mehrfach änderbar:** `admin` / `super_admin` dürfen `adminRating` per `PATCH` anpassen oder mit **`null`** wieder entfernen.
+- **Idempotent:** Sendet ihr im `PATCH` **dieselbe** Zahl wie bereits gespeichert (oder erneut `null`, wenn schon ohne Bewertung), ändert sich nichts (kein neuer `adminRatedAt`).
+- **`adminRatedAt` nie mitsenden** – setzt nur das Backend bei jeder inhaltlichen Änderung von `adminRating`.
+- Gültige Werte: Ganzzahl **1–5**, oder **`null`** zum Entfernen (entspricht Backend-Validierung).
 
 ### Beim Anlegen (optional)
 
@@ -88,13 +88,12 @@ Keine zusätzlichen Endpunkte nötig; die Felder liegen direkt am Spot.
 { "adminRating": 5 }
 ```
 
-Nach erfolgreicher Antwort enthält `data.adminRatedAt` den Zeitstempel (einmalig gesetzt).
+Nach erfolgreicher Antwort enthält `data.adminRatedAt` den Zeitstempel der letzten Bewertungsänderung (bzw. `null`, wenn keine Bewertung).
 
 ### UI-Empfehlungen
 
-- **Eingabe:** Sterne- oder Slider-Komponente mit Werten 1–5; vor Speichern prüfen: `if (spot.adminRating != null) { disable oder Hinweis „Bewertung ist endgültig“ }`.
-- **Fehler 409:** Nutzerfreundlicher Text, z. B. „Die Redaktionsbewertung kann nach der Vergabe nicht geändert werden.“
-- **Konflikt vermeiden:** Beim Öffnen des Formulars aktuellen Spot laden; wenn `adminRating !== null`, keine Änderungs-UI für dieses Feld anbieten (nur Anzeige).
+- **Eingabe:** Sterne- oder Slider-Komponente 1–5; optional Aktion „Redaktionsbewertung entfernen“ (`PATCH` mit `adminRating: null`).
+- Beim Speichern aktuellen Spot aus der Response übernehmen, damit `adminRatedAt` stimmt.
 
 ---
 
@@ -164,8 +163,8 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return json.data;
 }
 
-/** Admin: Redaktionssterne einmalig setzen */
-export async function patchAdminRating(spotId: string, adminRating: number) {
+/** Admin: Redaktionssterne setzen oder ändern (optional null zum Entfernen) */
+export async function patchAdminRating(spotId: string, adminRating: number | null) {
   return api<CuratedSpot>(`/curated-spots/${encodeURIComponent(spotId)}`, {
     method: 'PATCH',
     body: JSON.stringify({ adminRating }),
@@ -196,8 +195,7 @@ export async function patchUserRatingsFeature(isEnabled: boolean) {
 |------|---------|
 | 401 | Token fehlt/ungültig |
 | 403 / 404 | Admin-Aktion ohne Rolle (wie bestehende Admin-Routen) |
-| 409 | `adminRating` soll geändert oder zurückgesetzt werden, obwohl bereits gesetzt |
-| 400 | Validierung (z. B. `adminRating` außerhalb 1–5) |
+| 400 | Validierung (z. B. `adminRating` außerhalb 1–5, wenn nicht `null`) |
 
 Der Toggle-Endpunkt `PATCH` nutzt dieselbe Admin-Absicherung wie `PATCH /curated-spots/:id`.
 
@@ -206,7 +204,6 @@ Der Toggle-Endpunkt `PATCH` nutzt dieselbe Admin-Absicherung wie `PATCH /curated
 ## 7. Kurz-Checkliste Admin-UI
 
 1. Spot-Liste/Detail aus `GET /curated-spots/admin` bzw. `…/admin/:id` – `adminRating` / `adminRatedAt` anzeigen.
-2. Formular: Sterne nur anbieten, wenn `adminRating === null`.
+2. Formular: Redaktionssterne bearbeitbar halten; optional Entfernen per `null`.
 3. Nach Speichern: Response `data` in den lokalen State übernehmen.
 4. Einstellungsseite: `GET` Toggle → Schalter binden → `PATCH` bei Änderung.
-5. Bei 409 eine klare, nicht technische Meldung anzeigen.
