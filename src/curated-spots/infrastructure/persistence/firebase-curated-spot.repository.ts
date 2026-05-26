@@ -50,9 +50,7 @@ export class FirebaseCuratedSpotRepository implements CuratedSpotRepository {
     const userRatingAverage = this.readOptionalAverage(data.userRatingAverage);
     const userRatingCountRaw = data.userRatingCount;
     const userRatingCount =
-      typeof userRatingCountRaw === 'number'
-        ? userRatingCountRaw
-        : Number(userRatingCountRaw) || 0;
+      typeof userRatingCountRaw === 'number' ? userRatingCountRaw : Number(userRatingCountRaw) || 0;
     const adminRatedAt =
       data.adminRatedAt === null || data.adminRatedAt === undefined
         ? null
@@ -65,9 +63,12 @@ export class FirebaseCuratedSpotRepository implements CuratedSpotRepository {
       imageUrls,
       keywordIds,
       address: this.toAddressProps(data.address),
-      videoUrl: data.videoUrl === null || data.videoUrl === undefined ? null : String(data.videoUrl),
+      videoUrl:
+        data.videoUrl === null || data.videoUrl === undefined ? null : String(data.videoUrl),
       instagramUrl:
-        data.instagramUrl === null || data.instagramUrl === undefined ? null : String(data.instagramUrl),
+        data.instagramUrl === null || data.instagramUrl === undefined
+          ? null
+          : String(data.instagramUrl),
       status: data.status as CuratedSpotStatus,
       isDeleted: data.isDeleted === true,
       createdAt: String(data.createdAt ?? ''),
@@ -113,7 +114,9 @@ export class FirebaseCuratedSpotRepository implements CuratedSpotRepository {
     if (!doc.exists) {
       return null;
     }
-    return CuratedSpot.fromProps(this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id));
+    return CuratedSpot.fromProps(
+      this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id),
+    );
   }
 
   async findAllActiveNotDeleted(): Promise<CuratedSpot[]> {

@@ -17,12 +17,7 @@ export interface VideoFileValidationOptions {
 export class VideoFileValidationPipe implements PipeTransform {
   private readonly logger = new Logger(VideoFileValidationPipe.name);
   private readonly maxFileSizeBytes = 10 * 1024 * 1024;
-  private readonly allowedMimeTypes = [
-    'video/mp4',
-    'video/webm',
-    'video/quicktime',
-    'video/x-m4v',
-  ];
+  private readonly allowedMimeTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'];
   private readonly options: VideoFileValidationOptions;
 
   constructor(options: VideoFileValidationOptions = {}) {

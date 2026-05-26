@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
 
@@ -75,9 +71,7 @@ export class CuratedSpotUserRatingsService {
             : Number(avgRaw);
       const newCount = count + 1;
       const newAvg =
-        count === 0 || avg === null || Number.isNaN(avg)
-          ? score
-          : (avg * count + score) / newCount;
+        count === 0 || avg === null || Number.isNaN(avg) ? score : (avg * count + score) / newCount;
       transaction.set(userRatingRef, { score, ratedAt });
       transaction.update(spotRef, {
         userRatingAverage: newAvg,

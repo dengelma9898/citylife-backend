@@ -4,7 +4,8 @@ import { SpecialPollStatus } from '../interfaces/special-poll.interface';
 
 export class UpdateSpecialPollStatusDto {
   @ApiProperty({
-    description: 'Der neue Status der Umfrage (ACTIVE sichtbar, INACTIVE ausgeblendet für App-Nutzer)',
+    description:
+      'Der neue Status der Umfrage (ACTIVE sichtbar, INACTIVE ausgeblendet für App-Nutzer)',
     enum: SpecialPollStatus,
     example: SpecialPollStatus.INACTIVE,
   })

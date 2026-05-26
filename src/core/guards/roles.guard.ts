@@ -41,12 +41,8 @@ export class RolesGuard implements CanActivate {
     const userData = await this.usersService.getById(user.uid);
     if (!userData) {
       const decoded = user as DecodedIdToken;
-      const isAnonymousFirebase =
-        decoded.firebase?.sign_in_provider === 'anonymous';
-      if (
-        isAnonymousFirebase &&
-        requiredRoles.includes(ANONYMOUS_FIREBASE_APP_ROLE)
-      ) {
+      const isAnonymousFirebase = decoded.firebase?.sign_in_provider === 'anonymous';
+      if (isAnonymousFirebase && requiredRoles.includes(ANONYMOUS_FIREBASE_APP_ROLE)) {
         return true;
       }
       this.logger.warn(`No user data found for user ${user.uid}`);

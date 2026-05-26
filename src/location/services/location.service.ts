@@ -80,7 +80,7 @@ export class LocationService {
       }
       let s = 0;
       const street = (a.street || '').trim();
-      const houseNum = (((a as { houseNumber?: string }).houseNumber) || '').trim();
+      const houseNum = ((a as { houseNumber?: string }).houseNumber || '').trim();
       const plz = (a.postalCode || '').trim();
       const city = (a.city || '').trim();
 

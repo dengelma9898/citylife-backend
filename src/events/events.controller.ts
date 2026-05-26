@@ -36,9 +36,7 @@ import { EventStatus } from './enums/event-status.enum';
 import { RolesGuard } from '../core/guards/roles.guard';
 import { Roles } from '../core/decorators/roles.decorator';
 
-function isFirebaseAnonymousUser(
-  user?: { firebase?: { sign_in_provider?: string } },
-): boolean {
+function isFirebaseAnonymousUser(user?: { firebase?: { sign_in_provider?: string } }): boolean {
   return user?.firebase?.sign_in_provider === 'anonymous';
 }
 
@@ -67,9 +65,7 @@ export class EventsController {
 
   private async isActorAdmin(actorUid: string): Promise<boolean> {
     const profile = await this.usersService.getUserProfile(actorUid);
-    return (
-      profile?.userType === UserType.ADMIN || profile?.userType === UserType.SUPER_ADMIN
-    );
+    return profile?.userType === UserType.ADMIN || profile?.userType === UserType.SUPER_ADMIN;
   }
 
   /**
@@ -213,10 +209,7 @@ export class EventsController {
   }
 
   @Post()
-  public async create(
-    @Req() req: Request,
-    @Body() createEventDto: CreateEventDto,
-  ): Promise<Event> {
+  public async create(@Req() req: Request, @Body() createEventDto: CreateEventDto): Promise<Event> {
     this.logger.log('POST /events');
     this.assertNotAnonymous(req);
     const actorUid = req.user!.uid;
@@ -309,7 +302,9 @@ export class EventsController {
     this.logger.log(`PATCH /events/${eventId}/title-image`);
     this.assertNotAnonymous(req);
     const actorUid = req.user!.uid;
-    const currentEvent = await this.eventsService.getById(eventId, { includePendingInResult: true });
+    const currentEvent = await this.eventsService.getById(eventId, {
+      includePendingInResult: true,
+    });
     if (!currentEvent) {
       throw new NotFoundException('Event not found');
     }
@@ -363,7 +358,9 @@ export class EventsController {
     this.logger.log(`PATCH /events/${eventId}/images`);
     this.assertNotAnonymous(req);
     const actorUid = req.user!.uid;
-    const currentEvent = await this.eventsService.getById(eventId, { includePendingInResult: true });
+    const currentEvent = await this.eventsService.getById(eventId, {
+      includePendingInResult: true,
+    });
     if (!currentEvent) {
       throw new NotFoundException('Event not found');
     }
@@ -394,7 +391,9 @@ export class EventsController {
     }
     this.assertNotAnonymous(req);
     const actorUid = req.user!.uid;
-    const currentEvent = await this.eventsService.getById(eventId, { includePendingInResult: true });
+    const currentEvent = await this.eventsService.getById(eventId, {
+      includePendingInResult: true,
+    });
     if (!currentEvent) {
       throw new NotFoundException('Event not found');
     }

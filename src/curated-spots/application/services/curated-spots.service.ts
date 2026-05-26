@@ -102,7 +102,8 @@ export class CuratedSpotsService {
       imageUrls: [],
       address: dto.address,
       videoUrl: dto.videoUrl !== undefined ? normalizeHttpUrlSpaces(dto.videoUrl) : null,
-      instagramUrl: dto.instagramUrl !== undefined ? normalizeHttpUrlSpaces(dto.instagramUrl) : null,
+      instagramUrl:
+        dto.instagramUrl !== undefined ? normalizeHttpUrlSpaces(dto.instagramUrl) : null,
       status: dto.status ?? CuratedSpotStatus.PENDING,
       createdByUserId,
       adminRating: dto.adminRating ?? null,
@@ -145,7 +146,8 @@ export class CuratedSpotsService {
       patch.videoUrl = dto.videoUrl === null ? null : normalizeHttpUrlSpaces(dto.videoUrl);
     }
     if (dto.instagramUrl !== undefined) {
-      patch.instagramUrl = dto.instagramUrl === null ? null : normalizeHttpUrlSpaces(dto.instagramUrl);
+      patch.instagramUrl =
+        dto.instagramUrl === null ? null : normalizeHttpUrlSpaces(dto.instagramUrl);
     }
     if (dto.status !== undefined) {
       patch.status = dto.status;
@@ -155,8 +157,7 @@ export class CuratedSpotsService {
     }
     if (dto.adminRating !== undefined && dto.adminRating !== existing.adminRating) {
       patch.adminRating = dto.adminRating;
-      patch.adminRatedAt =
-        dto.adminRating === null ? null : new Date().toISOString();
+      patch.adminRatedAt = dto.adminRating === null ? null : new Date().toISOString();
     }
     const updated = existing.update(patch);
     return this.curatedSpotRepository.update(id, updated);

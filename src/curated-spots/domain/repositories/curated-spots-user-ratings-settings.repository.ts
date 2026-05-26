@@ -2,5 +2,7 @@ import { CuratedSpotsUserRatingsSettings } from '../entities/curated-spots-user-
 
 export abstract class CuratedSpotsUserRatingsSettingsRepository {
   abstract get(): Promise<CuratedSpotsUserRatingsSettings>;
-  abstract save(settings: CuratedSpotsUserRatingsSettings): Promise<CuratedSpotsUserRatingsSettings>;
+  abstract save(
+    settings: CuratedSpotsUserRatingsSettings,
+  ): Promise<CuratedSpotsUserRatingsSettings>;
 }

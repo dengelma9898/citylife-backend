@@ -40,7 +40,10 @@ export class FirebaseCuratedSpotsUserRatingsSettingsRepository extends CuratedSp
     return this.removeUndefined(data) as Omit<CuratedSpotsUserRatingsSettingsProps, 'id'>;
   }
 
-  private toEntityProps(data: Record<string, unknown>, id: string): CuratedSpotsUserRatingsSettingsProps {
+  private toEntityProps(
+    data: Record<string, unknown>,
+    id: string,
+  ): CuratedSpotsUserRatingsSettingsProps {
     const updatedAtRaw = data.updatedAt;
     const updatedAt =
       updatedAtRaw &&
@@ -53,7 +56,10 @@ export class FirebaseCuratedSpotsUserRatingsSettingsRepository extends CuratedSp
       id,
       isEnabled: data.isEnabled === true,
       updatedAt,
-      updatedBy: data.updatedBy === undefined || data.updatedBy === null ? undefined : String(data.updatedBy),
+      updatedBy:
+        data.updatedBy === undefined || data.updatedBy === null
+          ? undefined
+          : String(data.updatedBy),
     };
   }
 

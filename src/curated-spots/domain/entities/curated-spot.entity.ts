@@ -187,9 +187,7 @@ export class CuratedSpot {
   update(props: Partial<Omit<CuratedSpotProps, 'id' | 'createdAt'>>): CuratedSpot {
     const name = props.name !== undefined ? props.name.trim() : this.name;
     const address =
-      props.address !== undefined
-        ? CuratedSpotAddress.create(props.address)
-        : this.address;
+      props.address !== undefined ? CuratedSpotAddress.create(props.address) : this.address;
     return new CuratedSpot({
       id: this.id,
       name,
@@ -214,7 +212,8 @@ export class CuratedSpot {
       adminRatedAt: props.adminRatedAt !== undefined ? props.adminRatedAt : this.adminRatedAt,
       userRatingAverage:
         props.userRatingAverage !== undefined ? props.userRatingAverage : this.userRatingAverage,
-      userRatingCount: props.userRatingCount !== undefined ? props.userRatingCount : this.userRatingCount,
+      userRatingCount:
+        props.userRatingCount !== undefined ? props.userRatingCount : this.userRatingCount,
     });
   }
 
@@ -241,4 +240,3 @@ export class CuratedSpot {
     };
   }
 }
-

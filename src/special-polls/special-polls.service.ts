@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { FirebaseService } from '../firebase/firebase.service';
 import {
@@ -47,10 +43,7 @@ export class SpecialPollsService {
    * Maps legacy Firestore values (CLOSED, PENDING) to {@link SpecialPollStatus.ACTIVE}.
    */
   private normalizeStoredStatus(raw: unknown): SpecialPollStatus {
-    if (
-      raw === LEGACY_SPECIAL_POLL_STATUS_CLOSED ||
-      raw === LEGACY_SPECIAL_POLL_STATUS_PENDING
-    ) {
+    if (raw === LEGACY_SPECIAL_POLL_STATUS_CLOSED || raw === LEGACY_SPECIAL_POLL_STATUS_PENDING) {
       return SpecialPollStatus.ACTIVE;
     }
     if (raw === SpecialPollStatus.INACTIVE) {
@@ -67,8 +60,7 @@ export class SpecialPollsService {
     const upvotedUserIds = Array.isArray(row?.upvotedUserIds)
       ? (row.upvotedUserIds as unknown[]).filter((u): u is string => typeof u === 'string')
       : [];
-    const id =
-      typeof row?.id === 'string' && row.id.length > 0 ? row.id : randomUUID();
+    const id = typeof row?.id === 'string' && row.id.length > 0 ? row.id : randomUUID();
     return {
       id,
       userId: String(row?.userId ?? ''),

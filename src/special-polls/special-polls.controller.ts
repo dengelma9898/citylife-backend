@@ -75,8 +75,7 @@ export class SpecialPollsController {
   })
   @ApiOperation({
     summary: 'Gibt alle Special Polls zurück',
-    description:
-      'Standard: ohne INACTIVE. Admin/Super-Admin erhalten alle Status inkl. INACTIVE.',
+    description: 'Standard: ohne INACTIVE. Admin/Super-Admin erhalten alle Status inkl. INACTIVE.',
   })
   @ApiResponse({ status: 200, description: 'Liste aller Special Polls' })
   async findAll(
@@ -88,11 +87,7 @@ export class SpecialPollsController {
     const highlightedOnly = highlighted === 'true';
     const includeInactivePolls = await this.resolveIncludeInactivePolls(userId);
     const stripResponses = isFirebaseAnonymousRequest(req);
-    return this.specialPollsService.findAll(
-      highlightedOnly,
-      includeInactivePolls,
-      stripResponses,
-    );
+    return this.specialPollsService.findAll(highlightedOnly, includeInactivePolls, stripResponses);
   }
 
   @Get(':id')
