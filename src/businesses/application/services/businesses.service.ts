@@ -18,6 +18,7 @@ import { EventsService } from '../../../events/events.service';
 import { DateTimeUtils } from '../../../utils/date-time.utils';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { UsersService } from '../../../users/users.service';
+import { PassScanService } from '../../../pass-stats/application/services/pass-scan.service';
 
 @Injectable()
 export class BusinessesService {
@@ -32,6 +33,8 @@ export class BusinessesService {
     private readonly notificationService: NotificationService,
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => PassScanService))
+    private readonly passScanService: PassScanService,
   ) {}
 
   public async getAll(): Promise<Business[]> {
@@ -178,7 +181,20 @@ export class BusinessesService {
     });
 
     const updatedBusiness = existingBusiness.addCustomer(customer);
-    return this.businessRepository.update(businessId, updatedBusiness);
+    const savedBusiness = await this.businessRepository.update(businessId, updatedBusiness);
+    try {
+      await this.passScanService.recordScanFromBusinessScan({
+        businessId,
+        businessName: existingBusiness.name,
+        scanData,
+        customer,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to record pass scan for user (businessId=${businessId}): ${error.message}`,
+      );
+    }
+    return savedBusiness;
   }
 
   public async updateBenefit(id: string, benefit: string): Promise<Business> {

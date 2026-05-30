@@ -359,4 +359,4 @@ async health() { ... }
 
 ---
 
-**Letzte Aktualisierung:** 31. Januar 2026
+**Letzte Aktualisierung:** 30. Mai 2026

@@ -30,6 +30,7 @@ import { HealthModule } from './health/health.module';
 import { EasterEggHuntModule } from './easter-egg-hunt/easter-egg-hunt.module';
 import { TaxiStandsModule } from './taxi-stands/taxi-stands.module';
 import { CuratedSpotsModule } from './curated-spots/curated-spots.module';
+import { PassStatsModule } from './pass-stats/pass-stats.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { CuratedSpotsModule } from './curated-spots/curated-spots.module';
     EasterEggHuntModule,
     TaxiStandsModule,
     CuratedSpotsModule,
+    PassStatsModule,
   ],
 })
 export class AppModule {}
