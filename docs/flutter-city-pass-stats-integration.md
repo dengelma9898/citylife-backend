@@ -92,6 +92,13 @@ Content-Type: application/json
 
 Die Statistik enthält **nur Scans ab Rollout** des Features (kein Import alter `business.customers[]`-Einträge).
 
+### Dev: Testdaten (einmalig)
+
+In **`NODE_ENV=dev`** legt das Backend beim **ersten** Start automatisch Fake-`pass-scans` an – nur für User-ID `yZTZZ4bRhnORR3Oy2jl2mJLl0ef2`, verteilt über ca. zwei Jahre bis zum aktuellen Monat. Ein Marker-Dokument `_dev-pass-stats-seed` verhindert erneutes Anlegen.
+
+- Produktion (`prd`): **kein** Seed
+- Erneut seeden (nur Dev): Marker-Dokument `users/yZTZZ4bRhnORR3Oy2jl2mJLl0ef2/pass-scans/_dev-pass-stats-seed` in Firestore löschen und Server neu starten
+
 ---
 
 ## Dart-Model (Vorschlag)

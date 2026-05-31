@@ -5,6 +5,8 @@ import { PassScanRecord, PassScanRecordProps } from '../../domain/interfaces/pas
 @Injectable()
 export class FirebasePassScanRepository {
   private readonly passScansSubcollection = 'pass-scans';
+  /** Dev-only marker: pass-scans/{this id} – not a real scan. */
+  public readonly devSeedMarkerDocId = '_dev-pass-stats-seed';
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
@@ -38,6 +40,30 @@ export class FirebasePassScanRepository {
       price: this.toOptionalNumber(data.price),
       numberOfPeople: this.toOptionalNumber(data.numberOfPeople),
     };
+  }
+
+  public async hasDevSeedMarker(userId: string): Promise<boolean> {
+    const db = this.firebaseService.getFirestore();
+    const doc = await db
+      .collection('users')
+      .doc(userId)
+      .collection(this.passScansSubcollection)
+      .doc(this.devSeedMarkerDocId)
+      .get();
+    return doc.exists;
+  }
+
+  public async setDevSeedMarker(userId: string): Promise<void> {
+    const db = this.firebaseService.getFirestore();
+    await db
+      .collection('users')
+      .doc(userId)
+      .collection(this.passScansSubcollection)
+      .doc(this.devSeedMarkerDocId)
+      .set({
+        seededAt: new Date().toISOString(),
+        purpose: 'dev-pass-stats-test-data',
+      });
   }
 
   public async createIfNotExists(userId: string, record: PassScanRecordProps): Promise<boolean> {
