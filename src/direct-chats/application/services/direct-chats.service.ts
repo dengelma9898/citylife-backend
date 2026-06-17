@@ -6,6 +6,7 @@ import {
   BadRequestException,
   Inject,
   forwardRef,
+  Scope,
 } from '@nestjs/common';
 import { DirectChatRepository } from '../../domain/repositories/direct-chat.repository';
 import { DirectMessageRepository } from '../../domain/repositories/direct-message.repository';
@@ -13,13 +14,15 @@ import { DirectChat, DirectChatProps } from '../../domain/entities/direct-chat.e
 import { CreateDirectChatDto } from '../dtos/create-direct-chat.dto';
 import { UsersService } from '../../../users/users.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
+import { UserProfileLoader } from '../../../core/loaders/user-profile.loader';
+import { UserProfile } from '../../../users/interfaces/user-profile.interface';
 
 export interface DirectChatWithParticipantInfo extends DirectChatProps {
   otherParticipantName?: string;
   otherParticipantProfilePictureUrl?: string;
 }
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class DirectChatsService {
   private readonly logger = new Logger(DirectChatsService.name);
 
@@ -29,6 +32,7 @@ export class DirectChatsService {
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
     private readonly notificationService: NotificationService,
+    private readonly userProfileLoader: UserProfileLoader,
   ) {}
 
   async createChat(userId: string, dto: CreateDirectChatDto): Promise<DirectChat> {
@@ -36,7 +40,7 @@ export class DirectChatsService {
     if (userId === dto.invitedUserId) {
       throw new BadRequestException('Cannot create a chat with yourself');
     }
-    const userProfile = await this.usersService.getUserProfile(userId);
+    const userProfile = await this.userProfileLoader.load(userId);
     if (!userProfile) {
       throw new NotFoundException('User profile not found');
     }
@@ -44,7 +48,7 @@ export class DirectChatsService {
     if (blockedUserIds.includes(dto.invitedUserId)) {
       throw new BadRequestException('Cannot create a chat with a blocked user');
     }
-    const invitedUserProfile = await this.usersService.getUserProfile(dto.invitedUserId);
+    const invitedUserProfile = await this.userProfileLoader.load(dto.invitedUserId);
     if (!invitedUserProfile) {
       throw new NotFoundException('Invited user not found');
     }
@@ -76,7 +80,7 @@ export class DirectChatsService {
     const otherParticipantIds = chats
       .map(chat => chat.getOtherParticipantId(userId))
       .filter(Boolean) as string[];
-    const userProfiles = await this.usersService.getUserProfilesByIds(otherParticipantIds);
+    const userProfiles = await this.userProfileLoader.loadManyAsMap(otherParticipantIds);
     return chats.map(chat => {
       const otherParticipantId = chat.getOtherParticipantId(userId);
       const otherParticipant = otherParticipantId ? userProfiles.get(otherParticipantId) : null;
@@ -92,7 +96,7 @@ export class DirectChatsService {
     this.logger.debug(`Getting pending direct chats for user ${userId}`);
     const chats = await this.directChatRepository.findPendingByInvitedUserId(userId);
     const creatorIds = chats.map(chat => chat.creatorId);
-    const userProfiles = await this.usersService.getUserProfilesByIds(creatorIds);
+    const userProfiles = await this.userProfileLoader.loadManyAsMap(creatorIds);
     return chats.map(chat => {
       const creator = userProfiles.get(chat.creatorId);
       return {
@@ -115,7 +119,7 @@ export class DirectChatsService {
     const otherParticipantId = chat.getOtherParticipantId(userId);
     let otherParticipant = null;
     if (otherParticipantId) {
-      otherParticipant = await this.usersService.getUserProfile(otherParticipantId);
+      otherParticipant = await this.userProfileLoader.load(otherParticipantId);
     }
     return {
       ...chat.toJSON(),
@@ -182,10 +186,10 @@ export class DirectChatsService {
 
   private async sendDirectChatRequestNotification(
     chat: DirectChat,
-    senderProfile: any,
+    senderProfile: UserProfile,
   ): Promise<void> {
     try {
-      const invitedUserProfile = await this.usersService.getUserProfile(chat.invitedUserId);
+      const invitedUserProfile = await this.userProfileLoader.load(chat.invitedUserId);
       if (!invitedUserProfile) {
         this.logger.warn(
           `Invited user profile not found for user ${chat.invitedUserId}, skipping notification`,
@@ -231,7 +235,7 @@ export class DirectChatsService {
     action: 'add' | 'remove',
   ): Promise<void> {
     try {
-      const userProfile = await this.usersService.getUserProfile(userId);
+      const userProfile = await this.userProfileLoader.load(userId);
       if (!userProfile) return;
       let directChatIds = userProfile.directChatIds || [];
       if (action === 'add' && !directChatIds.includes(chatId)) {

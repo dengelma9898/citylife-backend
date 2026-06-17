@@ -1,4 +1,5 @@
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { TaxiStand } from '../../domain/entities/taxi-stand.entity';
 import {
   TaxiStandRepository,
@@ -10,15 +11,25 @@ import { UpdateTaxiStandDto } from '../../dto/update-taxi-stand.dto';
 @Injectable()
 export class TaxiStandService {
   private readonly logger = new Logger(TaxiStandService.name);
+  private readonly CACHE_KEY = 'taxi-stands:all';
+  private readonly CACHE_TTL = 1800000;
 
   constructor(
     @Inject(TAXI_STAND_REPOSITORY)
     private readonly taxiStandRepository: TaxiStandRepository,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async getAll(): Promise<TaxiStand[]> {
-    this.logger.log('Getting all taxi stands');
-    return this.taxiStandRepository.findAll();
+    const cached = await this.cacheManager.get<TaxiStand[]>(this.CACHE_KEY);
+    if (cached) {
+      this.logger.debug('Cache hit for taxi stands');
+      return cached;
+    }
+    this.logger.debug('Cache miss for taxi stands, fetching from DB');
+    const taxiStands = await this.taxiStandRepository.findAll();
+    await this.cacheManager.set(this.CACHE_KEY, taxiStands, this.CACHE_TTL);
+    return taxiStands;
   }
 
   async getById(id: string): Promise<TaxiStand> {
@@ -43,7 +54,9 @@ export class TaxiStandService {
         longitude: dto.longitude,
       },
     });
-    return this.taxiStandRepository.create(taxiStand);
+    const created = await this.taxiStandRepository.create(taxiStand);
+    await this.invalidateCache();
+    return created;
   }
 
   async update(id: string, dto: UpdateTaxiStandDto): Promise<TaxiStand> {
@@ -65,11 +78,19 @@ export class TaxiStandService {
       };
     }
     const updatedTaxiStand = existingTaxiStand.update(updateProps);
-    return this.taxiStandRepository.update(id, updatedTaxiStand);
+    const updated = await this.taxiStandRepository.update(id, updatedTaxiStand);
+    await this.invalidateCache();
+    return updated;
   }
 
   async delete(id: string): Promise<void> {
     this.logger.log(`Deleting taxi stand with id: ${id}`);
     await this.taxiStandRepository.delete(id);
+    await this.invalidateCache();
+  }
+
+  private async invalidateCache(): Promise<void> {
+    await this.cacheManager.del(this.CACHE_KEY);
+    this.logger.debug('Taxi stands cache invalidated');
   }
 }

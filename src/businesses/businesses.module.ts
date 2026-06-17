@@ -13,11 +13,13 @@ import { BUSINESS_REPOSITORY } from './domain/repositories/business.repository';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { BusinessEventsSettingsRepository } from './domain/repositories/business-events-settings.repository';
 import { FirebaseBusinessEventsSettingsRepository } from './infrastructure/persistence/firebase-business-events-settings.repository';
+import { PassStatsModule } from '../pass-stats/pass-stats.module';
 
 @Module({
   imports: [
     FirebaseModule,
     forwardRef(() => UsersModule),
+    forwardRef(() => PassStatsModule),
     BusinessCategoriesModule,
     KeywordsModule,
     forwardRef(() => EventsModule),

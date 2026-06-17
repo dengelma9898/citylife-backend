@@ -5,11 +5,17 @@ import { UsersService } from '../../../users/users.service';
 import { BusinessCategoriesService } from '../../../business-categories/application/services/business-categories.service';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { Business, BusinessAddress, BusinessContact } from '../../domain/entities/business.entity';
+import {
+  Business,
+  BusinessAddress,
+  BusinessContact,
+  BusinessCustomer,
+} from '../../domain/entities/business.entity';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
 import { KeywordsService } from '../../../keywords/keywords.service';
 import { EventsService } from '../../../events/events.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
+import { PassScanService } from '../../../pass-stats/application/services/pass-scan.service';
 
 jest.mock('../../../firebase/firebase.service', () => ({
   FirebaseService: jest.fn().mockImplementation(() => ({
@@ -54,6 +60,10 @@ describe('BusinessesService', () => {
   const mockNotificationService = {
     sendToUser: jest.fn(),
     sendToUsers: jest.fn(),
+  };
+
+  const mockPassScanService = {
+    recordScanFromBusinessScan: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockConfigService = {
@@ -116,6 +126,10 @@ describe('BusinessesService', () => {
         {
           provide: NotificationService,
           useValue: mockNotificationService,
+        },
+        {
+          provide: PassScanService,
+          useValue: mockPassScanService,
         },
       ],
     }).compile();
@@ -577,6 +591,81 @@ describe('BusinessesService', () => {
 
       expect(mockUsersService.getAllBusinessUsers).not.toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('addCustomerScan', () => {
+    it('should persist business scan and record pass scan for user', async () => {
+      const existingBusiness = Business.create({
+        name: 'Scan Business',
+        contact: mockBusinessContact,
+        address: mockBusinessAddress,
+        categoryIds: ['cat-1'],
+        keywordIds: [],
+        description: 'desc',
+        status: BusinessStatus.ACTIVE,
+        benefit: '10% Rabatt',
+        hasAccount: true,
+      });
+      const businessWithId = Business.fromProps({
+        ...existingBusiness.toJSON(),
+        id: 'business-scan-1',
+      });
+      const updatedBusiness = businessWithId.addCustomer(
+        BusinessCustomer.create({
+          customerId: 'NSP-user-1',
+          scannedAt: '2026-05-10T12:00:00+02:00',
+          benefit: '10% Rabatt',
+          price: 50,
+        }),
+      );
+      mockBusinessesRepository.findById.mockResolvedValue(businessWithId);
+      mockBusinessesRepository.update.mockResolvedValue(updatedBusiness);
+      const result = await service.addCustomerScan('business-scan-1', {
+        customerId: 'NSP-user-1',
+        userId: 'user-1',
+        price: 50,
+      });
+      expect(result).toEqual(updatedBusiness);
+      expect(mockPassScanService.recordScanFromBusinessScan).toHaveBeenCalledWith(
+        expect.objectContaining({
+          businessId: 'business-scan-1',
+          businessName: 'Scan Business',
+        }),
+      );
+    });
+
+    it('should still return business when pass scan recording fails', async () => {
+      const existingBusiness = Business.create({
+        name: 'Scan Business',
+        contact: mockBusinessContact,
+        address: mockBusinessAddress,
+        categoryIds: ['cat-1'],
+        keywordIds: [],
+        description: 'desc',
+        status: BusinessStatus.ACTIVE,
+        benefit: '10% Rabatt',
+        hasAccount: true,
+      });
+      const businessWithId = Business.fromProps({
+        ...existingBusiness.toJSON(),
+        id: 'business-scan-2',
+      });
+      const updatedBusiness = businessWithId.addCustomer(
+        BusinessCustomer.create({
+          customerId: 'NSP-user-2',
+          scannedAt: '2026-05-10T12:00:00+02:00',
+          benefit: '10% Rabatt',
+        }),
+      );
+      mockBusinessesRepository.findById.mockResolvedValue(businessWithId);
+      mockBusinessesRepository.update.mockResolvedValue(updatedBusiness);
+      mockPassScanService.recordScanFromBusinessScan.mockRejectedValue(new Error('firestore error'));
+      const result = await service.addCustomerScan('business-scan-2', {
+        customerId: 'NSP-user-2',
+        userId: 'user-2',
+      });
+      expect(result).toEqual(updatedBusiness);
     });
   });
 });

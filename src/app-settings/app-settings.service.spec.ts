@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppSettingsService } from './app-settings.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { Preference } from './interfaces/preference.interface';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 describe('AppSettingsService', () => {
   let service: AppSettingsService;
@@ -22,13 +23,24 @@ describe('AppSettingsService', () => {
     getFirestore: jest.fn(),
   };
 
+  const mockCacheManager = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
   beforeEach(async () => {
+    mockCacheManager.get.mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AppSettingsService,
         {
           provide: FirebaseService,
           useValue: mockFirebaseService,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
         },
       ],
     }).compile();
@@ -87,6 +99,15 @@ describe('AppSettingsService', () => {
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
       expect(mockFirestore.collection).toHaveBeenCalledWith('app_settings');
+    });
+
+    it('should return cached app settings on cache hit', async () => {
+      mockCacheManager.get.mockResolvedValue(mockPreferences);
+
+      const result = await service.getAll();
+
+      expect(result).toEqual(mockPreferences);
+      expect(mockFirebaseService.getFirestore).not.toHaveBeenCalled();
     });
   });
 

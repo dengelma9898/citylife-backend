@@ -67,6 +67,8 @@ ENV_FILE=.env.prod PORT=3100 NODE_ENV=prd BASE_URL=/prd docker-compose up
 
 ### Docker Build
 
+Das Image nutzt einen **Multi-Stage-Build**: Stage 1 kompiliert TypeScript (inkl. Dev-Dependencies), Stage 2 enthält nur `dist/`, Prod-`node_modules` und Runtime-Assets. Chromium/Puppeteer sind nicht mehr enthalten.
+
 #### Test-Umgebung
 ```bash
 docker buildx build --platform linux/amd64 \

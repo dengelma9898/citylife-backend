@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, Scope } from '@nestjs/common';
 import {
   NewsItem,
   TextNewsItem,
@@ -17,8 +17,9 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { DateTimeUtils } from '../utils/date-time.utils';
 import { NotificationService } from '../notifications/application/services/notification.service';
+import { UserProfileLoader } from '../core/loaders/user-profile.loader';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class NewsService {
   private readonly logger = new Logger(NewsService.name);
   private readonly collectionName = 'news';
@@ -29,6 +30,7 @@ export class NewsService {
     private readonly firebaseService: FirebaseService,
     private readonly firebaseStorageService: FirebaseStorageService,
     private readonly notificationService: NotificationService,
+    private readonly userProfileLoader: UserProfileLoader,
   ) {}
 
   private removeUndefined(obj: any): any {
@@ -98,7 +100,7 @@ export class NewsService {
         return newsItems;
       }
 
-      const userProfiles = await this.usersService.getUserProfilesByIds(authorIds);
+      const userProfiles = await this.userProfileLoader.loadManyAsMap(authorIds);
 
       return newsItems.map(item => {
         if (item.createdBy) {

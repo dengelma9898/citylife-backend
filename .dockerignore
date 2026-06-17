@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+.git
+.github
+.cursor
+.husky
+docs
+*.md
+!README.md
+**/*.spec.ts
+test
+sonar-project.properties
+npm-debug.log*
+.DS_Store
+certificates

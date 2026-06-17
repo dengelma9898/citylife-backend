@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { LegalDocumentService } from './legal-document.service';
 import { LegalDocumentRepository, LEGAL_DOCUMENT_REPOSITORY } from '../../domain/repositories/legal-document.repository';
 import { LegalDocument, LegalDocumentType } from '../../domain/entities/legal-document.entity';
@@ -22,13 +23,24 @@ describe('LegalDocumentService', () => {
     createdBy: 'user123',
   });
 
+  const mockCacheManager = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
   beforeEach(async () => {
+    mockCacheManager.get.mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LegalDocumentService,
         {
           provide: LEGAL_DOCUMENT_REPOSITORY,
           useValue: mockRepository,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
         },
       ],
     }).compile();
@@ -97,6 +109,15 @@ describe('LegalDocumentService', () => {
       expect(result).toBeDefined();
       expect(result.type).toBe(LegalDocumentType.IMPRESSUM);
       expect(mockRepository.findLatestByType).toHaveBeenCalledWith(LegalDocumentType.IMPRESSUM);
+    });
+
+    it('should return cached document on cache hit', async () => {
+      mockCacheManager.get.mockResolvedValue(mockDocument);
+
+      const result = await service.getLatestByType(LegalDocumentType.IMPRESSUM);
+
+      expect(result).toBe(mockDocument);
+      expect(mockRepository.findLatestByType).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if no document found', async () => {

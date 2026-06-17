@@ -4,6 +4,7 @@ import { UsersService } from '../users/users.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { NotificationService } from '../notifications/application/services/notification.service';
+import { UserProfileLoader } from '../core/loaders/user-profile.loader';
 import {
   getDocs,
   getDoc,
@@ -83,9 +84,12 @@ describe('NewsService', () => {
     getFirestore: jest.fn().mockReturnValue(createFirestoreMock()),
   };
 
+  const mockUserProfileLoader = {
+    load: jest.fn(),
+    loadManyAsMap: jest.fn().mockResolvedValue(new Map()),
+  };
+
   const mockUsersService = {
-    getUserProfile: jest.fn(),
-    getUserProfilesByIds: jest.fn(),
     getAllUserProfilesWithIds: jest.fn(),
   };
 
@@ -163,10 +167,14 @@ describe('NewsService', () => {
           provide: NotificationService,
           useValue: mockNotificationService,
         },
+        {
+          provide: UserProfileLoader,
+          useValue: mockUserProfileLoader,
+        },
       ],
     }).compile();
 
-    service = module.get<NewsService>(NewsService);
+    service = await module.resolve(NewsService);
     usersService = module.get<UsersService>(UsersService);
     firebaseService = module.get<FirebaseService>(FirebaseService);
     firebaseStorageService = module.get<FirebaseStorageService>(FirebaseStorageService);
@@ -179,10 +187,17 @@ describe('NewsService', () => {
     it('should return all news items with author info', async () => {
       const mockFirestore = createFirestoreMock(mockTextNewsItem);
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
-      mockUsersService.getUserProfile.mockResolvedValue({
-        name: 'Test User',
-        profilePictureUrl: 'https://example.com/avatar.jpg',
-      });
+      mockUserProfileLoader.loadManyAsMap.mockResolvedValue(
+        new Map([
+          [
+            'user1',
+            {
+              name: 'Test User',
+              profilePictureUrl: 'https://example.com/avatar.jpg',
+            },
+          ],
+        ]),
+      );
 
       const result = await service.getAll();
 
@@ -195,10 +210,17 @@ describe('NewsService', () => {
     it('should return a news item by id with author info', async () => {
       const mockFirestore = createFirestoreMock(mockTextNewsItem);
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
-      mockUsersService.getUserProfile.mockResolvedValue({
-        name: 'Test User',
-        profilePictureUrl: 'https://example.com/avatar.jpg',
-      });
+      mockUserProfileLoader.loadManyAsMap.mockResolvedValue(
+        new Map([
+          [
+            'user1',
+            {
+              name: 'Test User',
+              profilePictureUrl: 'https://example.com/avatar.jpg',
+            },
+          ],
+        ]),
+      );
 
       const result = await service.getById('news1');
 
