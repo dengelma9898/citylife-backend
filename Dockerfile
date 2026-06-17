@@ -9,8 +9,7 @@ ARG NODE_ENV=prd
 WORKDIR /app
 
 COPY package*.json ./
-ENV HUSKY=0
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY . .
 RUN npm run build:${NODE_ENV}
@@ -25,8 +24,7 @@ ARG PORT=3000
 WORKDIR /app
 
 COPY package*.json ./
-ENV HUSKY=0
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 COPY --from=builder --chown=node:node /app/dist ./dist
 COPY --from=builder --chown=node:node /app/pass-templates ./pass-templates
