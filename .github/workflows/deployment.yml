@@ -105,6 +105,8 @@ jobs:
             # Erstelle certificates Verzeichnis und Service Account
             mkdir -p /app/certificates
             echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT }}' > /app/certificates/service_account.json
+            chmod 755 /app/certificates
+            chmod 644 /app/certificates/service_account.json
             
             # Pull und starte neuen Container
             docker pull ${{ env.IMAGE_NAME_DEV }}:latest
@@ -196,6 +198,8 @@ jobs:
             # Erstelle certificates Verzeichnis und Service Account
             mkdir -p /app/certificates
             echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT }}' > /app/certificates/service_account.json
+            chmod 755 /app/certificates
+            chmod 644 /app/certificates/service_account.json
             
             # Pull und starte neuen Container
             docker pull ${{ env.IMAGE_NAME_PRD }}:latest
