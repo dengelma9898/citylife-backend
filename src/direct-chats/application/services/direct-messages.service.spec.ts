@@ -6,7 +6,7 @@ import { DirectChat } from '../../domain/entities/direct-chat.entity';
 import { DirectChatsService } from './direct-chats.service';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
-import { UsersService } from '../../../users/users.service';
+import { UserProfileLoader } from '../../../core/loaders/user-profile.loader';
 
 describe('DirectMessagesService', () => {
   let service: DirectMessagesService;
@@ -32,9 +32,8 @@ describe('DirectMessagesService', () => {
     sendToUsers: jest.fn(),
   };
 
-  const mockUsersService = {
-    getById: jest.fn(),
-    getUserProfile: jest.fn(),
+  const mockUserProfileLoader = {
+    load: jest.fn(),
   };
 
   const mockActiveChat = DirectChat.fromProps({
@@ -87,13 +86,13 @@ describe('DirectMessagesService', () => {
           useValue: mockNotificationService,
         },
         {
-          provide: UsersService,
-          useValue: mockUsersService,
+          provide: UserProfileLoader,
+          useValue: mockUserProfileLoader,
         },
       ],
     }).compile();
 
-    service = module.get<DirectMessagesService>(DirectMessagesService);
+    service = await module.resolve(DirectMessagesService);
     directMessageRepository = module.get(DirectMessageRepository);
     directChatsService = module.get(DirectChatsService);
   });

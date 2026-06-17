@@ -154,21 +154,8 @@ export class UsersService {
   }
 
   public async getUserProfile(id: string): Promise<UserProfile | null> {
-    try {
-      this.logger.debug(`Getting user profile for id: ${id}`);
-      const db = this.firebaseService.getFirestore();
-      const doc = await db.collection(this.usersCollection).doc(id).get();
-
-      if (doc.exists) {
-        this.logger.debug('Found user in users collection');
-        return doc.data() as UserProfile;
-      }
-
-      return null;
-    } catch (error) {
-      this.logger.error(`Error getting user profile for id ${id}: ${error.message}`);
-      throw error;
-    }
+    const profiles = await this.getUserProfilesByIds([id]);
+    return profiles.get(id) ?? null;
   }
 
   public async getUserProfileByCustomerId(

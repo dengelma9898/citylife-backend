@@ -120,13 +120,48 @@ Caching reduziert Datenbankabfragen für häufig abgerufene Daten.
 // src/app.module.ts
 CacheModule.register({
   isGlobal: true,
-  ttl: 300000, // 5 Minuten
-  max: process.env.NODE_ENV === 'dev' ? 50 : 100,
+  ...createCacheModuleOptions(), // src/core/cache/cache.config.ts
 }),
 
 // src/event-categories/services/event-categories.service.ts
 private readonly CACHE_TTL = 600000; // 10 Minuten für Kategorien
 ```
+
+### In-Memory Cache (aktuell)
+
+- **Store:** `@nestjs/cache-manager` mit In-Memory-LRU pro Node.js-Prozess
+- **Deployment:** Ein Docker-Container auf dem VPS – der Cache lebt im Prozess-Speicher dieses Containers
+- **Env:** `CACHE_TTL_MS` – optional; globaler Default-TTL (Standard: 300000 ms)
+- **Grenzen:** Cache wird bei Container-Neustart geleert; bei mehreren Backend-Instanzen hätte jede ihren eigenen, nicht geteilten Cache
+- **Ausreichend wenn:** Ein Backend-Container, moderate Traffic-Last, TTL + Invalidierung bei Writes
+
+### Zukünftige Option: Shared Cache (Redis)
+
+Erst relevant, wenn das Deployment **über einen einzelnen VPS-Container** hinauswächst, z. B.:
+
+- Mehrere Backend-Replikas (z. B. `docker compose scale` oder zweiter VPS)
+- Zero-Downtime-Deploys mit kurzzeitig zwei laufenden Containern
+- Bedarf an Cache-Persistenz über Restarts hinweg
+
+**Empfohlener Ansatz auf dem VPS:** Redis als eigener Docker-Compose-Service im selben Netzwerk (`redis:6379`), Backend verbindet sich intern – kein öffentlicher Redis-Port nötig.
+
+**Dann zu prüfen:** `cache-manager-redis-yet` oder Keyv-Redis-Store, zentraler Cache-Store in `cache.config.ts`, Health-Check, Invalidierung bleibt unverändert pro Service.
+
+**Bis dahin:** In-Memory beibehalten – weniger Infrastruktur, ausreichend für Single-Container-VPS.
+
+### Service-spezifische TTLs
+
+| Ressource | Cache-Key | TTL | Invalidierung |
+|-----------|-----------|-----|---------------|
+| Keywords | `keywords:all` | 10 Min | Create/Update/Delete |
+| App-Settings | `app-settings:all`, `app-settings:{id}` | 15 Min | Writes (wenn vorhanden) |
+| Taxi-Stands | `taxi-stands:all` | 30 Min | Create/Update/Delete |
+| Legal Documents (latest) | `legal-documents:latest:{type}` | 15 Min | Create |
+| Location Search | `location:search:{query}` | 1 h | – |
+| Location Reverse | `location:reverse:{lat}:{lng}` | 24 h | – |
+| User-Profiles | `user-profile:{id}` | 5 Min | Profile-Update |
+| Event-Kategorien | `event-categories:all` | 10 Min | Create/Update/Delete |
+| Business-Kategorien | `business-categories:all` | 10 Min | Create/Update/Delete |
 
 ---
 
@@ -351,12 +386,19 @@ async health() { ... }
 | Rate-Limit | 100/60s | Development |
 | Cache TTL | 5 Min | Alle |
 | Cache TTL Kategorien | 10 Min | Alle |
+| Cache TTL Keywords | 10 Min | Alle |
+| Cache TTL App-Settings | 15 Min | Alle |
+| Cache TTL Taxi-Stands | 30 Min | Alle |
+| Cache TTL Legal Documents | 15 Min | Alle |
+| Cache TTL Location Search | 1 h | Alle |
+| Cache TTL Location Reverse | 24 h | Alle |
 | Cache Max | 100 | Production |
 | Cache Max | 50 | Development |
+| Cache Store | In-Memory (pro Container) | Alle |
 | DataLoader Cache | true | Alle |
 | DataLoader Batch | true | Alle |
 | Memory Threshold | 500MB | Alle (anpassbar) |
 
 ---
 
-**Letzte Aktualisierung:** 30. Mai 2026
+**Letzte Aktualisierung:** 15. Juni 2026

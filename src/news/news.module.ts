@@ -5,9 +5,10 @@ import { FirebaseModule } from '../firebase/firebase.module';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { LoadersModule } from '../core/loaders/loaders.module';
 
 @Module({
-  imports: [FirebaseModule, UsersModule, forwardRef(() => NotificationsModule)],
+  imports: [FirebaseModule, UsersModule, LoadersModule, forwardRef(() => NotificationsModule)],
   controllers: [NewsController],
   providers: [NewsService, FirebaseStorageService],
   exports: [NewsService],

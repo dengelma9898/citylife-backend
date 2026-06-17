@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LocationService } from './location.service';
 import { ConfigService } from '@nestjs/config';
 import { LocationResult } from '../interfaces/location-result.interface';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 const mockFetch = jest.fn();
 
@@ -35,13 +36,24 @@ describe('LocationService', () => {
     },
   };
 
+  const mockCacheManager = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
   beforeEach(async () => {
+    mockCacheManager.get.mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LocationService,
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
         },
       ],
     }).compile();
@@ -89,6 +101,15 @@ describe('LocationService', () => {
       expect(mockConfigService.get).toHaveBeenCalledWith('HERE_APP_ID');
       expect(mockConfigService.get).toHaveBeenCalledWith('HERE_API_KEY');
       expect(mockFetch).toHaveBeenCalled();
+    });
+
+    it('should return cached search results on cache hit', async () => {
+      mockCacheManager.get.mockResolvedValue([mockLocationResult]);
+
+      const result = await service.searchLocations('Test Street');
+
+      expect(result).toEqual([mockLocationResult]);
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('should return empty array when API returns no results', async () => {

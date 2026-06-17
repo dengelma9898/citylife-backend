@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { TaxiStandService } from './taxi-stand.service';
 import { TAXI_STAND_REPOSITORY } from '../../domain/repositories/taxi-stand.repository';
 import { TaxiStand } from '../../domain/entities/taxi-stand.entity';
@@ -22,7 +23,14 @@ describe('TaxiStandService', () => {
 
   const mockTaxiStand = TaxiStand.fromProps(mockTaxiStandProps);
 
+  const mockCacheManager = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
   beforeEach(async () => {
+    mockCacheManager.get.mockResolvedValue(undefined);
     mockRepository = {
       findAll: jest.fn(),
       findById: jest.fn(),
@@ -34,6 +42,7 @@ describe('TaxiStandService', () => {
       providers: [
         TaxiStandService,
         { provide: TAXI_STAND_REPOSITORY, useValue: mockRepository },
+        { provide: CACHE_MANAGER, useValue: mockCacheManager },
       ],
     }).compile();
     service = module.get<TaxiStandService>(TaxiStandService);
@@ -45,6 +54,14 @@ describe('TaxiStandService', () => {
       const result = await service.getAll();
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('stand-1');
+      expect(mockCacheManager.set).toHaveBeenCalled();
+    });
+
+    it('should return cached taxi stands on cache hit', async () => {
+      mockCacheManager.get.mockResolvedValue([mockTaxiStand]);
+      const result = await service.getAll();
+      expect(result).toHaveLength(1);
+      expect(mockRepository.findAll).not.toHaveBeenCalled();
     });
   });
 

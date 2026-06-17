@@ -1,10 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { KeywordsService } from './keywords.service';
 import { FirebaseService } from '../firebase/firebase.service';
-import { Keyword } from './interfaces/keyword.interface';
 import { CreateKeywordDto } from './dto/create-keyword.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
-import { NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   getFirestore,
   getDocs,
@@ -70,13 +69,24 @@ describe('KeywordsService', () => {
   const mockUpdateDoc = jest.fn();
   const mockDeleteDoc = jest.fn();
 
+  const mockCacheManager = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
   beforeEach(async () => {
+    mockCacheManager.get.mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         KeywordsService,
         {
           provide: FirebaseService,
           useValue: mockFirebaseService,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
         },
       ],
     }).compile();
@@ -121,6 +131,17 @@ describe('KeywordsService', () => {
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('keyword1');
       expect(result[0].name).toBe('Test Keyword');
+      expect(mockCacheManager.set).toHaveBeenCalled();
+    });
+
+    it('should return cached keywords on cache hit', async () => {
+      const cachedKeywords = [{ id: 'cached', name: 'Cached', description: 'Cached' }];
+      mockCacheManager.get.mockResolvedValue(cachedKeywords);
+
+      const result = await service.getAll();
+
+      expect(result).toEqual(cachedKeywords);
+      expect(mockFirebaseService.getFirestore).not.toHaveBeenCalled();
     });
   });
 
@@ -163,6 +184,7 @@ describe('KeywordsService', () => {
       expect(result.name).toBe(createDto.name);
       expect(result.description).toBe(createDto.description);
       expect(mockFirestore.collection().add).toHaveBeenCalled();
+      expect(mockCacheManager.del).toHaveBeenCalled();
     });
   });
 

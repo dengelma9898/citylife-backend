@@ -142,6 +142,17 @@ export class Entity {
 - Example: If `AppVersionsAdminController` uses `@UseGuards(RolesGuard)`, then `AppVersionsModule` must import `UsersModule`
 - Always check if controllers use `RolesGuard` and ensure the module imports `UsersModule`
 
+### Caching (Mandatory for New Modules)
+- **IMPORTANT**: Every new module with read-heavy endpoints **MUST** implement caching
+- Use global `CACHE_MANAGER` from `@nestjs/cache-manager` (in-memory, per Docker container on VPS)
+- Reference pattern: `src/event-categories/services/event-categories.service.ts`
+- **MUST** document TTL values in `docs/configuration-values.md`
+- **MUST** invalidate cache on all write operations (Create/Update/Delete)
+- **MUST** add debug logging for cache hit/miss
+- **MUST** add tests for cache hit, cache miss, and cache invalidation
+- For user profile enrichment in lists: use `UserProfileLoader` (request-scoped) instead of N individual `getUserProfile()` calls
+- **Future option:** Shared Redis cache when running multiple backend replicas – see `docs/configuration-values.md` (Zukünftige Option: Shared Cache)
+
 ### Testing
 - Use Jest framework
 - Write tests for controllers and services
@@ -154,6 +165,7 @@ export class Entity {
   - **MUST** mock all external dependencies (repositories, services, etc.)
   - **MUST** test error scenarios and edge cases
   - Tests should cover at least 80% of the new code paths
+  - When implementing caching: **MUST** test hit, miss, and invalidation paths
 
 ## Feature Development Guidelines
 

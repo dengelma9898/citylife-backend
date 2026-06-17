@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
+import { createCacheModuleOptions } from './core/cache/cache.config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CoreModule } from './core/core.module';
 import { UsersModule } from './users/users.module';
@@ -49,14 +50,10 @@ import { PassStatsModule } from './pass-stats/pass-stats.module';
         limit: process.env.NODE_ENV === 'dev' ? 100 : 60,
       },
     ]),
-    // Caching: In-Memory-Cache für teure Operationen
-    // ttl: Time-to-Live in Millisekunden (300000ms = 5 Minuten)
-    // max: Maximale Anzahl gecachter Items (LRU Eviction bei Überschreitung)
-    // Siehe docs/configuration-values.md für Erläuterungen der Werte
+    // Caching: In-Memory-Cache pro Container (LRU, siehe docs/configuration-values.md)
     CacheModule.register({
       isGlobal: true,
-      ttl: 300000, // 5 Minuten
-      max: process.env.NODE_ENV === 'dev' ? 50 : 100,
+      ...createCacheModuleOptions(),
     }),
     CoreModule,
     FirebaseModule,
