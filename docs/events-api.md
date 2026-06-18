@@ -48,6 +48,44 @@ Erstellung erfolgt u. a. über:
 
 Ablehnung ohne eigenen Status: Ein Admin kann ein unerwünschtes Event per `DELETE /events/:id` entfernen (siehe Berechtigung: Pending nur Ersteller/Admin).
 
+## Bulk-Kategorie-Update (Admin)
+
+- `PATCH /events/bulk/category` – nur `admin` / `super_admin`: weist mehreren Events dieselbe Kategorie zu.
+- Es darf **nur** `categoryId` geändert werden; andere Event-Felder sind in diesem Endpunkt nicht erlaubt.
+
+**Request-Body:**
+
+```json
+{
+  "eventIds": ["event-1", "event-2"],
+  "categoryId": "konzerte-id"
+}
+```
+
+- `eventIds`: 1–100 eindeutige Event-IDs (Duplikate werden serverseitig entfernt).
+- `categoryId`: muss eine gültige Event-Kategorie aus `event_categories` sein (Validierung wie bei `POST /events`).
+
+**Response (Teilerfolg):**
+
+```json
+{
+  "total": 2,
+  "successful": 1,
+  "failed": 1,
+  "results": [
+    { "eventId": "event-1", "success": true, "event": { "...": "..." } },
+    { "eventId": "event-2", "success": false, "message": "Event not found" }
+  ]
+}
+```
+
+- Ungültige `categoryId` → gesamter Request schlägt fehl (`400`).
+- Nicht gefundene Event-IDs werden pro Eintrag als `success: false` gemeldet; gültige Events werden trotzdem aktualisiert.
+- Events, die bereits die Ziel-`categoryId` haben, werden übersprungen (Erfolg ohne erneutes Firestore-Update).
+- Bei öffentlich sichtbaren Events (`ACTIVE` bzw. ohne `status`) kann eine Kategorieänderung `FAV_EVENT_UPDATE` mit `updateType: OTHER` auslösen (siehe Benachrichtigungen).
+
+**Admin-Frontend:** Siehe [events-bulk-category-admin-integration.md](events-bulk-category-admin-integration.md).
+
 ## CSV-Import
 
 `POST /events/import/csv` legt Events als **`ACTIVE`** an (Admin-/Importpfad). Anonyme Aufrufer erhalten `403`.

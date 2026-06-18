@@ -35,6 +35,8 @@ import { UserType } from '../users/enums/user-type.enum';
 import { EventStatus } from './enums/event-status.enum';
 import { RolesGuard } from '../core/guards/roles.guard';
 import { Roles } from '../core/decorators/roles.decorator';
+import { BulkUpdateEventCategoryDto } from './dto/bulk-update-event-category.dto';
+import { BulkUpdateEventCategoryResult } from './dto/bulk-update-event-category-result.dto';
 
 function isFirebaseAnonymousUser(user?: { firebase?: { sign_in_provider?: string } }): boolean {
   return user?.firebase?.sign_in_provider === 'anonymous';
@@ -265,6 +267,16 @@ export class EventsController {
     const eventIds = [...(business.eventIds || []), createdEvent.id];
     await this.businessesService.update(businessId, { eventIds });
     return createdEvent;
+  }
+
+  @Patch('bulk/category')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'super_admin')
+  public async bulkUpdateCategory(
+    @Body() dto: BulkUpdateEventCategoryDto,
+  ): Promise<BulkUpdateEventCategoryResult> {
+    this.logger.log(`PATCH /events/bulk/category (${dto.eventIds.length} events)`);
+    return this.eventsService.bulkUpdateCategory(dto.eventIds, dto.categoryId);
   }
 
   @Patch(':id/approve')

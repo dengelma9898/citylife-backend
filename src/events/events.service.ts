@@ -13,6 +13,11 @@ import { DateTimeUtils } from '../utils/date-time.utils';
 import { NotificationService } from '../notifications/application/services/notification.service';
 import { UsersService } from '../users/users.service';
 import { EventStatus } from './enums/event-status.enum';
+import { EventCategoriesService } from '../event-categories/services/event-categories.service';
+import {
+  BulkUpdateEventCategoryItemResult,
+  BulkUpdateEventCategoryResult,
+} from './dto/bulk-update-event-category-result.dto';
 
 @Injectable()
 export class EventsService {
@@ -24,6 +29,7 @@ export class EventsService {
     private readonly notificationService: NotificationService,
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
+    private readonly eventCategoriesService: EventCategoriesService,
   ) {}
 
   /**
@@ -563,5 +569,67 @@ export class EventsService {
         error.stack,
       );
     }
+  }
+
+  /**
+   * Weist mehreren Events dieselbe Kategorie zu (Admin-Bulk-Update).
+   */
+  public async bulkUpdateCategory(
+    eventIds: string[],
+    categoryId: string,
+  ): Promise<BulkUpdateEventCategoryResult> {
+    const category = await this.eventCategoriesService.findOne(categoryId);
+    if (!category) {
+      throw new BadRequestException('categoryId muss eine gültige Event-Kategorie sein');
+    }
+    const uniqueEventIds = [...new Set(eventIds)];
+    const results: BulkUpdateEventCategoryItemResult[] = [];
+    for (const eventId of uniqueEventIds) {
+      try {
+        const existing = await this.getById(eventId, { includePendingInResult: true });
+        if (!existing) {
+          results.push({
+            eventId,
+            success: false,
+            message: 'Event not found',
+          });
+          continue;
+        }
+        if (existing.categoryId === categoryId) {
+          results.push({
+            eventId,
+            success: true,
+            event: existing,
+          });
+          continue;
+        }
+        const updated = await this.update(eventId, { categoryId });
+        results.push({
+          eventId,
+          success: true,
+          event: updated,
+        });
+      } catch (error: any) {
+        this.logger.error(
+          `Error bulk-updating category for event ${eventId}: ${error.message}`,
+        );
+        results.push({
+          eventId,
+          success: false,
+          message: error.message ?? 'Unknown error',
+        });
+      }
+    }
+    const successful = results.filter(r => r.success).length;
+    const failed = results.length - successful;
+    this.logger.log(
+      `Bulk category update completed: ${successful} successful, ${failed} failed`,
+    );
+    return {
+      total: results.length,
+      successful,
+      failed,
+      results,
+    };
   }
 }

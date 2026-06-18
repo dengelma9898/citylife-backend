@@ -10,6 +10,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Event } from './interfaces/event.interface';
 import { CsvImportResult } from './dto/csv-import-result.dto';
+import { BulkUpdateEventCategoryResult } from './dto/bulk-update-event-category-result.dto';
 import { UserType } from '../users/enums/user-type.enum';
 import { EventStatus } from './enums/event-status.enum';
 
@@ -33,6 +34,7 @@ describe('EventsController', () => {
     getByIds: jest.Mock;
     getPendingEvents: jest.Mock;
     approveEvent: jest.Mock;
+    bulkUpdateCategory: jest.Mock;
   };
   let mockUsersService: {
     getBusinessUser: jest.Mock;
@@ -84,6 +86,7 @@ describe('EventsController', () => {
       getByIds: jest.fn(),
       getPendingEvents: jest.fn(),
       approveEvent: jest.fn(),
+      bulkUpdateCategory: jest.fn(),
     };
     mockUsersService = {
       getBusinessUser: jest.fn(),
@@ -368,6 +371,28 @@ describe('EventsController', () => {
       const result = await controller.importFromCsv(makeRequest(), mockCsvFile);
       expect(result.successful).toBe(1);
       expect(mockCsvImportService.importFromCsv).toHaveBeenCalledWith(mockCsvFile);
+    });
+  });
+
+  describe('bulkUpdateCategory', () => {
+    it('should delegate bulk category update to service', async () => {
+      const mockResult: BulkUpdateEventCategoryResult = {
+        total: 2,
+        successful: 2,
+        failed: 0,
+        results: [
+          { eventId: 'event-1', success: true, event: mockEvent },
+          { eventId: 'event-2', success: true, event: mockEvent },
+        ],
+      };
+      mockEventsService.bulkUpdateCategory.mockResolvedValue(mockResult);
+      const dto = { eventIds: ['event-1', 'event-2'], categoryId: 'category2' };
+      const result = await controller.bulkUpdateCategory(dto);
+      expect(result).toEqual(mockResult);
+      expect(mockEventsService.bulkUpdateCategory).toHaveBeenCalledWith(
+        ['event-1', 'event-2'],
+        'category2',
+      );
     });
   });
 });

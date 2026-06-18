@@ -5,7 +5,7 @@ import { UsersService } from '../users/users.service';
 import { EventCategoriesService } from '../event-categories/services/event-categories.service';
 import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { NotificationService } from '../notifications/application/services/notification.service';
 import { EventStatus } from './enums/event-status.enum';
 
@@ -54,7 +54,7 @@ describe('EventsService', () => {
   };
 
   const mockEventCategoriesService = {
-    getById: jest.fn(),
+    findOne: jest.fn(),
   };
 
   const mockNotificationService = {
@@ -715,6 +715,146 @@ describe('EventsService', () => {
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
       await service.update('event1', { title: 'New Event Title' });
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('bulkUpdateCategory', () => {
+    const targetCategoryId = 'category2';
+
+    beforeEach(() => {
+      mockEventCategoriesService.findOne.mockResolvedValue({
+        id: targetCategoryId,
+        name: 'Konzerte',
+      });
+    });
+
+    it('should update multiple events successfully', async () => {
+      const event1 = { ...mockEvent, id: 'event1', categoryId: 'category1' };
+      const event2 = { ...mockEvent, id: 'event2', categoryId: 'category1' };
+      const updated1 = { ...event1, categoryId: targetCategoryId };
+      const updated2 = { ...event2, categoryId: targetCategoryId };
+      const getByIdSpy = jest
+        .spyOn(service, 'getById')
+        .mockResolvedValueOnce(event1)
+        .mockResolvedValueOnce(event2);
+      const updateSpy = jest
+        .spyOn(service, 'update')
+        .mockResolvedValueOnce(updated1)
+        .mockResolvedValueOnce(updated2);
+      const result = await service.bulkUpdateCategory(
+        ['event1', 'event2'],
+        targetCategoryId,
+      );
+      expect(result.total).toBe(2);
+      expect(result.successful).toBe(2);
+      expect(result.failed).toBe(0);
+      expect(updateSpy).toHaveBeenCalledTimes(2);
+      getByIdSpy.mockRestore();
+      updateSpy.mockRestore();
+    });
+
+    it('should throw BadRequestException for invalid categoryId', async () => {
+      mockEventCategoriesService.findOne.mockResolvedValue(null);
+      await expect(
+        service.bulkUpdateCategory(['event1'], 'invalid-category'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should return partial success when event not found', async () => {
+      const getByIdSpy = jest
+        .spyOn(service, 'getById')
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ ...mockEvent, id: 'event2', categoryId: 'category1' });
+      const updateSpy = jest
+        .spyOn(service, 'update')
+        .mockResolvedValueOnce({ ...mockEvent, id: 'event2', categoryId: targetCategoryId });
+      const result = await service.bulkUpdateCategory(
+        ['missing', 'event2'],
+        targetCategoryId,
+      );
+      expect(result.total).toBe(2);
+      expect(result.successful).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.results[0]).toEqual({
+        eventId: 'missing',
+        success: false,
+        message: 'Event not found',
+      });
+      getByIdSpy.mockRestore();
+      updateSpy.mockRestore();
+    });
+
+    it('should skip update when category already matches', async () => {
+      const existing = { ...mockEvent, id: 'event1', categoryId: targetCategoryId };
+      const getByIdSpy = jest.spyOn(service, 'getById').mockResolvedValueOnce(existing);
+      const updateSpy = jest.spyOn(service, 'update');
+      const result = await service.bulkUpdateCategory(['event1'], targetCategoryId);
+      expect(result.successful).toBe(1);
+      expect(updateSpy).not.toHaveBeenCalled();
+      expect(result.results[0].event).toEqual(existing);
+      getByIdSpy.mockRestore();
+      updateSpy.mockRestore();
+    });
+
+    it('should deduplicate event ids', async () => {
+      const existing = { ...mockEvent, id: 'event1', categoryId: 'category1' };
+      const updated = { ...existing, categoryId: targetCategoryId };
+      const getByIdSpy = jest.spyOn(service, 'getById').mockResolvedValue(existing);
+      const updateSpy = jest.spyOn(service, 'update').mockResolvedValue(updated);
+      const result = await service.bulkUpdateCategory(
+        ['event1', 'event1'],
+        targetCategoryId,
+      );
+      expect(result.total).toBe(1);
+      expect(getByIdSpy).toHaveBeenCalledTimes(1);
+      getByIdSpy.mockRestore();
+      updateSpy.mockRestore();
+    });
+
+    it('should send FAV_EVENT_UPDATE for public events on category change', async () => {
+      const oldEvent = {
+        ...mockEvent,
+        id: 'event1',
+        categoryId: 'category1',
+        status: EventStatus.ACTIVE,
+      };
+      const newEvent = { ...oldEvent, categoryId: targetCategoryId };
+      const mockFirestore = createFirestoreMock(oldEvent);
+      mockFirestore.collection().doc().get.mockResolvedValueOnce({
+        exists: true,
+        data: () => oldEvent,
+      });
+      mockFirestore.collection().doc().get.mockResolvedValueOnce({
+        exists: true,
+        data: () => newEvent,
+      });
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
+        {
+          id: 'user1',
+          profile: {
+            email: 'user1@test.com',
+            userType: 'USER' as any,
+            managementId: 'mgmt1',
+            favoriteEventIds: ['event1'],
+            notificationPreferences: { eventUpdates: true },
+            businessHistory: [],
+          },
+        },
+      ]);
+      jest.spyOn(service, 'getById').mockResolvedValueOnce(oldEvent);
+      const result = await service.bulkUpdateCategory(['event1'], targetCategoryId);
+      expect(result.successful).toBe(1);
+      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(
+        'user1',
+        expect.objectContaining({
+          data: expect.objectContaining({
+            type: 'FAV_EVENT_UPDATE',
+            updateType: 'OTHER',
+          }),
+        }),
+      );
+      jest.restoreAllMocks();
     });
   });
 });
