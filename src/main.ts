@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { TimezoneInterceptor } from './core/interceptors/timezone.interceptor';
 import { useContainer } from 'class-validator';
 import helmet from 'helmet';
 
@@ -93,9 +92,6 @@ async function bootstrap() {
 
   // Global validation pipe
   app.useGlobalPipes(new ValidationPipe());
-
-  // Globalen TimezoneInterceptor hinzufügen
-  app.useGlobalInterceptors(new TimezoneInterceptor());
 
   // Swagger configuration
   const config = new DocumentBuilder()

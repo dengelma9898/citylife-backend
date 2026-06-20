@@ -11,6 +11,7 @@ Dieses Dokument erläutert alle gesetzten Konfigurationswerte für Rate-Limiting
 5. [Umgebungsabhängige Konfigurationen](#umgebungsabhängige-konfigurationen)
 6. [Performance-Überlegungen](#performance-überlegungen)
 7. [Best Practices](#best-practices)
+8. [Zeitzonen-Strategie](#zeitzonen-strategie)
 
 ---
 
@@ -401,4 +402,19 @@ async health() { ... }
 
 ---
 
-**Letzte Aktualisierung:** 15. Juni 2026
+## Zeitzonen-Strategie
+
+**Strategie:** Berlin everywhere (Option B)
+
+| Schicht | Verhalten |
+|---------|-----------|
+| Persistenz (`createdAt`, `updatedAt`, …) | `DateTimeUtils.getBerlinTime()` – ISO-String mit Berlin-Offset |
+| API-Response (Entity-Felder) | Keine Konvertierung – Werte werden wie in Firestore gespeichert zurückgegeben |
+| API-Envelope (`timestamp` in Response/Errors) | `DateTimeUtils.getBerlinTime()` |
+
+- **Utility:** `src/utils/date-time.utils.ts` – nur `getBerlinTime()`
+- **Hinweis:** Ältere Dokumente mit UTC-Timestamps (`…Z`) werden nicht automatisch konvertiert
+
+---
+
+**Letzte Aktualisierung:** 20. Juni 2026
