@@ -13,7 +13,7 @@ import { UsersService } from '../../../users/users.service';
 describe('JobOffersService', () => {
   let service: JobOffersService;
   let repository: JobOfferRepository;
-  let notificationService: jest.Mocked<NotificationService>;
+  let notificationService: jest.Mocked<Pick<NotificationService, 'sendToUser' | 'sendToUsers'>>;
   let usersService: jest.Mocked<UsersService>;
 
   const mockJobOfferRepository = {

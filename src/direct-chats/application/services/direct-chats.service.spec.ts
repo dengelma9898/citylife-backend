@@ -13,7 +13,7 @@ describe('DirectChatsService', () => {
   let directChatRepository: jest.Mocked<DirectChatRepository>;
   let directMessageRepository: jest.Mocked<DirectMessageRepository>;
   let usersService: jest.Mocked<UsersService>;
-  let notificationService: jest.Mocked<NotificationService>;
+  let notificationService: jest.Mocked<Pick<NotificationService, 'sendToUser' | 'sendToUsers'>>;
 
   const mockDirectChatRepository = {
     findById: jest.fn(),

@@ -22,7 +22,7 @@ describe('NewsService', () => {
   let usersService: UsersService;
   let firebaseService: FirebaseService;
   let firebaseStorageService: FirebaseStorageService;
-  let notificationService: jest.Mocked<NotificationService>;
+  let notificationService: jest.Mocked<Pick<NotificationService, 'sendToUser' | 'sendToUsers'>>;
 
   const createFirestoreMock = (mockData: any = {}, docsList: any[] = []) => {
     const mockDoc = {

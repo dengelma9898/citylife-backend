@@ -363,7 +363,7 @@ if (businessUser && businessUser.businessIds.includes(businessId)) {
 ### Notification Interface erstellen
 
 ```typescript
-// src/notifications/domain/interfaces/business-activated-notification-data.interface.ts
+// src/notifications/domain/interfaces/notification-payload.interface.ts
 export interface BusinessActivatedNotificationData {
   type: 'BUSINESS_ACTIVATED';
   businessId: string;

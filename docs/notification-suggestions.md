@@ -410,7 +410,7 @@ Notification wird gesendet als Erinnerung vor einem favorisierten Event.
 ### Für Aktive Updates:
 1. **Notification Interface erstellen:**
    ```typescript
-   // src/notifications/domain/interfaces/[type]-notification-data.interface.ts
+   // src/notifications/domain/interfaces/notification-payload.interface.ts
    export interface [Type]NotificationData {
      type: '[NOTIFICATION_TYPE]';
      // ... type-specific fields

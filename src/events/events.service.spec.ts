@@ -14,7 +14,7 @@ describe('EventsService', () => {
   let firebaseService: FirebaseService;
   let usersService: jest.Mocked<UsersService>;
   let eventCategoriesService: EventCategoriesService;
-  let notificationService: jest.Mocked<NotificationService>;
+  let notificationService: jest.Mocked<Pick<NotificationService, 'sendToUser' | 'sendToUsers'>>;
 
   const createFirestoreMock = (mockData: any = {}) => {
     const mockDoc = {

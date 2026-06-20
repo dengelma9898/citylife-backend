@@ -18,7 +18,7 @@ describe('SpecialPollsService', () => {
   let service: SpecialPollsService;
   let mockFirebaseService: { getFirestore: jest.Mock };
   let mockUsersService: { getById: jest.Mock; getAllUserProfilesWithIds: jest.Mock };
-  let mockNotificationService: jest.Mocked<NotificationService>;
+  let mockNotificationService: jest.Mocked<Pick<NotificationService, 'sendToUser' | 'sendToUsers'>>;
 
   const rawPollDoc = {
     title: 'Test Poll',
