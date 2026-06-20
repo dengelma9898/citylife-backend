@@ -4,7 +4,6 @@ import { BusinessesService } from './application/services/businesses.service';
 import { BusinessEventsSettingsService } from './application/services/business-events-settings.service';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { UsersModule } from '../users/users.module';
-import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { BusinessCategoriesModule } from '../business-categories/business-categories.module';
 import { KeywordsModule } from '../keywords/keywords.module';
 import { EventsModule } from '../events/events.module';
@@ -29,7 +28,6 @@ import { PassStatsModule } from '../pass-stats/pass-stats.module';
   providers: [
     BusinessesService,
     BusinessEventsSettingsService,
-    FirebaseStorageService,
     {
       provide: BUSINESS_REPOSITORY,
       useClass: FirebaseBusinessRepository,

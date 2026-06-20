@@ -2,15 +2,13 @@ import { Module, forwardRef } from '@nestjs/common';
 import { NewsController } from './news.controller';
 import { NewsService } from './news.service';
 import { FirebaseModule } from '../firebase/firebase.module';
-import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { LoadersModule } from '../core/loaders/loaders.module';
 
 @Module({
-  imports: [FirebaseModule, UsersModule, LoadersModule, forwardRef(() => NotificationsModule)],
+  imports: [FirebaseModule, UsersModule, forwardRef(() => NotificationsModule)],
   controllers: [NewsController],
-  providers: [NewsService, FirebaseStorageService],
+  providers: [NewsService],
   exports: [NewsService],
 })
 export class NewsModule {}

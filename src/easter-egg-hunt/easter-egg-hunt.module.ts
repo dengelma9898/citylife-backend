@@ -8,7 +8,6 @@ import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { FirebaseEasterEggRepository } from './infrastructure/persistence/firebase-easter-egg.repository';
 import { EASTER_EGG_REPOSITORY } from './domain/repositories/easter-egg.repository';
-import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 
 @Module({
   imports: [FirebaseModule, UsersModule, forwardRef(() => NotificationsModule)],
@@ -17,7 +16,6 @@ import { FirebaseStorageService } from '../firebase/firebase-storage.service';
     EasterEggHuntService,
     EasterEggService,
     EasterEggHuntEnabledGuard,
-    FirebaseStorageService,
     {
       provide: EASTER_EGG_REPOSITORY,
       useClass: FirebaseEasterEggRepository,

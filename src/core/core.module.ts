@@ -7,10 +7,9 @@ import { AuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { UsersModule } from '../users/users.module';
-import { LoadersModule } from './loaders/loaders.module';
 
 @Module({
-  imports: [FirebaseModule, UsersModule, LoadersModule],
+  imports: [FirebaseModule, UsersModule],
   providers: [
     {
       provide: APP_FILTER,
@@ -36,6 +35,6 @@ import { LoadersModule } from './loaders/loaders.module';
     },
     RolesGuard, // Als normaler Provider registrieren, damit es exportiert werden kann
   ],
-  exports: [RolesGuard, LoadersModule],
+  exports: [RolesGuard],
 })
 export class CoreModule {}
