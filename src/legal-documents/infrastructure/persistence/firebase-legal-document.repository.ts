@@ -4,6 +4,8 @@ import { LegalDocument, LegalDocumentProps } from '../../domain/entities/legal-d
 import { LegalDocumentRepository } from '../../domain/repositories/legal-document.repository';
 import { LegalDocumentType } from '../../domain/entities/legal-document.entity';
 
+import { removeUndefined, toFirestoreData } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseLegalDocumentRepository implements LegalDocumentRepository {
   private readonly logger = new Logger(FirebaseLegalDocumentRepository.name);
@@ -11,22 +13,8 @@ export class FirebaseLegalDocumentRepository implements LegalDocumentRepository 
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: LegalDocument): Omit<LegalDocumentProps, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    return toFirestoreData(entity);
   }
 
   private toEntityProps(data: any, id: string): LegalDocumentProps {

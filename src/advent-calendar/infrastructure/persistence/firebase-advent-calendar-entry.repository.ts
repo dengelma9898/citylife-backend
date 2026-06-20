@@ -6,28 +6,16 @@ import {
 } from '../../domain/entities/advent-calendar-entry.entity';
 import { AdventCalendarEntryRepository } from '../../domain/repositories/advent-calendar-entry.repository';
 
+import { removeUndefined, toFirestoreData } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseAdventCalendarEntryRepository implements AdventCalendarEntryRepository {
   private readonly logger = new Logger(FirebaseAdventCalendarEntryRepository.name);
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: AdventCalendarEntry): Omit<AdventCalendarEntryProps, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    return toFirestoreData(entity);
   }
 
   private toAdventCalendarEntryProps(data: any, id: string): AdventCalendarEntryProps {

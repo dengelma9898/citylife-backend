@@ -4,6 +4,8 @@ import { ChatMessage, ChatMessageProps } from '../../domain/entities/chat-messag
 import { ChatMessageRepository } from '../../domain/repositories/chat-message.repository';
 import { UpdateChatMessageReactionDto } from 'src/chatrooms/application/dtos/update-message-reaction.dto';
 
+import { removeUndefined } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseChatMessageRepository implements ChatMessageRepository {
   private readonly logger = new Logger(FirebaseChatMessageRepository.name);
@@ -12,22 +14,9 @@ export class FirebaseChatMessageRepository implements ChatMessageRepository {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: ChatMessage) {
     const { id, isEditable, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    return removeUndefined(data);
   }
 
   private toEntityProps(data: any, id: string): ChatMessageProps {

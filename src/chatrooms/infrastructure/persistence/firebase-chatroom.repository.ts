@@ -3,6 +3,8 @@ import { FirebaseService } from '../../../firebase/firebase.service';
 import { Chatroom, ChatroomProps } from '../../domain/entities/chatroom.entity';
 import { ChatroomRepository } from '../../domain/repositories/chatroom.repository';
 
+import { removeUndefined, toFirestoreData } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseChatroomRepository implements ChatroomRepository {
   private readonly logger = new Logger(FirebaseChatroomRepository.name);
@@ -10,22 +12,8 @@ export class FirebaseChatroomRepository implements ChatroomRepository {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: Chatroom) {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    return toFirestoreData(entity);
   }
 
   private toEntityProps(data: any, id: string): ChatroomProps {

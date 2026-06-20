@@ -15,6 +15,7 @@ import { UsersService } from '../users/users.service';
 import { NotificationService } from '../notifications/application/services/notification.service';
 import { SpecialPollResponseDto } from './dto/special-poll-response.dto';
 
+import { removeUndefined } from '../firebase/firebase-mapper.util';
 @Injectable()
 export class SpecialPollsService {
   private readonly logger = new Logger(SpecialPollsService.name);
@@ -25,19 +26,6 @@ export class SpecialPollsService {
     private readonly usersService: UsersService,
     private readonly notificationService: NotificationService,
   ) {}
-
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
 
   /**
    * Maps legacy Firestore values (CLOSED, PENDING) to {@link SpecialPollStatus.ACTIVE}.
@@ -180,7 +168,7 @@ export class SpecialPollsService {
         createdAt: DateTimeUtils.getBerlinTime(),
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
-      const docRef = await db.collection(this.collection).add(this.removeUndefined(pollData));
+      const docRef = await db.collection(this.collection).add(removeUndefined(pollData));
       const specialPoll = this.mapDocumentToSpecialPoll(
         docRef.id,
         pollData as unknown as Record<string, unknown>,
@@ -205,7 +193,7 @@ export class SpecialPollsService {
         status: updateStatusDto.status,
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
-      await db.collection(this.collection).doc(id).update(this.removeUndefined(updateData));
+      await db.collection(this.collection).doc(id).update(removeUndefined(updateData));
       return this.findOne(id, true);
     } catch (error) {
       this.logger.error(`Error updating status of special poll ${id}: ${error.message}`);
@@ -222,7 +210,7 @@ export class SpecialPollsService {
         isHighlighted,
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
-      await db.collection(this.collection).doc(id).update(this.removeUndefined(updateData));
+      await db.collection(this.collection).doc(id).update(removeUndefined(updateData));
       return this.findOne(id, true);
     } catch (error) {
       this.logger.error(`Error updating highlight of special poll ${id}: ${error.message}`);
@@ -252,7 +240,7 @@ export class SpecialPollsService {
         responses: responsesForStore,
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
-      await db.collection(this.collection).doc(id).update(this.removeUndefined(updateData));
+      await db.collection(this.collection).doc(id).update(removeUndefined(updateData));
       return this.findOne(id);
     } catch (error) {
       this.logger.error(`Error adding response to special poll ${id}: ${error.message}`);
@@ -284,7 +272,7 @@ export class SpecialPollsService {
         responses: responsesForStore,
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
-      await db.collection(this.collection).doc(pollId).update(this.removeUndefined(updateData));
+      await db.collection(this.collection).doc(pollId).update(removeUndefined(updateData));
       return this.findOne(pollId);
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -309,7 +297,7 @@ export class SpecialPollsService {
         responses: updatedResponses,
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
-      await db.collection(this.collection).doc(id).update(this.removeUndefined(updateData));
+      await db.collection(this.collection).doc(id).update(removeUndefined(updateData));
       return this.findOne(id);
     } catch (error) {
       this.logger.error(`Error removing response from special poll ${id}: ${error.message}`);
@@ -342,7 +330,7 @@ export class SpecialPollsService {
         responses: normalized.map(r => ({ ...r })),
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
-      await db.collection(this.collection).doc(id).update(this.removeUndefined(updateData));
+      await db.collection(this.collection).doc(id).update(removeUndefined(updateData));
       return this.findOne(id, true);
     } catch (error) {
       this.logger.error(`Error updating responses for special poll ${id}: ${error.message}`);

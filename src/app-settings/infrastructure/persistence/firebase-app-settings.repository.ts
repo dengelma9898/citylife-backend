@@ -3,28 +3,16 @@ import { FirebaseService } from 'src/firebase/firebase.service';
 import { AppSettings, AppSettingsProps } from '../../domain/entities/app-settings.entity';
 import { AppSettingsRepository } from '../../domain/repositories/app-settings.repository';
 
+import { removeUndefined, toFirestoreData } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseAppSettingsRepository implements AppSettingsRepository {
   private readonly logger = new Logger(FirebaseAppSettingsRepository.name);
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: AppSettings): Omit<AppSettingsProps, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    return toFirestoreData(entity);
   }
 
   private toAppSettingsProps(data: any, id: string): AppSettingsProps {

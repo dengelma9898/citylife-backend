@@ -6,6 +6,8 @@ import {
 } from '../../domain/entities/business-category.entity';
 import { BusinessCategoryRepository } from '../../domain/repositories/business-category.repository';
 
+import { removeUndefined, toFirestoreData } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseBusinessCategoryRepository implements BusinessCategoryRepository {
   private readonly logger = new Logger(FirebaseBusinessCategoryRepository.name);
@@ -13,22 +15,8 @@ export class FirebaseBusinessCategoryRepository implements BusinessCategoryRepos
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: BusinessCategory): Omit<BusinessCategoryProps, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    return toFirestoreData(entity);
   }
 
   private toBusinessCategoryProps(data: any, id: string): BusinessCategoryProps {

@@ -5,6 +5,7 @@ import {
   DirectChatSettings,
   DirectChatSettingsProps,
 } from '../../domain/entities/direct-chat-settings.entity';
+import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
 
 @Injectable()
 export class FirebaseDirectChatSettingsRepository extends DirectChatSettingsRepository {
@@ -16,22 +17,8 @@ export class FirebaseDirectChatSettingsRepository extends DirectChatSettingsRepo
     super();
   }
 
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: DirectChatSettings): Omit<DirectChatSettingsProps, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    return toFirestoreData(entity);
   }
 
   private toEntityProps(data: any, id: string): DirectChatSettingsProps {

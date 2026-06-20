@@ -5,6 +5,7 @@ import {
   CuratedSpotsUserRatingsSettings,
   CuratedSpotsUserRatingsSettingsProps,
 } from '../../domain/entities/curated-spots-user-ratings-settings.entity';
+import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
 
 @Injectable()
 export class FirebaseCuratedSpotsUserRatingsSettingsRepository extends CuratedSpotsUserRatingsSettingsRepository {
@@ -16,28 +17,10 @@ export class FirebaseCuratedSpotsUserRatingsSettingsRepository extends CuratedSp
     super();
   }
 
-  private removeUndefined(obj: unknown): unknown {
-    if (obj === null || obj === undefined) {
-      return null;
-    }
-    if (Array.isArray(obj)) {
-      return obj.map(item => this.removeUndefined(item));
-    }
-    if (typeof obj === 'object') {
-      const result: Record<string, unknown> = {};
-      for (const key in obj as Record<string, unknown>) {
-        result[key] = this.removeUndefined((obj as Record<string, unknown>)[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(
     entity: CuratedSpotsUserRatingsSettings,
   ): Omit<CuratedSpotsUserRatingsSettingsProps, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data) as Omit<CuratedSpotsUserRatingsSettingsProps, 'id'>;
+    return toFirestoreData(entity);
   }
 
   private toEntityProps(

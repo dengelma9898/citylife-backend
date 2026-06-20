@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { PassScanRecord, PassScanRecordProps } from '../../domain/interfaces/pass-scan-record.interface';
 
+import { removeUndefined } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebasePassScanRepository {
   private readonly passScansSubcollection = 'pass-scans';
@@ -9,17 +11,6 @@ export class FirebasePassScanRepository {
   public readonly devSeedMarkerDocId = '_dev-pass-stats-seed';
 
   constructor(private readonly firebaseService: FirebaseService) {}
-
-  private removeUndefined(obj: Record<string, unknown>): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-    for (const key in obj) {
-      const value = obj[key];
-      if (value !== undefined) {
-        result[key] = value;
-      }
-    }
-    return result;
-  }
 
   private toOptionalNumber(value: unknown): number | null {
     if (value === undefined || value === null) {
@@ -77,7 +68,7 @@ export class FirebasePassScanRepository {
     if (existing.exists) {
       return false;
     }
-    const plain = this.removeUndefined({ ...record } as Record<string, unknown>);
+    const plain = removeUndefined({ ...record } as Record<string, unknown>);
     await docRef.set(plain);
     return true;
   }

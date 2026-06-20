@@ -7,6 +7,8 @@ import {
 } from '../../domain/entities/version-changelog.entity';
 import { AppVersionRepository } from '../../domain/repositories/app-version.repository';
 
+import { removeUndefined, toFirestoreData } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseAppVersionRepository implements AppVersionRepository {
   private readonly logger = new Logger(FirebaseAppVersionRepository.name);
@@ -16,22 +18,8 @@ export class FirebaseAppVersionRepository implements AppVersionRepository {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: AppVersion): Omit<AppVersionProps, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    return toFirestoreData(entity);
   }
 
   private toAppVersionProps(data: any, id: string): AppVersionProps {
@@ -78,8 +66,7 @@ export class FirebaseAppVersionRepository implements AppVersionRepository {
   }
 
   private toChangelogPlainObject(entity: VersionChangelog): Omit<VersionChangelogProps, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    return toFirestoreData(entity);
   }
 
   private toChangelogProps(data: any, id: string): VersionChangelogProps {

@@ -4,6 +4,8 @@ import { CuratedSpot, CuratedSpotAddressProps } from '../../domain/entities/cura
 import { CuratedSpotRepository } from '../../domain/repositories/curated-spot.repository';
 import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
 
+import { removeUndefined, toFirestoreData } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseCuratedSpotRepository implements CuratedSpotRepository {
   private readonly logger = new Logger(FirebaseCuratedSpotRepository.name);
@@ -11,22 +13,8 @@ export class FirebaseCuratedSpotRepository implements CuratedSpotRepository {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private removeUndefined(obj: unknown): unknown {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: Record<string, unknown> = {};
-      for (const key in obj as Record<string, unknown>) {
-        result[key] = this.removeUndefined((obj as Record<string, unknown>)[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: CuratedSpot): Omit<ReturnType<CuratedSpot['toJSON']>, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data) as Omit<ReturnType<CuratedSpot['toJSON']>, 'id'>;
+    return toFirestoreData(entity);
   }
 
   private toAddressProps(raw: unknown): CuratedSpotAddressProps {

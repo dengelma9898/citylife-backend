@@ -3,6 +3,8 @@ import { FirebaseService } from '../../../firebase/firebase.service';
 import { DirectMessageRepository } from '../../domain/repositories/direct-message.repository';
 import { DirectMessage, DirectMessageProps } from '../../domain/entities/direct-message.entity';
 
+import { removeUndefined, toFirestoreData } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseDirectMessageRepository extends DirectMessageRepository {
   private readonly logger = new Logger(FirebaseDirectMessageRepository.name);
@@ -13,22 +15,8 @@ export class FirebaseDirectMessageRepository extends DirectMessageRepository {
     super();
   }
 
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: DirectMessage): Omit<DirectMessageProps, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    return toFirestoreData(entity);
   }
 
   private toEntityProps(data: any, id: string): DirectMessageProps {

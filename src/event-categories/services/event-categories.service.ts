@@ -5,6 +5,7 @@ import { CreateEventCategoryDto } from '../dto/create-event-category.dto';
 import { FirebaseService } from '../../firebase/firebase.service';
 import { DateTimeUtils } from '../../utils/date-time.utils';
 
+import { removeUndefined } from '../../firebase/firebase-mapper.util';
 @Injectable()
 export class EventCategoriesService {
   private readonly logger = new Logger(EventCategoriesService.name);
@@ -16,19 +17,6 @@ export class EventCategoriesService {
     private readonly firebaseService: FirebaseService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
-
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
 
   public async findAll(): Promise<EventCategory[]> {
     try {
@@ -97,7 +85,7 @@ export class EventCategoriesService {
         createdAt: DateTimeUtils.getBerlinTime(),
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
-      const docRef = await db.collection(this.collection).add(this.removeUndefined(categoryData));
+      const docRef = await db.collection(this.collection).add(removeUndefined(categoryData));
       // Cache invalidieren nach Erstellung
       await this.invalidateCache();
       return {
@@ -122,7 +110,7 @@ export class EventCategoriesService {
         ...data,
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
-      await db.collection(this.collection).doc(id).update(this.removeUndefined(updateData));
+      await db.collection(this.collection).doc(id).update(removeUndefined(updateData));
       // Cache invalidieren nach Update
       await this.invalidateCache();
       const updatedDoc = await db.collection(this.collection).doc(id).get();

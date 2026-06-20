@@ -10,26 +10,15 @@ import {
 import { BusinessRepository } from '../../domain/repositories/business.repository';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
 
+import { removeUndefined } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseBusinessRepository implements BusinessRepository {
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: Business): Omit<BusinessProps, 'id'> {
     const { id, ...data } = entity.toJSON();
-    const plainObject = this.removeUndefined(data);
+    const plainObject = removeUndefined(data);
     if (plainObject.logoUrl === null || plainObject.logoUrl === undefined) {
       plainObject.logoUrl = '';
     }

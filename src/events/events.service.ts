@@ -18,6 +18,7 @@ import {
   BulkUpdateEventCategoryItemResult,
   BulkUpdateEventCategoryResult,
 } from './dto/bulk-update-event-category-result.dto';
+import { removeUndefined } from '../firebase/firebase-mapper.util';
 
 @Injectable()
 export class EventsService {
@@ -37,19 +38,6 @@ export class EventsService {
    */
   private isPubliclyVisibleStatus(status?: EventStatus): boolean {
     return status === undefined || status === EventStatus.ACTIVE;
-  }
-
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
   }
 
   private convertDateRangeToDailyTimeSlots(
@@ -243,7 +231,7 @@ export class EventsService {
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
 
-      const docRef = await db.collection(this.collection).add(this.removeUndefined(eventData));
+      const docRef = await db.collection(this.collection).add(removeUndefined(eventData));
 
       const createdEvent = {
         id: docRef.id,
@@ -291,7 +279,7 @@ export class EventsService {
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
 
-      await db.collection(this.collection).doc(id).update(this.removeUndefined(updateData));
+      await db.collection(this.collection).doc(id).update(removeUndefined(updateData));
 
       const updatedDoc = await db.collection(this.collection).doc(id).get();
       const updatedData = updatedDoc.data();

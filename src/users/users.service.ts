@@ -20,6 +20,7 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { DateTimeUtils } from '../utils/date-time.utils';
 import { BusinessStatus } from '../businesses/domain/enums/business-status.enum';
 
+import { removeUndefined } from '../firebase/firebase-mapper.util';
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
@@ -36,19 +37,6 @@ export class UsersService {
     private readonly firebaseService: FirebaseService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
-
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
 
   public async getAll(): Promise<UserProfile[]> {
     try {
@@ -225,7 +213,7 @@ export class UsersService {
       };
 
       const db = this.firebaseService.getFirestore();
-      await db.collection(this.usersCollection).doc(id).set(this.removeUndefined(userProfile));
+      await db.collection(this.usersCollection).doc(id).set(removeUndefined(userProfile));
 
       return userProfile;
     } catch (error) {
@@ -246,7 +234,7 @@ export class UsersService {
         ...profile,
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
-      await db.collection(this.usersCollection).doc(id).update(this.removeUndefined(updateData));
+      await db.collection(this.usersCollection).doc(id).update(removeUndefined(updateData));
       // Cache invalidieren nach Update
       await this.invalidateUserProfileCache(id);
       const updatedDoc = await db.collection(this.usersCollection).doc(id).get();
@@ -291,7 +279,7 @@ export class UsersService {
       await db
         .collection(this.businessUsersCollection)
         .doc(data.userId)
-        .set(this.removeUndefined(userData));
+        .set(removeUndefined(userData));
 
       return {
         id: data.userId,
@@ -321,7 +309,7 @@ export class UsersService {
       await db
         .collection(this.businessUsersCollection)
         .doc(id)
-        .update(this.removeUndefined(updateData));
+        .update(removeUndefined(updateData));
 
       const businessUser = await this.getBusinessUser(id);
       if (!businessUser) {

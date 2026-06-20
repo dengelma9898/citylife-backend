@@ -3,6 +3,8 @@ import { FirebaseService } from '../../../firebase/firebase.service';
 import { SpotKeyword } from '../../domain/entities/spot-keyword.entity';
 import { SpotKeywordRepository } from '../../domain/repositories/spot-keyword.repository';
 
+import { removeUndefined, toFirestoreData } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseSpotKeywordRepository implements SpotKeywordRepository {
   private readonly logger = new Logger(FirebaseSpotKeywordRepository.name);
@@ -10,22 +12,8 @@ export class FirebaseSpotKeywordRepository implements SpotKeywordRepository {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private removeUndefined(obj: unknown): unknown {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: Record<string, unknown> = {};
-      for (const key in obj as Record<string, unknown>) {
-        result[key] = this.removeUndefined((obj as Record<string, unknown>)[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: SpotKeyword): Omit<ReturnType<SpotKeyword['toJSON']>, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data) as Omit<ReturnType<SpotKeyword['toJSON']>, 'id'>;
+    return toFirestoreData(entity);
   }
 
   private toProps(data: Record<string, unknown>, id: string): ReturnType<SpotKeyword['toJSON']> {

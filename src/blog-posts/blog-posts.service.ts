@@ -4,25 +4,13 @@ import { CreateBlogPostDto } from './dto/create-blog-post.dto';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { DateTimeUtils } from 'src/utils/date-time.utils';
 
+import { removeUndefined } from '../firebase/firebase-mapper.util';
 @Injectable()
 export class BlogPostsService {
   private readonly logger = new Logger(BlogPostsService.name);
   private readonly collection = 'blog_posts';
 
   constructor(private readonly firebaseService: FirebaseService) {}
-
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
 
   public async getAll(): Promise<BlogPost[]> {
     try {
@@ -76,7 +64,7 @@ export class BlogPostsService {
         views: 0,
       };
 
-      const docRef = await db.collection(this.collection).add(this.removeUndefined(postData));
+      const docRef = await db.collection(this.collection).add(removeUndefined(postData));
 
       return {
         id: docRef.id,
@@ -103,7 +91,7 @@ export class BlogPostsService {
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
 
-      await db.collection(this.collection).doc(id).update(this.removeUndefined(updateData));
+      await db.collection(this.collection).doc(id).update(removeUndefined(updateData));
 
       const updatedDoc = await db.collection(this.collection).doc(id).get();
       return {

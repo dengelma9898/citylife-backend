@@ -3,6 +3,8 @@ import { FirebaseService } from '../../../firebase/firebase.service';
 import { EasterEgg, EasterEggProps } from '../../domain/entities/easter-egg.entity';
 import { EasterEggRepository } from '../../domain/repositories/easter-egg.repository';
 
+import { removeUndefined, toFirestoreData } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseEasterEggRepository implements EasterEggRepository {
   private readonly logger = new Logger(FirebaseEasterEggRepository.name);
@@ -10,22 +12,8 @@ export class FirebaseEasterEggRepository implements EasterEggRepository {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
-
   private toPlainObject(entity: EasterEgg): Omit<EasterEggProps, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    return this.removeUndefined(data);
+    return toFirestoreData(entity);
   }
 
   private toEasterEggProps(data: any, id: string): EasterEggProps {

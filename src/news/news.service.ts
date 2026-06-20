@@ -19,6 +19,7 @@ import { DateTimeUtils } from '../utils/date-time.utils';
 import { NotificationService } from '../notifications/application/services/notification.service';
 import { UserProfileLoader } from '../core/loaders/user-profile.loader';
 
+import { removeUndefined } from '../firebase/firebase-mapper.util';
 @Injectable({ scope: Scope.REQUEST })
 export class NewsService {
   private readonly logger = new Logger(NewsService.name);
@@ -32,19 +33,6 @@ export class NewsService {
     private readonly notificationService: NotificationService,
     private readonly userProfileLoader: UserProfileLoader,
   ) {}
-
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) return null;
-    if (Array.isArray(obj)) return obj.map(item => this.removeUndefined(item));
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        result[key] = this.removeUndefined(obj[key]);
-      }
-      return result;
-    }
-    return obj;
-  }
 
   public async getAll(): Promise<NewsItem[]> {
     try {
@@ -232,7 +220,7 @@ export class NewsService {
   private async saveNewsItem(newsItem: Omit<NewsItem, 'id'>): Promise<NewsItem> {
     try {
       const db = this.firebaseService.getFirestore();
-      const docRef = await db.collection(this.collectionName).add(this.removeUndefined(newsItem));
+      const docRef = await db.collection(this.collectionName).add(removeUndefined(newsItem));
       const savedNewsItem = {
         id: docRef.id,
         ...newsItem,
@@ -315,7 +303,7 @@ export class NewsService {
           !hasExplicitBearbeitet && { bearbeitet: true }),
       };
 
-      await db.collection(this.collectionName).doc(id).update(this.removeUndefined(updateData));
+      await db.collection(this.collectionName).doc(id).update(removeUndefined(updateData));
 
       const updatedDoc = await db.collection(this.collectionName).doc(id).get();
       return {

@@ -3,6 +3,8 @@ import { FirebaseService } from '../../../firebase/firebase.service';
 import { JobOffer } from '../../domain/entities/job-offer.entity';
 import { JobOfferRepository } from '../../domain/repositories/job-offer.repository.interface';
 
+import { removeUndefined } from '../../../firebase/firebase-mapper.util';
+
 @Injectable()
 export class FirebaseJobOfferRepository implements JobOfferRepository {
   private readonly logger = new Logger(FirebaseJobOfferRepository.name);
@@ -21,30 +23,9 @@ export class FirebaseJobOfferRepository implements JobOfferRepository {
 
   private toPlainObject(jobOffer: JobOffer) {
     const { id, ...data } = jobOffer;
-    return this.removeUndefined({
+    return removeUndefined({
       ...data,
     });
-  }
-
-  private removeUndefined(obj: any): any {
-    if (obj === null || obj === undefined) {
-      return null;
-    }
-
-    if (Array.isArray(obj)) {
-      return obj.map(item => this.removeUndefined(item));
-    }
-
-    if (typeof obj === 'object') {
-      const result: any = {};
-      for (const key in obj) {
-        const value = obj[key];
-        result[key] = this.removeUndefined(value);
-      }
-      return result;
-    }
-
-    return obj;
   }
 
   async findById(id: string): Promise<JobOffer> {
