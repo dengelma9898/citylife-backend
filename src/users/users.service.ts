@@ -11,14 +11,14 @@ import { UserProfile, FcmToken } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { RegisterFcmTokenDto } from './dto/register-fcm-token.dto';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { UserType } from './enums/user-type.enum';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { EventsService } from '../events/events.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { DateTimeUtils } from '../utils/date-time.utils';
-import { BusinessStatus } from '../businesses/interfaces/business.interface';
+import { BusinessStatus } from '../businesses/domain/enums/business-status.enum';
 
 @Injectable()
 export class UsersService {
@@ -216,7 +216,7 @@ export class UsersService {
       const userProfile: UserProfile = {
         ...profile,
         userType: UserType.USER,
-        managementId: uuidv4(),
+        managementId: randomUUID(),
         customerId: `NSP-${id}`,
         memberSince: `${new Date().getFullYear()}-${new Date().getMonth() + 1}`,
         businessHistory: [],

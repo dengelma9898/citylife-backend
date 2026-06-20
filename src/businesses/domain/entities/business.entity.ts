@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { NuernbergspotsReview } from '../../interfaces/business.interface';
+import { NuernbergspotsReview } from '../nuernbergspots-review.type';
 import { BusinessStatus } from '../enums/business-status.enum';
 
 export interface BusinessContactProps {

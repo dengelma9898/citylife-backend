@@ -14,7 +14,6 @@ import { RolesGuard } from '../../../core/guards/roles.guard';
 
 jest.mock('../../../firebase/firebase.service', () => ({
   FirebaseService: jest.fn().mockImplementation(() => ({
-    getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
     getClientStorage: jest.fn(),
   })),
@@ -38,7 +37,6 @@ describe('BusinessesController', () => {
   };
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
     getClientStorage: jest.fn(),
   };

@@ -9,7 +9,6 @@ import { FirebaseService } from '../../../firebase/firebase.service';
 
 jest.mock('../../../firebase/firebase.service', () => ({
   FirebaseService: jest.fn().mockImplementation(() => ({
-    getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
     getClientStorage: jest.fn(),
   })),
@@ -38,7 +37,6 @@ describe('ContactController', () => {
   };
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
     getClientStorage: jest.fn(),
   };

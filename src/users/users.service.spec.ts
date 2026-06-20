@@ -4,25 +4,13 @@ import { UsersService } from './users.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { EventsService } from '../events/events.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
-import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  runTransaction,
-} from 'firebase/firestore';
 import { UserProfile } from './interfaces/user-profile.interface';
 import { BusinessUser } from './interfaces/business-user.interface';
 import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { UserType } from './enums/user-type.enum';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { BusinessStatus } from '../businesses/interfaces/business.interface';
+import { BusinessStatus } from '../businesses/domain/enums/business-status.enum';
 
 describe('UsersService', () => {
   let service: UsersService;

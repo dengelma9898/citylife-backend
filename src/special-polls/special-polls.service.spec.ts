@@ -14,18 +14,6 @@ import { CreateSpecialPollDto } from './dto/create-special-poll.dto';
 import { UpdateSpecialPollStatusDto } from './dto/update-special-poll-status.dto';
 import { NotFoundException } from '@nestjs/common';
 
-jest.mock('firebase/firestore', () => ({
-  collection: jest.fn(),
-  getDocs: jest.fn(),
-  doc: jest.fn(),
-  getDoc: jest.fn(),
-  addDoc: jest.fn(),
-  updateDoc: jest.fn(),
-  deleteDoc: jest.fn(),
-  query: jest.fn(),
-  orderBy: jest.fn(),
-}));
-
 describe('SpecialPollsService', () => {
   let service: SpecialPollsService;
   let mockFirebaseService: { getFirestore: jest.Mock };

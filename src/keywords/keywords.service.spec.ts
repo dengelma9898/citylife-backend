@@ -4,18 +4,6 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { CreateKeywordDto } from './dto/create-keyword.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import {
-  getFirestore,
-  getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  collection,
-  doc,
-} from 'firebase/firestore';
-
-jest.mock('firebase/firestore');
 
 describe('KeywordsService', () => {
   let service: KeywordsService;
@@ -61,14 +49,6 @@ describe('KeywordsService', () => {
     updatedAt: '2024-01-01T00:00:00.000Z',
   };
 
-  const mockCollection = jest.fn();
-  const mockDoc = jest.fn();
-  const mockGetDocs = jest.fn();
-  const mockGetDoc = jest.fn();
-  const mockAddDoc = jest.fn();
-  const mockUpdateDoc = jest.fn();
-  const mockDeleteDoc = jest.fn();
-
   const mockCacheManager = {
     get: jest.fn(),
     set: jest.fn(),
@@ -93,28 +73,6 @@ describe('KeywordsService', () => {
 
     service = module.get<KeywordsService>(KeywordsService);
     firebaseService = module.get<FirebaseService>(FirebaseService);
-
-    // Mock Firebase functions
-    (getFirestore as jest.Mock).mockReturnValue({
-      collection: mockCollection,
-      doc: mockDoc,
-    });
-
-    mockCollection.mockReturnValue({});
-    mockDoc.mockReturnValue({});
-    mockFirebaseService.getFirestore.mockReturnValue({
-      collection: mockCollection,
-      doc: mockDoc,
-    });
-
-    // Mock Firestore functions
-    (collection as jest.Mock).mockImplementation(mockCollection);
-    (doc as jest.Mock).mockImplementation(mockDoc);
-    (getDocs as jest.Mock).mockImplementation(mockGetDocs);
-    (getDoc as jest.Mock).mockImplementation(mockGetDoc);
-    (addDoc as jest.Mock).mockImplementation(mockAddDoc);
-    (updateDoc as jest.Mock).mockImplementation(mockUpdateDoc);
-    (deleteDoc as jest.Mock).mockImplementation(mockDeleteDoc);
   });
 
   afterEach(() => {

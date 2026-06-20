@@ -44,7 +44,6 @@ describe('ContactService', () => {
   };
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
     getClientStorage: jest.fn(),
   };

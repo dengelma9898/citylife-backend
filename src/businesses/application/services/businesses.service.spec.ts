@@ -19,7 +19,6 @@ import { PassScanService } from '../../../pass-stats/application/services/pass-s
 
 jest.mock('../../../firebase/firebase.service', () => ({
   FirebaseService: jest.fn().mockImplementation(() => ({
-    getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
     getClientStorage: jest.fn(),
   })),
@@ -71,7 +70,6 @@ describe('BusinessesService', () => {
   };
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn(),
     getClientAuth: jest.fn(),
     getClientStorage: jest.fn(),
   };

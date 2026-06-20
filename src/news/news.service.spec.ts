@@ -6,14 +6,6 @@ import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { NotificationService } from '../notifications/application/services/notification.service';
 import { UserProfileLoader } from '../core/loaders/user-profile.loader';
 import {
-  getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  runTransaction,
-} from 'firebase/firestore';
-import {
   TextNewsItem,
   ImageNewsItem,
   PollNewsItem,

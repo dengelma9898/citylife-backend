@@ -5,33 +5,8 @@ import { UsersService } from '../../../users/users.service';
 import { CHAT_MESSAGE_REPOSITORY } from '../../domain/repositories/chat-message.repository';
 import { ChatMessage } from '../../domain/entities/chat-message.entity';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  orderBy,
-  limit,
-} from 'firebase/firestore';
 import { ReactionType, UpdateChatMessageReactionDto } from '../dtos/update-message-reaction.dto';
 import { UserType } from '../../../users/enums/user-type.enum';
-
-jest.mock('firebase/firestore', () => ({
-  collection: jest.fn(),
-  doc: jest.fn(),
-  getDoc: jest.fn(),
-  getDocs: jest.fn(),
-  addDoc: jest.fn(),
-  updateDoc: jest.fn(),
-  deleteDoc: jest.fn(),
-  query: jest.fn(),
-  orderBy: jest.fn(),
-  limit: jest.fn(),
-}));
 
 describe('ChatMessagesService', () => {
   let service: ChatMessagesService;
@@ -68,7 +43,6 @@ describe('ChatMessagesService', () => {
   };
 
   const mockFirebaseService = {
-    getClientFirestore: jest.fn(),
     getFirestore: jest.fn(),
   };
 

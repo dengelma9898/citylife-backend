@@ -225,4 +225,3 @@ Das Direct Chat Feature kann vom Admin aktiviert/deaktiviert werden. Bei deaktiv
 4. Bei `active` Status können beide User Nachrichten senden
 5. Jeder Teilnehmer kann den Chat jederzeit löschen (`DELETE`)
 6. Bei Löschung werden alle Nachrichten mit gelöscht
-
