@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { TaxiStandsFeatureService } from './taxi-stands-feature.service';
-import { TAXI_STAND_REPOSITORY } from '../../domain/repositories/taxi-stand.repository';
+import { TaxiStandService } from './taxi-stand.service';
 import { TaxiStand } from '../../domain/entities/taxi-stand.entity';
 import { FirebaseService } from '../../../firebase/firebase.service';
 
 describe('TaxiStandsFeatureService', () => {
   let service: TaxiStandsFeatureService;
-  let mockRepository: Record<string, jest.Mock>;
+  let mockTaxiStandService: Record<string, jest.Mock>;
   let mockFirebaseService: Record<string, jest.Mock>;
 
   const mockTaxiStandProps = {
@@ -39,12 +39,9 @@ describe('TaxiStandsFeatureService', () => {
   };
 
   beforeEach(async () => {
-    mockRepository = {
-      findAll: jest.fn(),
+    mockTaxiStandService = {
       findById: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      updateEntity: jest.fn(),
     };
     mockFirebaseService = {
       getFirestore: jest.fn().mockReturnValue({
@@ -54,7 +51,7 @@ describe('TaxiStandsFeatureService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TaxiStandsFeatureService,
-        { provide: TAXI_STAND_REPOSITORY, useValue: mockRepository },
+        { provide: TaxiStandService, useValue: mockTaxiStandService },
         { provide: FirebaseService, useValue: mockFirebaseService },
       ],
     }).compile();
@@ -137,14 +134,14 @@ describe('TaxiStandsFeatureService', () => {
 
   describe('trackPhoneClick', () => {
     it('should track a phone click', async () => {
-      mockRepository.findById.mockResolvedValue(mockTaxiStand);
-      mockRepository.update.mockImplementation((id, stand) => Promise.resolve(stand));
+      mockTaxiStandService.findById.mockResolvedValue(mockTaxiStand);
+      mockTaxiStandService.updateEntity.mockImplementation((id, stand) => Promise.resolve(stand));
       const result = await service.trackPhoneClick('stand-1');
       expect(result.phoneClickTimestamps.length).toBe(2);
     });
 
     it('should throw NotFoundException when taxi stand not found', async () => {
-      mockRepository.findById.mockResolvedValue(null);
+      mockTaxiStandService.findById.mockResolvedValue(null);
       await expect(service.trackPhoneClick('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });

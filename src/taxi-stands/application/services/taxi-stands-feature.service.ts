@@ -1,10 +1,7 @@
-import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
-import {
-  TaxiStandRepository,
-  TAXI_STAND_REPOSITORY,
-} from '../../domain/repositories/taxi-stand.repository';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { TaxiStand } from '../../domain/entities/taxi-stand.entity';
+import { TaxiStandService } from './taxi-stand.service';
 
 export interface FeatureStatus {
   isFeatureActive: boolean;
@@ -15,17 +12,16 @@ export interface FeatureStatus {
 export class TaxiStandsFeatureService {
   private readonly logger = new Logger(TaxiStandsFeatureService.name);
   private readonly FEATURE_STATUS_DOC_ID = 'feature-status';
-  private readonly COLLECTION = 'taxiStands';
+  private readonly collection = 'taxiStands';
 
   constructor(
-    @Inject(TAXI_STAND_REPOSITORY)
-    private readonly taxiStandRepository: TaxiStandRepository,
+    private readonly taxiStandService: TaxiStandService,
     private readonly firebaseService: FirebaseService,
   ) {}
 
   async getFeatureStatus(): Promise<FeatureStatus> {
     const db = this.firebaseService.getFirestore();
-    const docRef = db.collection(this.COLLECTION).doc(this.FEATURE_STATUS_DOC_ID);
+    const docRef = db.collection(this.collection).doc(this.FEATURE_STATUS_DOC_ID);
     const doc = await docRef.get();
     if (!doc.exists) {
       return { isFeatureActive: false };
@@ -52,8 +48,8 @@ export class TaxiStandsFeatureService {
   async setFeatureStatus(isFeatureActive: boolean, startDate?: string): Promise<FeatureStatus> {
     this.logger.log(`Setting taxi stands feature status to: ${isFeatureActive}`);
     const db = this.firebaseService.getFirestore();
-    const docRef = db.collection(this.COLLECTION).doc(this.FEATURE_STATUS_DOC_ID);
-    const updateData: Record<string, any> = {
+    const docRef = db.collection(this.collection).doc(this.FEATURE_STATUS_DOC_ID);
+    const updateData: Record<string, unknown> = {
       isFeatureActive,
       updatedAt: new Date().toISOString(),
     };
@@ -67,11 +63,11 @@ export class TaxiStandsFeatureService {
 
   async trackPhoneClick(taxiStandId: string): Promise<TaxiStand> {
     this.logger.log(`Tracking phone click for taxi stand ${taxiStandId}`);
-    const taxiStand = await this.taxiStandRepository.findById(taxiStandId);
+    const taxiStand = await this.taxiStandService.findById(taxiStandId);
     if (!taxiStand) {
       throw new NotFoundException('Taxi stand not found');
     }
     const updatedTaxiStand = taxiStand.addPhoneClick();
-    return this.taxiStandRepository.update(taxiStandId, updatedTaxiStand);
+    return this.taxiStandService.updateEntity(taxiStandId, updatedTaxiStand);
   }
 }

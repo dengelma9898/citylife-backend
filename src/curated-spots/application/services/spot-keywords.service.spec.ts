@@ -1,11 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SpotKeywordsService } from './spot-keywords.service';
-import { SPOT_KEYWORD_REPOSITORY } from '../../domain/repositories/spot-keyword.repository';
+import { FirebaseService } from '../../../firebase/firebase.service';
 import { SpotKeyword } from '../../domain/entities/spot-keyword.entity';
 
 describe('SpotKeywordsService', () => {
   let service: SpotKeywordsService;
-  let mockRepository: Record<string, jest.Mock>;
+  let findByNameLowerSpy: jest.SpyInstance;
+  let suggestByNameLowerPrefixSpy: jest.SpyInstance;
+  let createKeywordSpy: jest.SpyInstance;
+  let mockDoc: { get: jest.Mock };
+  let mockCollection: { doc: jest.Mock };
+  let mockFirestore: { collection: jest.Mock };
 
   const existing = SpotKeyword.fromProps({
     id: 'kw-1',
@@ -16,39 +21,53 @@ describe('SpotKeywordsService', () => {
   });
 
   beforeEach(async () => {
-    mockRepository = {
-      findById: jest.fn(),
-      findByNameLower: jest.fn(),
-      suggestByNameLowerPrefix: jest.fn(),
-      create: jest.fn(),
+    mockDoc = {
+      get: jest.fn(),
+    };
+    mockCollection = {
+      doc: jest.fn().mockReturnValue(mockDoc),
+    };
+    mockFirestore = {
+      collection: jest.fn().mockReturnValue(mockCollection),
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SpotKeywordsService,
-        { provide: SPOT_KEYWORD_REPOSITORY, useValue: mockRepository },
+        { provide: FirebaseService, useValue: { getFirestore: jest.fn().mockReturnValue(mockFirestore) } },
       ],
     }).compile();
     service = module.get<SpotKeywordsService>(SpotKeywordsService);
+    findByNameLowerSpy = jest.spyOn(service as any, 'findByNameLower');
+    suggestByNameLowerPrefixSpy = jest.spyOn(service as any, 'suggestByNameLowerPrefix');
+    createKeywordSpy = jest.spyOn(service as any, 'createKeyword');
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('suggestByPrefix', () => {
     it('should clamp limit', async () => {
-      mockRepository.suggestByNameLowerPrefix.mockResolvedValue([]);
+      suggestByNameLowerPrefixSpy.mockResolvedValue([]);
       await service.suggestByPrefix('a', 500);
-      expect(mockRepository.suggestByNameLowerPrefix).toHaveBeenCalledWith('a', 50);
+      expect(suggestByNameLowerPrefixSpy).toHaveBeenCalledWith('a', 50);
     });
   });
 
   describe('findById', () => {
-    it('should delegate to repository', async () => {
-      mockRepository.findById.mockResolvedValue(existing);
+    it('should return keyword when document exists', async () => {
+      mockDoc.get.mockResolvedValue({
+        exists: true,
+        id: 'kw-1',
+        data: () => existing.toJSON(),
+      });
       const result = await service.findById('kw-1');
-      expect(result).toEqual(existing);
-      expect(mockRepository.findById).toHaveBeenCalledWith('kw-1');
+      expect(result?.id).toBe('kw-1');
+      expect(mockCollection.doc).toHaveBeenCalledWith('kw-1');
     });
 
     it('should return null when not found', async () => {
-      mockRepository.findById.mockResolvedValue(null);
+      mockDoc.get.mockResolvedValue({ exists: false });
       const result = await service.findById('none');
       expect(result).toBeNull();
     });
@@ -56,27 +75,27 @@ describe('SpotKeywordsService', () => {
 
   describe('create', () => {
     it('should return existing when nameLower already exists', async () => {
-      mockRepository.findByNameLower.mockResolvedValue(existing);
+      findByNameLowerSpy.mockResolvedValue(existing);
       const result = await service.create({ name: 'Biergarten' });
       expect(result.id).toBe('kw-1');
-      expect(mockRepository.create).not.toHaveBeenCalled();
+      expect(createKeywordSpy).not.toHaveBeenCalled();
     });
 
     it('should create when new', async () => {
-      mockRepository.findByNameLower.mockResolvedValue(null);
-      mockRepository.create.mockImplementation(k => Promise.resolve(SpotKeyword.fromProps({ ...k.toJSON(), id: 'new-id' })));
+      findByNameLowerSpy.mockResolvedValue(null);
+      createKeywordSpy.mockImplementation(k =>
+        Promise.resolve(SpotKeyword.fromProps({ ...k.toJSON(), id: 'new-id' })),
+      );
       const result = await service.create({ name: 'Neu' });
-      expect(mockRepository.create).toHaveBeenCalled();
+      expect(createKeywordSpy).toHaveBeenCalled();
       expect(result.id).toBe('new-id');
     });
   });
 
   describe('resolveNewKeywordNamesToIds', () => {
     it('should create missing and dedupe', async () => {
-      mockRepository.findByNameLower
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(existing);
-      mockRepository.create.mockImplementation(k =>
+      findByNameLowerSpy.mockResolvedValueOnce(null).mockResolvedValueOnce(existing);
+      createKeywordSpy.mockImplementation(k =>
         Promise.resolve(SpotKeyword.fromProps({ ...k.toJSON(), id: 'new-kw' })),
       );
       const ids = await service.resolveNewKeywordNamesToIds(['  Neu ', 'Biergarten']);

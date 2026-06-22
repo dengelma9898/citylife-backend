@@ -1,20 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ContactService } from './contact.service';
 import { UsersService } from '../../../users/users.service';
-import { CONTACT_REQUEST_REPOSITORY } from '../../domain/repositories/contact-request.repository';
 import { ContactRequest, ContactRequestType } from '../../domain/entities/contact-request.entity';
 import { ContactMessage } from '../../domain/entities/contact-message.entity';
 import { UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { UserType } from '../../../users/enums/user-type.enum';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 
 describe('ContactService', () => {
   let service: ContactService;
-  let usersService: UsersService;
-  let contactRequestRepository: any;
-  let notificationService: NotificationService;
+  let mockDoc: {
+    get: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let mockCollection: {
+    doc: jest.Mock;
+    add: jest.Mock;
+    get: jest.Mock;
+    where: jest.Mock;
+  };
+  let mockFirestore: { collection: jest.Mock };
+  let mockFirebaseService: { getFirestore: jest.Mock };
 
   const mockUsersService = {
     getById: jest.fn(),
@@ -24,61 +32,51 @@ describe('ContactService', () => {
     getBusinessUser: jest.fn(),
   };
 
-  const mockContactRequestRepository = {
-    create: jest.fn(),
-    findById: jest.fn(),
-    findAll: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    findByUserId: jest.fn(),
-    findByBusinessId: jest.fn(),
-  };
-
   const mockNotificationService = {
     sendToUser: jest.fn(),
     sendToUsers: jest.fn(),
   };
 
-  const mockConfigService = {
-    get: jest.fn(),
+  const contactRequestToFirestoreData = (request: ContactRequest): Record<string, unknown> => {
+    const { id, ...data } = request.toJSON();
+    return data;
   };
 
-  const mockFirebaseService = {
-    getClientAuth: jest.fn(),
-    getClientStorage: jest.fn(),
+  const configureFindById = (request: ContactRequest | null): void => {
+    mockDoc.get.mockResolvedValue({
+      exists: request !== null,
+      id: request?.id ?? 'unknown',
+      data: () => (request ? contactRequestToFirestoreData(request) : undefined),
+    });
   };
 
   beforeEach(async () => {
+    mockDoc = {
+      get: jest.fn(),
+      update: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+    };
+    mockCollection = {
+      doc: jest.fn().mockReturnValue(mockDoc),
+      add: jest.fn().mockResolvedValue({ id: 'fixed-id-123' }),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
+      where: jest.fn().mockReturnThis(),
+    };
+    mockFirestore = {
+      collection: jest.fn().mockReturnValue(mockCollection),
+    };
+    mockFirebaseService = {
+      getFirestore: jest.fn().mockReturnValue(mockFirestore),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ContactService,
-        {
-          provide: UsersService,
-          useValue: mockUsersService,
-        },
-        {
-          provide: CONTACT_REQUEST_REPOSITORY,
-          useValue: mockContactRequestRepository,
-        },
-        {
-          provide: NotificationService,
-          useValue: mockNotificationService,
-        },
-        {
-          provide: ConfigService,
-          useValue: mockConfigService,
-        },
-        {
-          provide: FirebaseService,
-          useValue: mockFirebaseService,
-        },
+        { provide: UsersService, useValue: mockUsersService },
+        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: FirebaseService, useValue: mockFirebaseService },
       ],
     }).compile();
-
     service = module.get<ContactService>(ContactService);
-    usersService = module.get<UsersService>(UsersService);
-    contactRequestRepository = module.get(CONTACT_REQUEST_REPOSITORY);
-    notificationService = module.get<NotificationService>(NotificationService);
   });
 
   afterEach(() => {
@@ -97,34 +95,15 @@ describe('ContactService', () => {
       userType: UserType.USER,
     };
 
-    const mockContactRequest = ContactRequest.fromProps({
-      id: 'fixed-id-123',
-      type: ContactRequestType.GENERAL,
-      userId: mockData.userId,
-      messages: [
-        ContactMessage.create({
-          message: mockData.message,
-          userId: mockData.userId,
-          isAdminResponse: false,
-        }),
-      ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      responded: false,
-      isProcessed: false,
-    });
-
     it('should create a new contact request and update user', async () => {
       mockUsersService.getById.mockResolvedValue(mockUser);
-      mockContactRequestRepository.create.mockResolvedValue(mockContactRequest);
-
       const result = await service.createContactRequest(mockData, ContactRequestType.GENERAL);
-
       expect(result).toBeDefined();
       expect(result.type).toBe(ContactRequestType.GENERAL);
       expect(result.userId).toBe(mockData.userId);
+      expect(mockCollection.add).toHaveBeenCalled();
       expect(mockUsersService.update).toHaveBeenCalledWith(mockData.userId, {
-        contactRequestIds: [mockContactRequest.id],
+        contactRequestIds: ['fixed-id-123'],
       });
     });
   });
@@ -150,7 +129,7 @@ describe('ContactService', () => {
     });
 
     it('should return contact request for super admin', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      configureFindById(mockContactRequest);
       mockUsersService.getById.mockResolvedValue({
         id: 'admin123',
         userType: UserType.SUPER_ADMIN,
@@ -161,27 +140,23 @@ describe('ContactService', () => {
     });
 
     it('should return contact request for owner', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      configureFindById(mockContactRequest);
       mockUsersService.getById.mockResolvedValue({
         id: mockUserId,
         contactRequestIds: [mockRequestId],
       });
-
       const result = await service.getById(mockRequestId, mockUserId);
-
       expect(result).toBeDefined();
       expect(result?.id).toBe(mockContactRequest.id);
     });
 
     it('should return null for unauthorized user', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      configureFindById(mockContactRequest);
       mockUsersService.getById.mockResolvedValue({
         id: 'other123',
         contactRequestIds: [],
       });
-
       const result = await service.getById(mockRequestId, 'other123');
-
       expect(result).toBeNull();
     });
   });
@@ -203,33 +178,20 @@ describe('ContactService', () => {
     });
 
     it('should add message for authorized user', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      configureFindById(mockContactRequest);
       mockUsersService.getById.mockResolvedValue({
         id: mockUserId,
         contactRequestIds: [mockRequestId],
       });
-      mockContactRequestRepository.update.mockResolvedValue({
-        ...mockContactRequest,
-        messages: [
-          ...mockContactRequest.messages,
-          ContactMessage.create({
-            message: mockMessage,
-            userId: mockUserId,
-            isAdminResponse: false,
-          }),
-        ],
-      });
-
       const result = await service.addMessage(mockRequestId, mockUserId, { message: mockMessage });
-
       expect(result).toBeDefined();
       expect(result.messages.length).toBe(2);
       expect(result.messages[1].message).toBe(mockMessage);
+      expect(mockDoc.update).toHaveBeenCalled();
     });
 
     it('should throw UnauthorizedException for unauthorized user', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(null);
-
+      configureFindById(null);
       await expect(
         service.addMessage(mockRequestId, mockUserId, { message: mockMessage }),
       ).rejects.toThrow(UnauthorizedException);
@@ -259,29 +221,13 @@ describe('ContactService', () => {
     };
 
     it('should add admin response and send notification when preference is enabled', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
-      const jsonData = mockContactRequest.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...jsonData,
-        messages: [
-          ...mockContactRequest.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-        responded: true,
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      configureFindById(mockContactRequest);
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
-
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(result.responded).toBe(true);
       expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(mockUserId, {
@@ -296,63 +242,31 @@ describe('ContactService', () => {
     });
 
     it('should add admin response but not send notification when preference is disabled', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
-      const jsonData = mockContactRequest.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...jsonData,
-        messages: [
-          ...mockContactRequest.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-        responded: true,
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      configureFindById(mockContactRequest);
       mockUsersService.getUserProfile.mockResolvedValue({
         notificationPreferences: {
           contactRequestResponses: false,
         },
       });
-
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(result.responded).toBe(true);
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
 
     it('should add admin response and send notification when preference is undefined (default: true)', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
-      const jsonData = mockContactRequest.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...jsonData,
-        messages: [
-          ...mockContactRequest.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-        responded: true,
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      configureFindById(mockContactRequest);
       mockUsersService.getUserProfile.mockResolvedValue({
         notificationPreferences: {},
       });
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
-
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(result.responded).toBe(true);
       expect(mockNotificationService.sendToUser).toHaveBeenCalled();
@@ -365,26 +279,11 @@ describe('ContactService', () => {
         messages: mockContactRequest.messages,
         responded: true,
       });
-      mockContactRequestRepository.findById.mockResolvedValue(alreadyRespondedRequest);
-      const alreadyRespondedJsonData = alreadyRespondedRequest.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...alreadyRespondedJsonData,
-        messages: [
-          ...alreadyRespondedRequest.messages,
-          ContactMessage.create({
-            message: 'Second admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
-
+      configureFindById(alreadyRespondedRequest);
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Second admin response',
       });
-
       expect(result).toBeDefined();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
@@ -400,55 +299,23 @@ describe('ContactService', () => {
           }),
         ],
       });
-      mockContactRequestRepository.findById.mockResolvedValue(requestWithoutUserId);
-      const requestWithoutUserIdJsonData = requestWithoutUserId.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...requestWithoutUserIdJsonData,
-        messages: [
-          ...requestWithoutUserId.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-        responded: true,
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
-
+      configureFindById(requestWithoutUserId);
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
 
     it('should handle notification sending errors gracefully', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
-      const jsonData = mockContactRequest.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...jsonData,
-        messages: [
-          ...mockContactRequest.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-        responded: true,
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      configureFindById(mockContactRequest);
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
       mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification error'));
-
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(result.responded).toBe(true);
     });
@@ -483,29 +350,13 @@ describe('ContactService', () => {
     };
 
     it('should add admin message and send notification when admin responds', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      configureFindById(mockContactRequest);
       mockUsersService.getById.mockResolvedValue(mockAdminUser);
-      const jsonData = mockContactRequest.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...jsonData,
-        messages: [
-          ...mockContactRequest.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-        responded: true,
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
-
       const result = await service.addMessage(mockRequestId, mockAdminId, {
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(result.responded).toBe(true);
       expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(mockUserId, {
@@ -525,27 +376,11 @@ describe('ContactService', () => {
         userType: UserType.USER,
         contactRequestIds: [mockRequestId],
       };
-      mockContactRequestRepository.findById.mockResolvedValue(mockContactRequest);
+      configureFindById(mockContactRequest);
       mockUsersService.getById.mockResolvedValue(mockRegularUser);
-      const jsonData = mockContactRequest.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...jsonData,
-        messages: [
-          ...mockContactRequest.messages,
-          ContactMessage.create({
-            message: 'User follow-up',
-            userId: mockUserId,
-            isAdminResponse: false,
-          }),
-        ],
-        responded: false,
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
-
       const result = await service.addMessage(mockRequestId, mockUserId, {
         message: 'User follow-up',
       });
-
       expect(result).toBeDefined();
       expect(result.responded).toBe(false);
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
@@ -598,29 +433,13 @@ describe('ContactService', () => {
     };
 
     it('should send BUSINESS_CONTACT_REQUEST_RESPONSE notification for BUSINESS_CLAIM when preference is enabled', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(mockBusinessClaimRequest);
-      const jsonData = mockBusinessClaimRequest.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...jsonData,
-        messages: [
-          ...mockBusinessClaimRequest.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-        responded: true,
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      configureFindById(mockBusinessClaimRequest);
       mockUsersService.getBusinessUser.mockResolvedValue(mockBusinessUser);
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
-
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(result.responded).toBe(true);
       expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockBusinessUserId);
@@ -637,29 +456,13 @@ describe('ContactService', () => {
     });
 
     it('should send BUSINESS_CONTACT_REQUEST_RESPONSE notification for BUSINESS_REQUEST when preference is enabled', async () => {
-      mockContactRequestRepository.findById.mockResolvedValue(mockBusinessRequest);
-      const jsonData = mockBusinessRequest.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...jsonData,
-        messages: [
-          ...mockBusinessRequest.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-        responded: true,
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      configureFindById(mockBusinessRequest);
       mockUsersService.getBusinessUser.mockResolvedValue(mockBusinessUser);
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
-
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(result.responded).toBe(true);
       expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockBusinessUserId);
@@ -687,21 +490,7 @@ describe('ContactService', () => {
           }),
         ],
       });
-
-      mockContactRequestRepository.findById.mockResolvedValue(mockGeneralRequest);
-      const updatedRequest = ContactRequest.fromProps({
-        ...mockGeneralRequest.toJSON(),
-        responded: true,
-        messages: [
-          ...mockGeneralRequest.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      configureFindById(mockGeneralRequest);
       mockUsersService.getBusinessUser.mockResolvedValue(null);
       mockUsersService.getUserProfile.mockResolvedValue({
         notificationPreferences: {
@@ -709,12 +498,10 @@ describe('ContactService', () => {
         },
       });
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
-
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockBusinessUserId);
       expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(mockBusinessUserId, {
@@ -735,29 +522,12 @@ describe('ContactService', () => {
           businessContactRequestResponses: false,
         },
       };
-
-      mockContactRequestRepository.findById.mockResolvedValue(mockBusinessClaimRequest);
-      const jsonData = mockBusinessClaimRequest.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...jsonData,
-        messages: [
-          ...mockBusinessClaimRequest.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-        responded: true,
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      configureFindById(mockBusinessClaimRequest);
       mockUsersService.getBusinessUser.mockResolvedValue(businessUserWithDisabledPreference);
-
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(result.responded).toBe(true);
       expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockBusinessUserId);
@@ -769,29 +539,12 @@ describe('ContactService', () => {
         ...mockBusinessUser,
         notificationPreferences: undefined,
       };
-
-      mockContactRequestRepository.findById.mockResolvedValue(mockBusinessClaimRequest);
-      const jsonData = mockBusinessClaimRequest.toJSON();
-      const updatedRequest = ContactRequest.fromProps({
-        ...jsonData,
-        messages: [
-          ...mockBusinessClaimRequest.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-        responded: true,
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      configureFindById(mockBusinessClaimRequest);
       mockUsersService.getBusinessUser.mockResolvedValue(businessUserWithoutPreference);
-
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(result.responded).toBe(true);
       expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockBusinessUserId);
@@ -811,21 +564,7 @@ describe('ContactService', () => {
           }),
         ],
       });
-
-      mockContactRequestRepository.findById.mockResolvedValue(mockGeneralRequest);
-      const updatedRequest = ContactRequest.fromProps({
-        ...mockGeneralRequest.toJSON(),
-        responded: true,
-        messages: [
-          ...mockGeneralRequest.messages,
-          ContactMessage.create({
-            message: 'Admin response',
-            userId: mockAdminId,
-            isAdminResponse: true,
-          }),
-        ],
-      });
-      mockContactRequestRepository.update.mockResolvedValue(updatedRequest);
+      configureFindById(mockGeneralRequest);
       mockUsersService.getBusinessUser.mockResolvedValue(null);
       mockUsersService.getUserProfile.mockResolvedValue({
         notificationPreferences: {
@@ -833,12 +572,10 @@ describe('ContactService', () => {
         },
       });
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
-
       const result = await service.addAdminResponse(mockRequestId, {
         userId: mockAdminId,
         message: 'Admin response',
       });
-
       expect(result).toBeDefined();
       expect(mockUsersService.getBusinessUser).toHaveBeenCalledWith(mockNormalUserId);
       expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(mockNormalUserId, {

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { EasterEggHuntService } from './easter-egg-hunt.service';
-import { EASTER_EGG_REPOSITORY } from '../../domain/repositories/easter-egg.repository';
+import { EasterEggService } from './easter-egg.service';
 import { EasterEgg } from '../../domain/entities/easter-egg.entity';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { UsersService } from '../../../users/users.service';
@@ -9,7 +9,7 @@ import { NotificationService } from '../../../notifications/application/services
 
 describe('EasterEggHuntService', () => {
   let service: EasterEggHuntService;
-  let mockRepository: Record<string, jest.Mock>;
+  let mockEasterEggService: Record<string, jest.Mock>;
   let mockFirebaseService: Record<string, jest.Mock>;
   let mockUsersService: Record<string, jest.Mock>;
   let mockNotificationService: Record<string, jest.Mock>;
@@ -47,12 +47,10 @@ describe('EasterEggHuntService', () => {
   };
 
   beforeEach(async () => {
-    mockRepository = {
+    mockEasterEggService = {
       findAll: jest.fn(),
       findById: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      updateEntity: jest.fn(),
     };
     mockFirebaseService = {
       getFirestore: jest.fn().mockReturnValue({
@@ -69,7 +67,7 @@ describe('EasterEggHuntService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EasterEggHuntService,
-        { provide: EASTER_EGG_REPOSITORY, useValue: mockRepository },
+        { provide: EasterEggService, useValue: mockEasterEggService },
         { provide: FirebaseService, useValue: mockFirebaseService },
         { provide: UsersService, useValue: mockUsersService },
         { provide: NotificationService, useValue: mockNotificationService },
@@ -108,8 +106,8 @@ describe('EasterEggHuntService', () => {
     it('should allow participation', async () => {
       mockUsersService.getUserProfile.mockResolvedValue({ email: 'test@test.com', userType: 'user' });
       const eggWithoutUser = EasterEgg.fromProps({ ...mockEggProps, participants: [] });
-      mockRepository.findById.mockResolvedValue(eggWithoutUser);
-      mockRepository.update.mockImplementation((id, egg) => Promise.resolve(egg));
+      mockEasterEggService.findById.mockResolvedValue(eggWithoutUser);
+      mockEasterEggService.updateEntity.mockImplementation((id, egg) => Promise.resolve(egg));
       const result = await service.participate('egg-1', 'new-user');
       expect(result.participants).toContain('new-user');
     });
@@ -121,54 +119,54 @@ describe('EasterEggHuntService', () => {
 
     it('should reject when egg not found', async () => {
       mockUsersService.getUserProfile.mockResolvedValue({ email: 'test@test.com' });
-      mockRepository.findById.mockResolvedValue(null);
+      mockEasterEggService.findById.mockResolvedValue(null);
       await expect(service.participate('nonexistent', 'user-1')).rejects.toThrow(NotFoundException);
     });
 
     it('should reject when egg is not active', async () => {
       mockUsersService.getUserProfile.mockResolvedValue({ email: 'test@test.com' });
       const futureEgg = EasterEgg.fromProps({ ...mockEggProps, startDate: '2099-01-01', participants: [] });
-      mockRepository.findById.mockResolvedValue(futureEgg);
+      mockEasterEggService.findById.mockResolvedValue(futureEgg);
       await expect(service.participate('egg-1', 'user-1')).rejects.toThrow(BadRequestException);
     });
 
     it('should reject duplicate participation', async () => {
       mockUsersService.getUserProfile.mockResolvedValue({ email: 'test@test.com' });
-      mockRepository.findById.mockResolvedValue(mockEgg);
+      mockEasterEggService.findById.mockResolvedValue(mockEgg);
       await expect(service.participate('egg-1', 'user-1')).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('addWinner', () => {
     it('should add a winner', async () => {
-      mockRepository.findById.mockResolvedValue(mockEgg);
-      mockRepository.update.mockImplementation((id, egg) => Promise.resolve(egg));
+      mockEasterEggService.findById.mockResolvedValue(mockEgg);
+      mockEasterEggService.updateEntity.mockImplementation((id, egg) => Promise.resolve(egg));
       mockUsersService.getUserProfile.mockResolvedValue({ email: 'test@test.com', notificationPreferences: {} });
       const result = await service.addWinner('egg-1', 'user-1');
       expect(result.winners).toContain('user-1');
     });
 
     it('should reject non-participant as winner', async () => {
-      mockRepository.findById.mockResolvedValue(mockEgg);
+      mockEasterEggService.findById.mockResolvedValue(mockEgg);
       await expect(service.addWinner('egg-1', 'non-participant')).rejects.toThrow(BadRequestException);
     });
 
     it('should reject duplicate winner', async () => {
       const eggWithWinner = EasterEgg.fromProps({ ...mockEggProps, winners: ['user-1'] });
-      mockRepository.findById.mockResolvedValue(eggWithWinner);
+      mockEasterEggService.findById.mockResolvedValue(eggWithWinner);
       await expect(service.addWinner('egg-1', 'user-1')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when egg not found', async () => {
-      mockRepository.findById.mockResolvedValue(null);
+      mockEasterEggService.findById.mockResolvedValue(null);
       await expect(service.addWinner('nonexistent', 'user-1')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('drawWinners', () => {
     it('should draw winners randomly', async () => {
-      mockRepository.findById.mockResolvedValue(mockEgg);
-      mockRepository.update.mockImplementation((id, egg) => Promise.resolve(egg));
+      mockEasterEggService.findById.mockResolvedValue(mockEgg);
+      mockEasterEggService.updateEntity.mockImplementation((id, egg) => Promise.resolve(egg));
       mockUsersService.getUserProfile.mockResolvedValue({ email: 'test@test.com', notificationPreferences: {} });
       const result = await service.drawWinners('egg-1');
       expect(result.winners.length).toBe(2);
@@ -176,12 +174,12 @@ describe('EasterEggHuntService', () => {
 
     it('should reject when no participants', async () => {
       const emptyEgg = EasterEgg.fromProps({ ...mockEggProps, participants: [] });
-      mockRepository.findById.mockResolvedValue(emptyEgg);
+      mockEasterEggService.findById.mockResolvedValue(emptyEgg);
       await expect(service.drawWinners('egg-1')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when egg not found', async () => {
-      mockRepository.findById.mockResolvedValue(null);
+      mockEasterEggService.findById.mockResolvedValue(null);
       await expect(service.drawWinners('nonexistent')).rejects.toThrow(NotFoundException);
     });
 
@@ -191,20 +189,20 @@ describe('EasterEggHuntService', () => {
         numberOfWinners: 2,
         winners: ['user-1', 'user-2'],
       });
-      mockRepository.findById.mockResolvedValue(eggWithWinners);
+      mockEasterEggService.findById.mockResolvedValue(eggWithWinners);
       await expect(service.drawWinners('egg-1')).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('getParticipants', () => {
     it('should return participants list', async () => {
-      mockRepository.findById.mockResolvedValue(mockEgg);
+      mockEasterEggService.findById.mockResolvedValue(mockEgg);
       const result = await service.getParticipants('egg-1');
       expect(result).toEqual(['user-1', 'user-2', 'user-3']);
     });
 
     it('should throw NotFoundException when egg not found', async () => {
-      mockRepository.findById.mockResolvedValue(null);
+      mockEasterEggService.findById.mockResolvedValue(null);
       await expect(service.getParticipants('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
@@ -224,7 +222,7 @@ describe('EasterEggHuntService', () => {
         participants: ['user-2', 'user-3'],
         winners: [],
       });
-      mockRepository.findAll.mockResolvedValue([egg1, egg2]);
+      mockEasterEggService.findAll.mockResolvedValue([egg1, egg2]);
       const result = await service.getStatistics();
       expect(result.totalEggs).toBe(2);
       expect(result.totalParticipants).toBe(3);
@@ -235,8 +233,8 @@ describe('EasterEggHuntService', () => {
 
   describe('sendWinnerNotification', () => {
     it('should send notification when preference is enabled', async () => {
-      mockRepository.findById.mockResolvedValue(mockEgg);
-      mockRepository.update.mockImplementation((id, egg) => Promise.resolve(egg));
+      mockEasterEggService.findById.mockResolvedValue(mockEgg);
+      mockEasterEggService.updateEntity.mockImplementation((id, egg) => Promise.resolve(egg));
       mockUsersService.getUserProfile.mockResolvedValue({
         email: 'test@test.com',
         notificationPreferences: { easterEggHuntWinner: true },
@@ -252,8 +250,8 @@ describe('EasterEggHuntService', () => {
     });
 
     it('should not send notification when preference is disabled', async () => {
-      mockRepository.findById.mockResolvedValue(mockEgg);
-      mockRepository.update.mockImplementation((id, egg) => Promise.resolve(egg));
+      mockEasterEggService.findById.mockResolvedValue(mockEgg);
+      mockEasterEggService.updateEntity.mockImplementation((id, egg) => Promise.resolve(egg));
       mockUsersService.getUserProfile.mockResolvedValue({
         email: 'test@test.com',
         notificationPreferences: { easterEggHuntWinner: false },
@@ -263,8 +261,8 @@ describe('EasterEggHuntService', () => {
     });
 
     it('should not send notification when preference is undefined (default false)', async () => {
-      mockRepository.findById.mockResolvedValue(mockEgg);
-      mockRepository.update.mockImplementation((id, egg) => Promise.resolve(egg));
+      mockEasterEggService.findById.mockResolvedValue(mockEgg);
+      mockEasterEggService.updateEntity.mockImplementation((id, egg) => Promise.resolve(egg));
       mockUsersService.getUserProfile.mockResolvedValue({
         email: 'test@test.com',
         notificationPreferences: {},

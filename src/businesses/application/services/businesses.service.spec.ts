@@ -1,9 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BusinessesService } from './businesses.service';
-import { BUSINESS_REPOSITORY } from '../../domain/repositories/business.repository';
 import { UsersService } from '../../../users/users.service';
 import { BusinessCategoriesService } from '../../../business-categories/application/services/business-categories.service';
-import { ConfigService } from '@nestjs/config';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import {
   Business,
@@ -17,26 +15,24 @@ import { EventsService } from '../../../events/events.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { PassScanService } from '../../../pass-stats/application/services/pass-scan.service';
 
-jest.mock('../../../firebase/firebase.service', () => ({
-  FirebaseService: jest.fn().mockImplementation(() => ({
-    getClientAuth: jest.fn(),
-    getClientStorage: jest.fn(),
-  })),
-}));
-
 describe('BusinessesService', () => {
   let service: BusinessesService;
-
-  const mockBusinessesRepository = {
-    findAll: jest.fn(),
-    findById: jest.fn(),
-    save: jest.fn(),
-    delete: jest.fn(),
-    findByStatus: jest.fn(),
-    findByStatusAndHasAccount: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
+  let mockDoc: {
+    get: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
+  let mockQuery: {
+    where: jest.Mock;
+    get: jest.Mock;
+  };
+  let mockCollection: {
+    doc: jest.Mock;
+    add: jest.Mock;
+    get: jest.Mock;
+    where: jest.Mock;
+  };
+  let mockFirestore: { collection: jest.Mock };
 
   const mockUsersService = {
     getById: jest.fn(),
@@ -65,15 +61,6 @@ describe('BusinessesService', () => {
     recordScanFromBusinessScan: jest.fn().mockResolvedValue(undefined),
   };
 
-  const mockConfigService = {
-    get: jest.fn(),
-  };
-
-  const mockFirebaseService = {
-    getClientAuth: jest.fn(),
-    getClientStorage: jest.fn(),
-  };
-
   const mockBusinessAddress = BusinessAddress.create({
     street: 'Main Street',
     houseNumber: '123',
@@ -89,49 +76,50 @@ describe('BusinessesService', () => {
     website: 'https://business.com',
   });
 
+  const toFirestoreDoc = (business: Business, id?: string) => {
+    const json = business.toJSON();
+    const docId = id || json.id;
+    const { id: _id, ...data } = json;
+    return {
+      id: docId,
+      data: () => data,
+    };
+  };
+
   beforeEach(async () => {
+    mockDoc = {
+      get: jest.fn().mockResolvedValue({ exists: true, id: 'business1', data: () => ({}) }),
+      update: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+    };
+    mockQuery = {
+      where: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
+    };
+    mockCollection = {
+      doc: jest.fn().mockReturnValue(mockDoc),
+      add: jest.fn().mockResolvedValue({ id: 'new-business-id' }),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
+      where: jest.fn().mockReturnValue(mockQuery),
+    };
+    mockFirestore = {
+      collection: jest.fn().mockReturnValue(mockCollection),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BusinessesService,
-        {
-          provide: BUSINESS_REPOSITORY,
-          useValue: mockBusinessesRepository,
-        },
-        {
-          provide: UsersService,
-          useValue: mockUsersService,
-        },
-        {
-          provide: BusinessCategoriesService,
-          useValue: mockBusinessCategoriesService,
-        },
-        {
-          provide: KeywordsService,
-          useValue: mockKeywordsService,
-        },
-        {
-          provide: EventsService,
-          useValue: mockEventsService,
-        },
-        {
-          provide: ConfigService,
-          useValue: mockConfigService,
-        },
+        { provide: UsersService, useValue: mockUsersService },
+        { provide: BusinessCategoriesService, useValue: mockBusinessCategoriesService },
+        { provide: KeywordsService, useValue: mockKeywordsService },
+        { provide: EventsService, useValue: mockEventsService },
         {
           provide: FirebaseService,
-          useValue: mockFirebaseService,
+          useValue: { getFirestore: jest.fn().mockReturnValue(mockFirestore) },
         },
-        {
-          provide: NotificationService,
-          useValue: mockNotificationService,
-        },
-        {
-          provide: PassScanService,
-          useValue: mockPassScanService,
-        },
+        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: PassScanService, useValue: mockPassScanService },
       ],
     }).compile();
-
     service = module.get<BusinessesService>(BusinessesService);
   });
 
@@ -172,15 +160,18 @@ describe('BusinessesService', () => {
     ];
 
     it('should return all businesses', async () => {
-      mockBusinessesRepository.findAll.mockResolvedValue(mockBusinesses);
-
+      mockCollection.get.mockResolvedValue({
+        docs: [
+          toFirestoreDoc(mockBusinesses[0], 'business-1'),
+          toFirestoreDoc(mockBusinesses[1], 'business-2'),
+        ],
+      });
       const result = await service.getAll();
-
       expect(result).toBeDefined();
       expect(result).toHaveLength(2);
       expect(result[0].name).toBe('Restaurant A');
       expect(result[1].name).toBe('Shop B');
-      expect(mockBusinessesRepository.findAll).toHaveBeenCalled();
+      expect(mockCollection.get).toHaveBeenCalled();
     });
   });
 
@@ -201,23 +192,23 @@ describe('BusinessesService', () => {
     });
 
     it('should return a business by id', async () => {
-      mockBusinessesRepository.findById.mockResolvedValue(mockBusiness);
-
+      mockDoc.get.mockResolvedValue({
+        exists: true,
+        id: 'business1',
+        data: () => toFirestoreDoc(mockBusiness, 'business1').data(),
+      });
       const result = await service.getById('business1');
-
       expect(result).toBeDefined();
-      expect(result?.id).toBeDefined();
+      expect(result?.id).toBe('business1');
       expect(result?.name).toBe('Restaurant A');
-      expect(mockBusinessesRepository.findById).toHaveBeenCalledWith('business1');
+      expect(mockCollection.doc).toHaveBeenCalledWith('business1');
     });
 
     it('should return null if business not found', async () => {
-      mockBusinessesRepository.findById.mockResolvedValue(null);
-
+      mockDoc.get.mockResolvedValue({ exists: false });
       const result = await service.getById('nonexistent');
-
       expect(result).toBeNull();
-      expect(mockBusinessesRepository.findById).toHaveBeenCalledWith('nonexistent');
+      expect(mockCollection.doc).toHaveBeenCalledWith('nonexistent');
     });
   });
 
@@ -247,26 +238,11 @@ describe('BusinessesService', () => {
       hasAccount: true,
     };
 
-    const mockCreatedBusiness = Business.create({
-      name: createData.name,
-      description: createData.description,
-      contact: BusinessContact.create(createData.contact),
-      address: BusinessAddress.create(createData.address),
-      categoryIds: createData.categoryIds,
-      keywordIds: createData.keywordIds,
-      openingHours: createData.openingHours,
-      benefit: createData.benefit,
-      hasAccount: createData.hasAccount,
-      status: BusinessStatus.PENDING,
-    });
-
     it('should create a new business', async () => {
-      mockBusinessesRepository.create.mockResolvedValue(mockCreatedBusiness);
-
+      mockCollection.add.mockResolvedValue({ id: 'new-business-id' });
       const result = await service.create(createData);
-
       expect(result).toBeDefined();
-      expect(result.id).toBeDefined();
+      expect(result.id).toBe('new-business-id');
       expect(result.name).toBe(createData.name);
       expect(result.description).toBe(createData.description);
       expect(result.contact.email).toBe(createData.contact.email);
@@ -274,27 +250,20 @@ describe('BusinessesService', () => {
       expect(result.categoryIds).toEqual(createData.categoryIds);
       expect(result.benefit).toBe(createData.benefit);
       expect(result.hasAccount).toBe(createData.hasAccount);
-      expect(mockBusinessesRepository.create).toHaveBeenCalled();
+      expect(mockCollection.add).toHaveBeenCalled();
     });
 
     it('should set status to PENDING by default', async () => {
-      mockBusinessesRepository.create.mockResolvedValue(mockCreatedBusiness);
-
+      mockCollection.add.mockResolvedValue({ id: 'new-business-id' });
       const result = await service.create(createData);
-
       expect(result.status).toBe(BusinessStatus.PENDING);
     });
 
     it('should set status to ACTIVE when isAdmin is true', async () => {
       const adminCreateData = { ...createData, isAdmin: true };
-      const adminBusiness = Business.create({
-        ...mockCreatedBusiness,
-        status: BusinessStatus.ACTIVE,
-      });
-      mockBusinessesRepository.create.mockResolvedValue(adminBusiness);
-
+      mockCollection.add.mockResolvedValue({ id: 'admin-business-id' });
+      mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
       const result = await service.create(adminCreateData);
-
       expect(result.status).toBe(BusinessStatus.ACTIVE);
     });
   });
@@ -322,33 +291,32 @@ describe('BusinessesService', () => {
     });
 
     it('should update an existing business', async () => {
-      mockBusinessesRepository.findById.mockResolvedValue(mockUpdatedBusiness);
-      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusiness);
-
+      mockDoc.get.mockResolvedValue({
+        exists: true,
+        id: 'business1',
+        data: () => toFirestoreDoc(mockUpdatedBusiness, 'business1').data(),
+      });
       const result = await service.update('business1', updateData);
-
       expect(result).toBeDefined();
-      expect(result.id).toBeDefined();
+      expect(result.id).toBe('business1');
       expect(result.name).toBe(updateData.name);
       expect(result.description).toBe(updateData.description);
       expect(result.openingHours).toEqual(updateData.openingHours);
-      expect(mockBusinessesRepository.update).toHaveBeenCalled();
+      expect(mockDoc.update).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if business not found', async () => {
-      mockBusinessesRepository.findById.mockResolvedValue(null);
-
+      mockDoc.get.mockResolvedValue({ exists: false });
       await expect(service.update('nonexistent', updateData)).rejects.toThrow('Business not found');
     });
   });
 
   describe('delete', () => {
     it('should delete a business', async () => {
-      mockBusinessesRepository.delete.mockResolvedValue(undefined);
-
+      mockDoc.get.mockResolvedValue({ exists: true });
       await service.delete('business1');
-
-      expect(mockBusinessesRepository.delete).toHaveBeenCalledWith('business1');
+      expect(mockCollection.doc).toHaveBeenCalledWith('business1');
+      expect(mockDoc.delete).toHaveBeenCalled();
     });
   });
 
@@ -371,20 +339,18 @@ describe('BusinessesService', () => {
     ];
 
     it('should return businesses by status', async () => {
-      mockBusinessesRepository.findByStatusAndHasAccount.mockResolvedValue(mockBusinesses);
-
+      mockQuery.get.mockResolvedValue({
+        docs: [toFirestoreDoc(mockBusinesses[0], 'business-1')],
+      });
       const result = await service.getBusinessesByStatus({
         hasAccount: true,
         status: BusinessStatus.ACTIVE,
       });
-
       expect(result).toBeDefined();
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Restaurant A');
-      expect(mockBusinessesRepository.findByStatusAndHasAccount).toHaveBeenCalledWith(
-        BusinessStatus.ACTIVE,
-        true,
-      );
+      expect(mockCollection.where).toHaveBeenCalledWith('status', '==', BusinessStatus.ACTIVE);
+      expect(mockQuery.where).toHaveBeenCalledWith('hasAccount', '==', true);
     });
   });
 
@@ -410,17 +376,22 @@ describe('BusinessesService', () => {
     });
 
     it('should update business status', async () => {
-      mockBusinessesRepository.findById.mockResolvedValue(mockBusiness);
-      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusiness);
+      const businessWithId = Business.fromProps({
+        ...mockBusiness.toJSON(),
+        id: 'business1',
+      });
+      mockDoc.get.mockResolvedValue({
+        exists: true,
+        id: 'business1',
+        data: () => toFirestoreDoc(businessWithId, 'business1').data(),
+      });
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
       mockUsersService.getAllBusinessUsers.mockResolvedValue([]);
-
       const result = await service.updateStatus('business1', BusinessStatus.ACTIVE);
-
       expect(result).toBeDefined();
       expect(result.status).toBe(BusinessStatus.ACTIVE);
-      expect(mockBusinessesRepository.findById).toHaveBeenCalledWith('business1');
-      expect(mockBusinessesRepository.update).toHaveBeenCalled();
+      expect(mockCollection.doc).toHaveBeenCalledWith('business1');
+      expect(mockDoc.update).toHaveBeenCalled();
     });
 
     it('should send business activated notification when status changes from PENDING to ACTIVE', async () => {
@@ -428,12 +399,11 @@ describe('BusinessesService', () => {
         ...mockBusiness.toJSON(),
         id: 'business1',
       });
-
-      const mockUpdatedBusinessWithId = Business.fromProps({
-        ...mockUpdatedBusiness.toJSON(),
+      mockDoc.get.mockResolvedValue({
+        exists: true,
         id: 'business1',
+        data: () => toFirestoreDoc(mockBusinessWithId, 'business1').data(),
       });
-
       const mockBusinessUser = {
         id: 'business-user-1',
         email: 'business@example.com',
@@ -446,15 +416,10 @@ describe('BusinessesService', () => {
           businessActivated: true,
         },
       };
-
-      mockBusinessesRepository.findById.mockResolvedValue(mockBusinessWithId);
-      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusinessWithId);
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
       mockUsersService.getAllBusinessUsers.mockResolvedValue([mockBusinessUser]);
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
-
       await service.updateStatus('business1', BusinessStatus.ACTIVE);
-
       expect(mockUsersService.getAllBusinessUsers).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('business-user-1', {
         title: 'Dein Business ist jetzt aktiv',
@@ -470,6 +435,15 @@ describe('BusinessesService', () => {
     });
 
     it('should not send business activated notification when preference is disabled', async () => {
+      const businessWithId = Business.fromProps({
+        ...mockBusiness.toJSON(),
+        id: 'business1',
+      });
+      mockDoc.get.mockResolvedValue({
+        exists: true,
+        id: 'business1',
+        data: () => toFirestoreDoc(businessWithId, 'business1').data(),
+      });
       const mockBusinessUser = {
         id: 'business-user-1',
         email: 'business@example.com',
@@ -482,19 +456,23 @@ describe('BusinessesService', () => {
           businessActivated: false,
         },
       };
-
-      mockBusinessesRepository.findById.mockResolvedValue(mockBusiness);
-      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusiness);
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
       mockUsersService.getAllBusinessUsers.mockResolvedValue([mockBusinessUser]);
-
       await service.updateStatus('business1', BusinessStatus.ACTIVE);
-
       expect(mockUsersService.getAllBusinessUsers).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
 
     it('should not send business activated notification when preference is undefined (default false)', async () => {
+      const businessWithId = Business.fromProps({
+        ...mockBusiness.toJSON(),
+        id: 'business1',
+      });
+      mockDoc.get.mockResolvedValue({
+        exists: true,
+        id: 'business1',
+        data: () => toFirestoreDoc(businessWithId, 'business1').data(),
+      });
       const mockBusinessUser = {
         id: 'business-user-1',
         email: 'business@example.com',
@@ -504,14 +482,9 @@ describe('BusinessesService', () => {
         isDeleted: false,
         needsReview: false,
       };
-
-      mockBusinessesRepository.findById.mockResolvedValue(mockBusiness);
-      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusiness);
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
       mockUsersService.getAllBusinessUsers.mockResolvedValue([mockBusinessUser]);
-
       await service.updateStatus('business1', BusinessStatus.ACTIVE);
-
       expect(mockUsersService.getAllBusinessUsers).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
@@ -521,12 +494,11 @@ describe('BusinessesService', () => {
         ...mockBusiness.toJSON(),
         id: 'business1',
       });
-
-      const mockUpdatedBusinessWithId = Business.fromProps({
-        ...mockUpdatedBusiness.toJSON(),
+      mockDoc.get.mockResolvedValue({
+        exists: true,
         id: 'business1',
+        data: () => toFirestoreDoc(mockBusinessWithId, 'business1').data(),
       });
-
       const mockBusinessUser1 = {
         id: 'business-user-1',
         email: 'business1@example.com',
@@ -539,7 +511,6 @@ describe('BusinessesService', () => {
           businessActivated: true,
         },
       };
-
       const mockBusinessUser2 = {
         id: 'business-user-2',
         email: 'business2@example.com',
@@ -552,18 +523,13 @@ describe('BusinessesService', () => {
           businessActivated: true,
         },
       };
-
-      mockBusinessesRepository.findById.mockResolvedValue(mockBusinessWithId);
-      mockBusinessesRepository.update.mockResolvedValue(mockUpdatedBusinessWithId);
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
       mockUsersService.getAllBusinessUsers.mockResolvedValue([
         mockBusinessUser1,
         mockBusinessUser2,
       ]);
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
-
       await service.updateStatus('business1', BusinessStatus.ACTIVE);
-
       expect(mockNotificationService.sendToUser).toHaveBeenCalledTimes(1);
       expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('business-user-1', expect.any(Object));
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalledWith('business-user-2', expect.any(Object));
@@ -574,19 +540,22 @@ describe('BusinessesService', () => {
         ...mockBusiness,
         status: BusinessStatus.ACTIVE,
       });
-
       const mockInactiveBusiness = Business.create({
         ...mockActiveBusiness,
         status: BusinessStatus.INACTIVE,
       });
-
-      mockBusinessesRepository.findById.mockResolvedValue(mockActiveBusiness);
-      mockBusinessesRepository.update.mockResolvedValue(mockInactiveBusiness);
+      const activeWithId = Business.fromProps({
+        ...mockActiveBusiness.toJSON(),
+        id: 'business1',
+      });
+      mockDoc.get.mockResolvedValue({
+        exists: true,
+        id: 'business1',
+        data: () => toFirestoreDoc(activeWithId, 'business1').data(),
+      });
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
       mockUsersService.getAllBusinessUsers.mockResolvedValue([]);
-
       await service.updateStatus('business1', BusinessStatus.INACTIVE);
-
       expect(mockUsersService.getAllBusinessUsers).not.toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
@@ -609,22 +578,18 @@ describe('BusinessesService', () => {
         ...existingBusiness.toJSON(),
         id: 'business-scan-1',
       });
-      const updatedBusiness = businessWithId.addCustomer(
-        BusinessCustomer.create({
-          customerId: 'NSP-user-1',
-          scannedAt: '2026-05-10T12:00:00+02:00',
-          benefit: '10% Rabatt',
-          price: 50,
-        }),
-      );
-      mockBusinessesRepository.findById.mockResolvedValue(businessWithId);
-      mockBusinessesRepository.update.mockResolvedValue(updatedBusiness);
+      mockDoc.get.mockResolvedValue({
+        exists: true,
+        id: 'business-scan-1',
+        data: () => toFirestoreDoc(businessWithId, 'business-scan-1').data(),
+      });
       const result = await service.addCustomerScan('business-scan-1', {
         customerId: 'NSP-user-1',
         userId: 'user-1',
         price: 50,
       });
-      expect(result).toEqual(updatedBusiness);
+      expect(result.id).toBe('business-scan-1');
+      expect(result.customers).toHaveLength(1);
       expect(mockPassScanService.recordScanFromBusinessScan).toHaveBeenCalledWith(
         expect.objectContaining({
           businessId: 'business-scan-1',
@@ -649,21 +614,18 @@ describe('BusinessesService', () => {
         ...existingBusiness.toJSON(),
         id: 'business-scan-2',
       });
-      const updatedBusiness = businessWithId.addCustomer(
-        BusinessCustomer.create({
-          customerId: 'NSP-user-2',
-          scannedAt: '2026-05-10T12:00:00+02:00',
-          benefit: '10% Rabatt',
-        }),
-      );
-      mockBusinessesRepository.findById.mockResolvedValue(businessWithId);
-      mockBusinessesRepository.update.mockResolvedValue(updatedBusiness);
+      mockDoc.get.mockResolvedValue({
+        exists: true,
+        id: 'business-scan-2',
+        data: () => toFirestoreDoc(businessWithId, 'business-scan-2').data(),
+      });
       mockPassScanService.recordScanFromBusinessScan.mockRejectedValue(new Error('firestore error'));
       const result = await service.addCustomerScan('business-scan-2', {
         customerId: 'NSP-user-2',
         userId: 'user-2',
       });
-      expect(result).toEqual(updatedBusiness);
+      expect(result.id).toBe('business-scan-2');
+      expect(result.customers).toHaveLength(1);
     });
   });
 });

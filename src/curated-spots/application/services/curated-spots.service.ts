@@ -1,9 +1,7 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
-import { CuratedSpot, CuratedSpotProps } from '../../domain/entities/curated-spot.entity';
-import {
-  CuratedSpotRepository,
-  CURATED_SPOT_REPOSITORY,
-} from '../../domain/repositories/curated-spot.repository';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { FirebaseService } from '../../../firebase/firebase.service';
+import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
+import { CuratedSpot, CuratedSpotAddressProps, CuratedSpotProps } from '../../domain/entities/curated-spot.entity';
 import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
 import { CreateCuratedSpotDto } from '../../dto/create-curated-spot.dto';
 import { UpdateCuratedSpotDto } from '../../dto/update-curated-spot.dto';
@@ -12,9 +10,11 @@ import { normalizeHttpUrlSpaces } from '../../dto/normalize-http-url-spaces';
 
 @Injectable()
 export class CuratedSpotsService {
+  private readonly logger = new Logger(CuratedSpotsService.name);
+  private readonly collection = 'curatedSpots';
+
   constructor(
-    @Inject(CURATED_SPOT_REPOSITORY)
-    private readonly curatedSpotRepository: CuratedSpotRepository,
+    private readonly firebaseService: FirebaseService,
     private readonly spotKeywordsService: SpotKeywordsService,
   ) {}
 
@@ -42,13 +42,11 @@ export class CuratedSpotsService {
     const prefix = namePrefix?.trim() ?? '';
     let candidates: CuratedSpot[];
     if (uniqueKeywordIds.length > 0) {
-      candidates = await this.curatedSpotRepository.findActiveNotDeletedByKeywordContains(
-        uniqueKeywordIds[0],
-      );
+      candidates = await this.findActiveNotDeletedByKeywordContains(uniqueKeywordIds[0]);
     } else if (prefix.length > 0) {
-      candidates = await this.curatedSpotRepository.findActiveNotDeletedByNameLowerPrefix(prefix);
+      candidates = await this.findActiveNotDeletedByNameLowerPrefix(prefix);
     } else {
-      candidates = await this.curatedSpotRepository.findAllActiveNotDeleted();
+      candidates = await this.findAllActiveNotDeleted();
     }
     let results = candidates;
     if (uniqueKeywordIds.length > 0) {
@@ -64,16 +62,16 @@ export class CuratedSpotsService {
   }
 
   public async listActiveForApp(): Promise<CuratedSpot[]> {
-    return this.curatedSpotRepository.findAllActiveNotDeleted();
+    return this.findAllActiveNotDeleted();
   }
 
   public async listAllForAdmin(): Promise<CuratedSpot[]> {
-    const all = await this.curatedSpotRepository.findAll();
+    const all = await this.findAll();
     return all.filter(s => !s.isDeleted);
   }
 
   public async getByIdForApp(id: string): Promise<CuratedSpot> {
-    const spot = await this.curatedSpotRepository.findById(id);
+    const spot = await this.findById(id);
     if (!spot || spot.isDeleted || spot.status !== CuratedSpotStatus.ACTIVE) {
       throw new NotFoundException('Curated spot not found');
     }
@@ -81,7 +79,7 @@ export class CuratedSpotsService {
   }
 
   public async getByIdForAdmin(id: string): Promise<CuratedSpot> {
-    const spot = await this.curatedSpotRepository.findById(id);
+    const spot = await this.findById(id);
     if (!spot) {
       throw new NotFoundException('Curated spot not found');
     }
@@ -108,11 +106,11 @@ export class CuratedSpotsService {
       createdByUserId,
       adminRating: dto.adminRating ?? null,
     });
-    return this.curatedSpotRepository.create(spot);
+    return this.createSpot(spot);
   }
 
   public async update(id: string, dto: UpdateCuratedSpotDto): Promise<CuratedSpot> {
-    const existing = await this.curatedSpotRepository.findById(id);
+    const existing = await this.findById(id);
     if (!existing) {
       throw new NotFoundException('Curated spot not found');
     }
@@ -160,28 +158,191 @@ export class CuratedSpotsService {
       patch.adminRatedAt = dto.adminRating === null ? null : new Date().toISOString();
     }
     const updated = existing.update(patch);
-    return this.curatedSpotRepository.update(id, updated);
+    return this.updateSpot(id, updated);
   }
 
   public async appendImageUrls(id: string, urls: string[]): Promise<CuratedSpot> {
     if (urls.length === 0) {
       throw new BadRequestException('No image URLs provided');
     }
-    const existing = await this.curatedSpotRepository.findById(id);
+    const existing = await this.findById(id);
     if (!existing) {
       throw new NotFoundException('Curated spot not found');
     }
     const merged = [...(existing.imageUrls ?? []), ...urls];
     const updated = existing.update({ imageUrls: merged });
-    return this.curatedSpotRepository.update(id, updated);
+    return this.updateSpot(id, updated);
   }
 
   public async softDelete(id: string): Promise<CuratedSpot> {
-    const existing = await this.curatedSpotRepository.findById(id);
+    const existing = await this.findById(id);
     if (!existing) {
       throw new NotFoundException('Curated spot not found');
     }
     const updated = existing.update({ isDeleted: true });
-    return this.curatedSpotRepository.update(id, updated);
+    return this.updateSpot(id, updated);
+  }
+
+  private toPlainObject(entity: CuratedSpot): Omit<ReturnType<CuratedSpot['toJSON']>, 'id'> {
+    return toFirestoreData(entity);
+  }
+
+  private toAddressProps(raw: unknown): CuratedSpotAddressProps {
+    const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+    const lat = o.latitude;
+    const lng = o.longitude;
+    return {
+      street: String(o.street ?? ''),
+      houseNumber: String(o.houseNumber ?? ''),
+      postalCode: String(o.postalCode ?? ''),
+      city: String(o.city ?? ''),
+      latitude: typeof lat === 'number' ? lat : Number(lat) || 0,
+      longitude: typeof lng === 'number' ? lng : Number(lng) || 0,
+    };
+  }
+
+  private toProps(data: Record<string, unknown>, id: string): ReturnType<CuratedSpot['toJSON']> {
+    const imageUrls = Array.isArray(data.imageUrls) ? data.imageUrls.map(String) : [];
+    const keywordIds = Array.isArray(data.keywordIds) ? data.keywordIds.map(String) : [];
+    const adminRating = this.readOptionalRating(data.adminRating);
+    const userRatingAverage = this.readOptionalAverage(data.userRatingAverage);
+    const userRatingCountRaw = data.userRatingCount;
+    const userRatingCount =
+      typeof userRatingCountRaw === 'number' ? userRatingCountRaw : Number(userRatingCountRaw) || 0;
+    const adminRatedAt =
+      data.adminRatedAt === null || data.adminRatedAt === undefined
+        ? null
+        : String(data.adminRatedAt);
+    return {
+      id,
+      name: String(data.name ?? ''),
+      nameLower: String(data.nameLower ?? ''),
+      descriptionMarkdown: String(data.descriptionMarkdown ?? ''),
+      imageUrls,
+      keywordIds,
+      address: this.toAddressProps(data.address),
+      videoUrl:
+        data.videoUrl === null || data.videoUrl === undefined ? null : String(data.videoUrl),
+      instagramUrl:
+        data.instagramUrl === null || data.instagramUrl === undefined
+          ? null
+          : String(data.instagramUrl),
+      status: data.status as CuratedSpotStatus,
+      isDeleted: data.isDeleted === true,
+      createdAt: String(data.createdAt ?? ''),
+      updatedAt: String(data.updatedAt ?? ''),
+      createdByUserId:
+        data.createdByUserId === null || data.createdByUserId === undefined
+          ? null
+          : String(data.createdByUserId),
+      adminRating,
+      adminRatedAt,
+      userRatingAverage,
+      userRatingCount,
+    };
+  }
+
+  private readOptionalRating(value: unknown): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    const n = typeof value === 'number' ? value : Number(value);
+    return Number.isNaN(n) ? null : n;
+  }
+
+  private readOptionalAverage(value: unknown): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    const n = typeof value === 'number' ? value : Number(value);
+    return Number.isNaN(n) ? null : n;
+  }
+
+  private async findAll(): Promise<CuratedSpot[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db.collection(this.collection).get();
+    return snapshot.docs.map(doc =>
+      CuratedSpot.fromProps(this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id)),
+    );
+  }
+
+  private async findById(id: string): Promise<CuratedSpot | null> {
+    const db = this.firebaseService.getFirestore();
+    const doc = await db.collection(this.collection).doc(id).get();
+    if (!doc.exists) {
+      return null;
+    }
+    return CuratedSpot.fromProps(
+      this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id),
+    );
+  }
+
+  private async findAllActiveNotDeleted(): Promise<CuratedSpot[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection(this.collection)
+      .where('status', '==', CuratedSpotStatus.ACTIVE)
+      .where('isDeleted', '==', false)
+      .get();
+    return snapshot.docs.map(doc =>
+      CuratedSpot.fromProps(this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id)),
+    );
+  }
+
+  private async findActiveNotDeletedByKeywordContains(keywordId: string): Promise<CuratedSpot[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection(this.collection)
+      .where('status', '==', CuratedSpotStatus.ACTIVE)
+      .where('isDeleted', '==', false)
+      .where('keywordIds', 'array-contains', keywordId)
+      .get();
+    return snapshot.docs.map(doc =>
+      CuratedSpot.fromProps(this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id)),
+    );
+  }
+
+  private async findActiveNotDeletedByNameLowerPrefix(nameLowerPrefix: string): Promise<CuratedSpot[]> {
+    const trimmed = nameLowerPrefix.trim().toLowerCase();
+    if (trimmed.length === 0) {
+      return [];
+    }
+    const db = this.firebaseService.getFirestore();
+    const upper = `${trimmed}\uf8ff`;
+    const snapshot = await db
+      .collection(this.collection)
+      .where('status', '==', CuratedSpotStatus.ACTIVE)
+      .where('isDeleted', '==', false)
+      .where('nameLower', '>=', trimmed)
+      .where('nameLower', '<=', upper)
+      .get();
+    return snapshot.docs.map(doc =>
+      CuratedSpot.fromProps(this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id)),
+    );
+  }
+
+  private async createSpot(spot: CuratedSpot): Promise<CuratedSpot> {
+    const db = this.firebaseService.getFirestore();
+    const docRef = await db.collection(this.collection).add(this.toPlainObject(spot));
+    this.logger.log(`Created curated spot with id: ${docRef.id}`);
+    return CuratedSpot.fromProps({
+      ...spot.toJSON(),
+      id: docRef.id,
+    });
+  }
+
+  private async updateSpot(id: string, spot: CuratedSpot): Promise<CuratedSpot> {
+    const db = this.firebaseService.getFirestore();
+    const docRef = db.collection(this.collection).doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      throw new NotFoundException('Curated spot not found');
+    }
+    await docRef.update(this.toPlainObject(spot));
+    this.logger.log(`Updated curated spot with id: ${id}`);
+    return CuratedSpot.fromProps({
+      ...spot.toJSON(),
+      id,
+    });
   }
 }

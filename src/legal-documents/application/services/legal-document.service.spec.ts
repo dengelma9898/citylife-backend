@@ -2,20 +2,29 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { LegalDocumentService } from './legal-document.service';
-import { LegalDocumentRepository, LEGAL_DOCUMENT_REPOSITORY } from '../../domain/repositories/legal-document.repository';
+import { FirebaseService } from '../../../firebase/firebase.service';
 import { LegalDocument, LegalDocumentType } from '../../domain/entities/legal-document.entity';
 
 describe('LegalDocumentService', () => {
   let service: LegalDocumentService;
-  let repository: LegalDocumentRepository;
-
-  const mockRepository = {
-    save: jest.fn(),
-    findById: jest.fn(),
-    findByType: jest.fn(),
-    findLatestByType: jest.fn(),
-    update: jest.fn(),
+  let mockDoc: {
+    id: string;
+    exists: boolean;
+    get: jest.Mock;
+    set: jest.Mock;
   };
+  let mockQuery: {
+    where: jest.Mock;
+    orderBy: jest.Mock;
+    limit: jest.Mock;
+    get: jest.Mock;
+  };
+  let mockCollection: {
+    doc: jest.Mock;
+    where: jest.Mock;
+    get: jest.Mock;
+  };
+  let mockFirestore: { collection: jest.Mock };
 
   const mockDocument: LegalDocument = LegalDocument.create({
     type: LegalDocumentType.IMPRESSUM,
@@ -29,24 +38,49 @@ describe('LegalDocumentService', () => {
     del: jest.fn(),
   };
 
+  const documentToFirestoreData = (document: LegalDocument): Record<string, unknown> => ({
+    type: document.type,
+    content: document.content,
+    version: document.version,
+    createdAt: document.createdAt,
+    createdBy: document.createdBy,
+    isActive: document.isActive,
+  });
+
   beforeEach(async () => {
+    mockDoc = {
+      id: mockDocument.id,
+      exists: true,
+      get: jest.fn().mockResolvedValue({
+        exists: true,
+        id: mockDocument.id,
+        data: () => documentToFirestoreData(mockDocument),
+      }),
+      set: jest.fn().mockResolvedValue(undefined),
+    };
+    mockQuery = {
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({ empty: true, docs: [] }),
+    };
+    mockCollection = {
+      doc: jest.fn().mockReturnValue(mockDoc),
+      where: jest.fn().mockReturnValue(mockQuery),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
+    };
+    mockFirestore = {
+      collection: jest.fn().mockReturnValue(mockCollection),
+    };
     mockCacheManager.get.mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LegalDocumentService,
-        {
-          provide: LEGAL_DOCUMENT_REPOSITORY,
-          useValue: mockRepository,
-        },
-        {
-          provide: CACHE_MANAGER,
-          useValue: mockCacheManager,
-        },
+        { provide: FirebaseService, useValue: { getFirestore: jest.fn().mockReturnValue(mockFirestore) } },
+        { provide: CACHE_MANAGER, useValue: mockCacheManager },
       ],
     }).compile();
-
     service = module.get<LegalDocumentService>(LegalDocumentService);
-    repository = module.get<LegalDocumentRepository>(LEGAL_DOCUMENT_REPOSITORY);
   });
 
   afterEach(() => {
@@ -58,18 +92,15 @@ describe('LegalDocumentService', () => {
       const type = LegalDocumentType.IMPRESSUM;
       const content = '# Impressum\n\nTest content';
       const createdBy = 'user123';
-
-      mockRepository.findLatestByType.mockResolvedValue(null);
-      mockRepository.save.mockResolvedValue(mockDocument);
-
+      mockQuery.get.mockResolvedValueOnce({ empty: true, docs: [] });
       const result = await service.create(type, content, createdBy);
-
       expect(result).toBeDefined();
       expect(result.type).toBe(type);
       expect(result.content).toBe(content);
       expect(result.createdBy).toBe(createdBy);
-      expect(mockRepository.findLatestByType).toHaveBeenCalledWith(type);
-      expect(mockRepository.save).toHaveBeenCalled();
+      expect(result.version).toBe(1);
+      expect(mockDoc.set).toHaveBeenCalled();
+      expect(mockCacheManager.del).toHaveBeenCalled();
     });
 
     it('should create a new legal document with incremented version when existing document exists', async () => {
@@ -81,52 +112,51 @@ describe('LegalDocumentService', () => {
         content: '# Impressum\n\nOld content',
         createdBy: 'user123',
       });
-
-      mockRepository.findLatestByType.mockResolvedValue(existingDocument);
-      const newDocument = LegalDocument.createWithVersion({
-        type,
-        content,
-        createdBy,
-        version: 2,
+      mockQuery.get.mockResolvedValueOnce({
+        empty: false,
+        docs: [
+          {
+            id: existingDocument.id,
+            data: () => documentToFirestoreData(existingDocument),
+          },
+        ],
       });
-      mockRepository.save.mockResolvedValue(newDocument);
-
       const result = await service.create(type, content, createdBy);
-
       expect(result).toBeDefined();
       expect(result.version).toBe(2);
-      expect(mockRepository.findLatestByType).toHaveBeenCalledWith(type);
-      expect(mockRepository.save).toHaveBeenCalled();
+      expect(mockDoc.set).toHaveBeenCalled();
     });
   });
 
   describe('getLatestByType', () => {
     it('should return the latest legal document of a type', async () => {
-      mockRepository.findLatestByType.mockResolvedValue(mockDocument);
-
+      mockQuery.get.mockResolvedValueOnce({
+        empty: false,
+        docs: [
+          {
+            id: mockDocument.id,
+            data: () => documentToFirestoreData(mockDocument),
+          },
+        ],
+      });
       const result = await service.getLatestByType(LegalDocumentType.IMPRESSUM);
-
       expect(result).toBeDefined();
       expect(result.type).toBe(LegalDocumentType.IMPRESSUM);
-      expect(mockRepository.findLatestByType).toHaveBeenCalledWith(LegalDocumentType.IMPRESSUM);
+      expect(mockCacheManager.set).toHaveBeenCalled();
     });
 
     it('should return cached document on cache hit', async () => {
       mockCacheManager.get.mockResolvedValue(mockDocument);
-
       const result = await service.getLatestByType(LegalDocumentType.IMPRESSUM);
-
       expect(result).toBe(mockDocument);
-      expect(mockRepository.findLatestByType).not.toHaveBeenCalled();
+      expect(mockQuery.get).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if no document found', async () => {
-      mockRepository.findLatestByType.mockResolvedValue(null);
-
+      mockQuery.get.mockResolvedValueOnce({ empty: true, docs: [] });
       await expect(service.getLatestByType(LegalDocumentType.IMPRESSUM)).rejects.toThrow(
         NotFoundException,
       );
-      expect(mockRepository.findLatestByType).toHaveBeenCalledWith(LegalDocumentType.IMPRESSUM);
     });
   });
 
@@ -140,46 +170,37 @@ describe('LegalDocumentService', () => {
           createdBy: 'user456',
         }),
       ];
-
-      mockRepository.findByType.mockResolvedValue(documents);
-
+      mockQuery.get.mockResolvedValueOnce({
+        docs: documents.map(doc => ({
+          id: doc.id,
+          data: () => documentToFirestoreData(doc),
+        })),
+      });
       const result = await service.getAllByType(LegalDocumentType.IMPRESSUM);
-
       expect(result).toBeDefined();
       expect(result).toHaveLength(2);
       expect(result[0].type).toBe(LegalDocumentType.IMPRESSUM);
-      expect(mockRepository.findByType).toHaveBeenCalledWith(LegalDocumentType.IMPRESSUM);
     });
 
     it('should return empty array if no documents found', async () => {
-      mockRepository.findByType.mockResolvedValue([]);
-
+      mockQuery.get.mockResolvedValueOnce({ docs: [] });
       const result = await service.getAllByType(LegalDocumentType.IMPRESSUM);
-
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
-      expect(mockRepository.findByType).toHaveBeenCalledWith(LegalDocumentType.IMPRESSUM);
     });
   });
 
   describe('getById', () => {
     it('should return a legal document by id', async () => {
-      mockRepository.findById.mockResolvedValue(mockDocument);
-
       const result = await service.getById(mockDocument.id);
-
       expect(result).toBeDefined();
       expect(result.id).toBe(mockDocument.id);
-      expect(mockRepository.findById).toHaveBeenCalledWith(mockDocument.id);
+      expect(mockCollection.doc).toHaveBeenCalledWith(mockDocument.id);
     });
 
     it('should throw NotFoundException if document not found', async () => {
-      const nonExistentId = 'non-existent-id';
-      mockRepository.findById.mockResolvedValue(null);
-
-      await expect(service.getById(nonExistentId)).rejects.toThrow(NotFoundException);
-      expect(mockRepository.findById).toHaveBeenCalledWith(nonExistentId);
+      mockDoc.get.mockResolvedValueOnce({ exists: false });
+      await expect(service.getById('non-existent-id')).rejects.toThrow(NotFoundException);
     });
   });
 });
-

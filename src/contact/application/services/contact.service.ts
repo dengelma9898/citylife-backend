@@ -1,5 +1,11 @@
 import { Injectable, Logger, Inject, forwardRef, UnauthorizedException } from '@nestjs/common';
-import { ContactRequest, ContactRequestType } from '../../domain/entities/contact-request.entity';
+import { FirebaseService } from '../../../firebase/firebase.service';
+import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
+import {
+  ContactRequest,
+  ContactRequestProps,
+  ContactRequestType,
+} from '../../domain/entities/contact-request.entity';
 import { ContactMessage } from '../../domain/entities/contact-message.entity';
 import { GeneralContactRequestDto } from '../dto/general-contact-request.dto';
 import { FeedbackRequestDto } from '../dto/feedback-request.dto';
@@ -9,23 +15,105 @@ import { AdminResponseDto } from '../dto/admin-response.dto';
 import { UsersService } from '../../../users/users.service';
 import { UserType } from '../../../users/enums/user-type.enum';
 import { AddMessageDto } from '../dto/add-message.dto';
-import {
-  CONTACT_REQUEST_REPOSITORY,
-  ContactRequestRepository,
-} from '../../domain/repositories/contact-request.repository';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 
 @Injectable()
 export class ContactService {
   private readonly logger = new Logger(ContactService.name);
+  private readonly collection = 'contact_requests';
 
   constructor(
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
-    @Inject(CONTACT_REQUEST_REPOSITORY)
-    private readonly contactRequestRepository: ContactRequestRepository,
+    private readonly firebaseService: FirebaseService,
     private readonly notificationService: NotificationService,
   ) {}
+
+  private toContactRequestProps(data: Record<string, unknown>, id: string): ContactRequestProps {
+    const messages = (data.messages as Record<string, unknown>[]) || [];
+    return {
+      id,
+      type: data.type as ContactRequestType,
+      userId: data.userId as string | undefined,
+      businessId: data.businessId as string | undefined,
+      messages: messages.map(msg =>
+        ContactMessage.fromProps({
+          userId: msg.userId as string | undefined,
+          message: msg.message as string,
+          createdAt: msg.createdAt as string,
+          isAdminResponse: msg.isAdminResponse as boolean,
+        }),
+      ),
+      createdAt: data.createdAt as string,
+      updatedAt: data.updatedAt as string,
+      isProcessed: (data.isProcessed as boolean) ?? false,
+      responded: (data.responded as boolean) ?? false,
+    };
+  }
+
+  private async findAllContactRequests(): Promise<ContactRequest[]> {
+    this.logger.log('Getting all contact requests');
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db.collection(this.collection).get();
+    return snapshot.docs.map(doc =>
+      ContactRequest.fromProps(
+        this.toContactRequestProps(doc.data() as Record<string, unknown>, doc.id),
+      ),
+    );
+  }
+
+  private async findContactRequestById(id: string): Promise<ContactRequest | null> {
+    this.logger.log(`Getting contact request with id: ${id}`);
+    const db = this.firebaseService.getFirestore();
+    const doc = await db.collection(this.collection).doc(id).get();
+    if (!doc.exists) {
+      return null;
+    }
+    return ContactRequest.fromProps(
+      this.toContactRequestProps(doc.data() as Record<string, unknown>, doc.id),
+    );
+  }
+
+  private async createContactRequestInFirestore(
+    data: Omit<ContactRequest, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<ContactRequest> {
+    this.logger.log('Creating new contact request');
+    const db = this.firebaseService.getFirestore();
+    const contactRequest = ContactRequest.create(data);
+    const plainData = toFirestoreData(contactRequest);
+    const docRef = await db.collection(this.collection).add(plainData);
+    return ContactRequest.fromProps(this.toContactRequestProps(plainData, docRef.id));
+  }
+
+  private async updateContactRequest(
+    id: string,
+    data: Partial<Omit<ContactRequest, 'id' | 'createdAt'>>,
+  ): Promise<ContactRequest | null> {
+    this.logger.log(`Updating contact request with id: ${id}`);
+    const db = this.firebaseService.getFirestore();
+    const doc = await db.collection(this.collection).doc(id).get();
+    if (!doc.exists) {
+      return null;
+    }
+    const currentRequest = ContactRequest.fromProps(
+      this.toContactRequestProps(doc.data() as Record<string, unknown>, doc.id),
+    );
+    const updatedRequest = currentRequest.update(data);
+    const plainData = toFirestoreData(updatedRequest);
+    await db.collection(this.collection).doc(id).update(plainData);
+    return ContactRequest.fromProps(this.toContactRequestProps(plainData, id));
+  }
+
+  private async findContactRequestsByUserId(userId: string): Promise<ContactRequest[]> {
+    this.logger.log(`Finding contact requests for user: ${userId}`);
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db.collection(this.collection).where('userId', '==', userId).get();
+    return snapshot.docs.map(doc =>
+      ContactRequest.fromProps(
+        this.toContactRequestProps(doc.data() as Record<string, unknown>, doc.id),
+      ),
+    );
+  }
 
   public async createContactRequest(
     data:
@@ -36,35 +124,28 @@ export class ContactService {
     type: ContactRequestType,
   ): Promise<ContactRequest> {
     this.logger.debug(`Creating new ${type} contact request`);
-
     const initialMessage = ContactMessage.create({
       message: data.message,
       userId: data.userId,
       isAdminResponse: false,
     });
-
     const contactRequest = ContactRequest.create({
       type,
       businessId: 'businessId' in data ? data.businessId : '',
       userId: data.userId,
       messages: [initialMessage],
     });
-
-    const createdRequest = await this.contactRequestRepository.create(contactRequest);
-
-    // Speichere die ID im Benutzermodell
+    const createdRequest = await this.createContactRequestInFirestore(contactRequest);
     const user = await this.usersService.getById(data.userId);
     if (user) {
       const contactRequestIds = user.contactRequestIds || [];
       contactRequestIds.push(createdRequest.id);
-
       if ('userType' in user) {
         await this.usersService.update(data.userId, { contactRequestIds });
       } else {
         await this.usersService.updateBusinessUser(data.userId, { contactRequestIds });
       }
     }
-
     return createdRequest;
   }
 
@@ -88,79 +169,65 @@ export class ContactService {
 
   public async addAdminResponse(id: string, data: AdminResponseDto): Promise<ContactRequest> {
     this.logger.debug(`Adding admin response to contact request ${id}`);
-
-    const contactRequest = await this.contactRequestRepository.findById(id);
+    const contactRequest = await this.findContactRequestById(id);
     if (!contactRequest) {
       throw new Error(`Contact request with id ${id} not found`);
     }
-
     const wasResponded = contactRequest.responded;
-
     const newMessage = ContactMessage.create({
       message: data.message,
       userId: data.userId,
       isAdminResponse: true,
     });
-
-    const updatedRequest = await this.contactRequestRepository.update(id, {
+    const updatedRequest = await this.updateContactRequest(id, {
       messages: [...contactRequest.messages.map(msg => ContactMessage.fromProps(msg)), newMessage],
       responded: true,
     });
-
     if (!updatedRequest) {
       throw new Error(`Contact request with id ${id} not found after update`);
     }
-
     if (!wasResponded && updatedRequest.userId) {
       await this.sendContactRequestResponseNotification(updatedRequest);
     }
-
     return updatedRequest;
   }
 
   public async getAll(): Promise<ContactRequest[]> {
     this.logger.debug('Getting all contact requests');
-    return this.contactRequestRepository.findAll();
+    return this.findAllContactRequests();
   }
 
   public async getById(id: string, userId: string): Promise<ContactRequest | null> {
     this.logger.debug(`Getting contact request ${id} for user ${userId}`);
-    const contactRequest = await this.contactRequestRepository.findById(id);
-
+    const contactRequest = await this.findContactRequestById(id);
     if (!contactRequest) {
       return null;
     }
-
     const user = await this.usersService.getById(userId);
     if (!user) {
       return null;
     }
-
     if ('userType' in user && user.userType === UserType.SUPER_ADMIN) {
       return contactRequest;
     }
-
     if (!user.contactRequestIds || !user.contactRequestIds.includes(id)) {
       return null;
     }
-
     return contactRequest;
   }
 
   public async markAsProcessed(id: string): Promise<ContactRequest> {
     this.logger.debug(`Marking contact request ${id} as processed`);
-    const updatedRequest = await this.contactRequestRepository.update(id, { isProcessed: true });
-
+    const updatedRequest = await this.updateContactRequest(id, { isProcessed: true });
     if (!updatedRequest) {
       throw new Error(`Contact request with id ${id} not found after update`);
     }
-
     return updatedRequest;
   }
 
   public async getContactRequestsByUserId(userId: string): Promise<ContactRequest[]> {
     this.logger.debug(`Getting contact requests for user ${userId}`);
-    return this.contactRequestRepository.findByUserId(userId);
+    return this.findContactRequestsByUserId(userId);
   }
 
   public async addMessage(
@@ -169,47 +236,39 @@ export class ContactService {
     messageDto: AddMessageDto,
   ): Promise<ContactRequest> {
     this.logger.debug(`Adding message to contact request ${id} from user ${userId}`);
-
     const contactRequest = await this.getById(id, userId);
     if (!contactRequest) {
       throw new UnauthorizedException(
         'Sie haben keine Berechtigung, diese Kontaktanfrage zu bearbeiten',
       );
     }
-
     const user = await this.usersService.getById(userId);
     if (!user) {
       throw new UnauthorizedException('Benutzer nicht gefunden');
     }
-
     const wasResponded = contactRequest.responded;
     const isAdminResponse = 'userType' in user && user.userType === UserType.SUPER_ADMIN;
-
     const newMessage = ContactMessage.create({
       message: messageDto.message,
       userId: userId,
       isAdminResponse,
     });
-
-    const updatedRequest = await this.contactRequestRepository.update(id, {
+    const updatedRequest = await this.updateContactRequest(id, {
       messages: [...contactRequest.messages.map(msg => ContactMessage.fromProps(msg)), newMessage],
       responded: isAdminResponse,
     });
-
     if (!updatedRequest) {
       throw new Error('Kontaktanfrage konnte nach dem Update nicht gefunden werden');
     }
-
     if (!wasResponded && isAdminResponse && updatedRequest.userId) {
       await this.sendContactRequestResponseNotification(updatedRequest);
     }
-
     return updatedRequest;
   }
 
   public async getOpenRequestsCount(): Promise<number> {
     this.logger.debug('Getting count of open contact requests');
-    const requests = await this.contactRequestRepository.findAll();
+    const requests = await this.findAllContactRequests();
     return requests.filter(request => !request.responded).length;
   }
 

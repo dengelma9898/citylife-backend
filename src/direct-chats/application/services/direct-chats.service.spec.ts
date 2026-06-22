@@ -1,37 +1,34 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DirectChatsService } from './direct-chats.service';
-import { DirectChatRepository } from '../../domain/repositories/direct-chat.repository';
-import { DirectMessageRepository } from '../../domain/repositories/direct-message.repository';
 import { DirectChat } from '../../domain/entities/direct-chat.entity';
 import { UsersService } from '../../../users/users.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
+import { FirebaseService } from '../../../firebase/firebase.service';
+import { DirectMessagesService } from './direct-messages.service';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 
 describe('DirectChatsService', () => {
   let service: DirectChatsService;
-  let directChatRepository: jest.Mocked<DirectChatRepository>;
-  let directMessageRepository: jest.Mocked<DirectMessageRepository>;
+  let mockDoc: {
+    get: jest.Mock;
+    set: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let mockQuery: {
+    where: jest.Mock;
+    limit: jest.Mock;
+    get: jest.Mock;
+  };
+  let mockCollection: {
+    doc: jest.Mock;
+    where: jest.Mock;
+  };
+  let mockFirestore: { collection: jest.Mock };
+  let mockFirebaseService: { getFirestore: jest.Mock };
+  let mockDirectMessagesService: { deleteAllMessagesByChatId: jest.Mock };
   let usersService: jest.Mocked<UsersService>;
   let notificationService: jest.Mocked<Pick<NotificationService, 'sendToUser' | 'sendToUsers'>>;
-
-  const mockDirectChatRepository = {
-    findById: jest.fn(),
-    findByUserId: jest.fn(),
-    findPendingByInvitedUserId: jest.fn(),
-    findExistingChat: jest.fn(),
-    save: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  };
-
-  const mockDirectMessageRepository = {
-    findById: jest.fn(),
-    findByChatId: jest.fn(),
-    save: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    deleteAllByChatId: jest.fn(),
-  };
 
   const mockUsersService = {
     update: jest.fn(),
@@ -74,32 +71,73 @@ describe('DirectChatsService', () => {
     updatedAt: new Date().toISOString(),
   });
 
+  const chatToFirestoreData = (chat: DirectChat): Record<string, unknown> => {
+    const { id, ...data } = chat.toJSON();
+    return data;
+  };
+
+  const configureFindById = (chat: DirectChat | null): void => {
+    mockDoc.get.mockResolvedValue({
+      exists: chat !== null,
+      id: chat?.id ?? 'unknown',
+      data: () => (chat ? chatToFirestoreData(chat) : undefined),
+    });
+  };
+
+  const configureFindExistingChat = (chat: DirectChat | null): void => {
+    mockQuery.get.mockResolvedValue({
+      empty: chat === null,
+      docs:
+        chat === null
+          ? []
+          : [{ id: chat.id, data: () => chatToFirestoreData(chat) }],
+    });
+  };
+
+  const configureFindByUserId = (chats: DirectChat[]): void => {
+    mockQuery.get.mockResolvedValue({
+      docs: chats.map(chat => ({
+        id: chat.id,
+        data: () => chatToFirestoreData(chat),
+      })),
+    });
+  };
+
   beforeEach(async () => {
+    mockQuery = {
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({ empty: true, docs: [] }),
+    };
+    mockDoc = {
+      get: jest.fn().mockResolvedValue({ exists: false, id: 'unknown', data: () => undefined }),
+      set: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+    };
+    mockCollection = {
+      doc: jest.fn().mockReturnValue(mockDoc),
+      where: jest.fn().mockReturnValue(mockQuery),
+    };
+    mockFirestore = {
+      collection: jest.fn().mockReturnValue(mockCollection),
+    };
+    mockFirebaseService = {
+      getFirestore: jest.fn().mockReturnValue(mockFirestore),
+    };
+    mockDirectMessagesService = {
+      deleteAllMessagesByChatId: jest.fn().mockResolvedValue(undefined),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DirectChatsService,
-        {
-          provide: DirectChatRepository,
-          useValue: mockDirectChatRepository,
-        },
-        {
-          provide: DirectMessageRepository,
-          useValue: mockDirectMessageRepository,
-        },
-        {
-          provide: UsersService,
-          useValue: mockUsersService,
-        },
-        {
-          provide: NotificationService,
-          useValue: mockNotificationService,
-        },
+        { provide: FirebaseService, useValue: mockFirebaseService },
+        { provide: DirectMessagesService, useValue: mockDirectMessagesService },
+        { provide: UsersService, useValue: mockUsersService },
+        { provide: NotificationService, useValue: mockNotificationService },
       ],
     }).compile();
-
     service = await module.resolve(DirectChatsService);
-    directChatRepository = module.get(DirectChatRepository);
-    directMessageRepository = module.get(DirectMessageRepository);
     usersService = module.get(UsersService);
     notificationService = module.get(NotificationService);
   });
@@ -125,8 +163,7 @@ describe('DirectChatsService', () => {
         .mockResolvedValueOnce(senderProfile)
         .mockResolvedValueOnce(invitedProfile)
         .mockResolvedValueOnce(invitedProfile);
-      mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
-      mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
+      configureFindExistingChat(null);
       mockUsersService.update.mockResolvedValue(mockUserProfile);
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
 
@@ -138,7 +175,7 @@ describe('DirectChatsService', () => {
       expect(result.creatorConfirmed).toBe(true);
       expect(result.invitedConfirmed).toBe(false);
       expect(result.status).toBe('pending');
-      expect(mockDirectChatRepository.save).toHaveBeenCalled();
+      expect(mockDoc.set).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user-2', {
         title: 'Neue Chat-Anfrage',
         body: 'Sender User möchte mit dir chatten',
@@ -167,14 +204,13 @@ describe('DirectChatsService', () => {
         .mockResolvedValueOnce(senderProfile)
         .mockResolvedValueOnce(invitedProfile)
         .mockResolvedValueOnce(invitedProfile);
-      mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
-      mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
+      configureFindExistingChat(null);
       mockUsersService.update.mockResolvedValue(mockUserProfile);
 
       const result = await service.createChat('user-1', { invitedUserId: 'user-2' });
 
       expect(result).toBeDefined();
-      expect(mockDirectChatRepository.save).toHaveBeenCalled();
+      expect(mockDoc.set).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
 
@@ -194,14 +230,13 @@ describe('DirectChatsService', () => {
         .mockResolvedValueOnce(senderProfile)
         .mockResolvedValueOnce(invitedProfile)
         .mockResolvedValueOnce(invitedProfile);
-      mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
-      mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
+      configureFindExistingChat(null);
       mockUsersService.update.mockResolvedValue(mockUserProfile);
 
       const result = await service.createChat('user-1', { invitedUserId: 'user-2' });
 
       expect(result).toBeDefined();
-      expect(mockDirectChatRepository.save).toHaveBeenCalled();
+      expect(mockDoc.set).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
     });
 
@@ -221,15 +256,14 @@ describe('DirectChatsService', () => {
         .mockResolvedValueOnce(senderProfile)
         .mockResolvedValueOnce(invitedProfile)
         .mockResolvedValueOnce(invitedProfile);
-      mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
-      mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
+      configureFindExistingChat(null);
       mockUsersService.update.mockResolvedValue(mockUserProfile);
       mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification failed'));
 
       const result = await service.createChat('user-1', { invitedUserId: 'user-2' });
 
       expect(result).toBeDefined();
-      expect(mockDirectChatRepository.save).toHaveBeenCalled();
+      expect(mockDoc.set).toHaveBeenCalled();
       expect(mockNotificationService.sendToUser).toHaveBeenCalled();
     });
 
@@ -249,8 +283,7 @@ describe('DirectChatsService', () => {
         .mockResolvedValueOnce(senderProfile)
         .mockResolvedValueOnce(invitedProfile)
         .mockResolvedValueOnce(invitedProfile);
-      mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
-      mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
+      configureFindExistingChat(null);
       mockUsersService.update.mockResolvedValue(mockUserProfile);
       mockNotificationService.sendToUser.mockResolvedValue(undefined);
 
@@ -318,7 +351,7 @@ describe('DirectChatsService', () => {
           ['user-2', mockUserProfile],
         ]),
       );
-      mockDirectChatRepository.findExistingChat.mockResolvedValue(mockChat);
+      configureFindExistingChat(mockChat);
 
       await expect(
         service.createChat('user-1', { invitedUserId: 'user-2' }),
@@ -328,7 +361,7 @@ describe('DirectChatsService', () => {
 
   describe('getChatsForUser', () => {
     it('should return all chats for a user', async () => {
-      mockDirectChatRepository.findByUserId.mockResolvedValue([mockChat]);
+      configureFindByUserId([mockChat]);
       mockUsersService.getUserProfilesByIds.mockResolvedValue(
         new Map([['user-2', mockUserProfile]]),
       );
@@ -343,7 +376,7 @@ describe('DirectChatsService', () => {
 
   describe('getChatById', () => {
     it('should return a chat by id', async () => {
-      mockDirectChatRepository.findById.mockResolvedValue(mockChat);
+      configureFindById(mockChat);
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
 
       const result = await service.getChatById('user-1', 'chat-1');
@@ -354,7 +387,7 @@ describe('DirectChatsService', () => {
     });
 
     it('should throw NotFoundException when chat not found', async () => {
-      mockDirectChatRepository.findById.mockResolvedValue(null);
+      configureFindById(null);
 
       await expect(
         service.getChatById('user-1', 'nonexistent'),
@@ -362,7 +395,7 @@ describe('DirectChatsService', () => {
     });
 
     it('should throw ForbiddenException when user is not participant', async () => {
-      mockDirectChatRepository.findById.mockResolvedValue(mockChat);
+      configureFindById(mockChat);
 
       await expect(
         service.getChatById('user-3', 'chat-1'),
@@ -372,17 +405,17 @@ describe('DirectChatsService', () => {
 
   describe('confirmChat', () => {
     it('should confirm a pending chat', async () => {
-      mockDirectChatRepository.findById.mockResolvedValue(mockChat);
-      mockDirectChatRepository.update.mockImplementation(chat => Promise.resolve(chat));
+      configureFindById(mockChat);
 
       const result = await service.confirmChat('user-2', 'chat-1');
 
       expect(result.invitedConfirmed).toBe(true);
       expect(result.status).toBe('active');
+      expect(mockDoc.update).toHaveBeenCalled();
     });
 
     it('should throw ForbiddenException when non-invited user tries to confirm', async () => {
-      mockDirectChatRepository.findById.mockResolvedValue(mockChat);
+      configureFindById(mockChat);
 
       await expect(
         service.confirmChat('user-1', 'chat-1'),
@@ -390,7 +423,7 @@ describe('DirectChatsService', () => {
     });
 
     it('should throw BadRequestException when chat is already confirmed', async () => {
-      mockDirectChatRepository.findById.mockResolvedValue(mockActiveChat);
+      configureFindById(mockActiveChat);
 
       await expect(
         service.confirmChat('user-2', 'chat-2'),
@@ -400,20 +433,18 @@ describe('DirectChatsService', () => {
 
   describe('deleteChat', () => {
     it('should delete a chat and all its messages', async () => {
-      mockDirectChatRepository.findById.mockResolvedValue(mockChat);
-      mockDirectMessageRepository.deleteAllByChatId.mockResolvedValue(undefined);
-      mockDirectChatRepository.delete.mockResolvedValue(undefined);
+      configureFindById(mockChat);
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
       mockUsersService.update.mockResolvedValue(mockUserProfile);
 
       await service.deleteChat('user-1', 'chat-1');
 
-      expect(mockDirectMessageRepository.deleteAllByChatId).toHaveBeenCalledWith('chat-1');
-      expect(mockDirectChatRepository.delete).toHaveBeenCalledWith('chat-1');
+      expect(mockDirectMessagesService.deleteAllMessagesByChatId).toHaveBeenCalledWith('chat-1');
+      expect(mockDoc.delete).toHaveBeenCalled();
     });
 
     it('should throw ForbiddenException when user is not participant', async () => {
-      mockDirectChatRepository.findById.mockResolvedValue(mockChat);
+      configureFindById(mockChat);
 
       await expect(
         service.deleteChat('user-3', 'chat-1'),
@@ -423,7 +454,7 @@ describe('DirectChatsService', () => {
 
   describe('validateChatAccess', () => {
     it('should return chat when user is participant', async () => {
-      mockDirectChatRepository.findById.mockResolvedValue(mockChat);
+      configureFindById(mockChat);
 
       const result = await service.validateChatAccess('user-1', 'chat-1');
 
@@ -432,7 +463,7 @@ describe('DirectChatsService', () => {
     });
 
     it('should throw NotFoundException when chat not found', async () => {
-      mockDirectChatRepository.findById.mockResolvedValue(null);
+      configureFindById(null);
 
       await expect(
         service.validateChatAccess('user-1', 'nonexistent'),
@@ -440,7 +471,7 @@ describe('DirectChatsService', () => {
     });
 
     it('should throw ForbiddenException when user is not participant', async () => {
-      mockDirectChatRepository.findById.mockResolvedValue(mockChat);
+      configureFindById(mockChat);
 
       await expect(
         service.validateChatAccess('user-3', 'chat-1'),
@@ -448,4 +479,3 @@ describe('DirectChatsService', () => {
     });
   });
 });
-

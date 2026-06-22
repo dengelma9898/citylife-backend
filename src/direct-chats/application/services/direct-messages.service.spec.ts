@@ -1,26 +1,42 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DirectMessagesService } from './direct-messages.service';
-import { DirectMessageRepository } from '../../domain/repositories/direct-message.repository';
 import { DirectMessage } from '../../domain/entities/direct-message.entity';
 import { DirectChat } from '../../domain/entities/direct-chat.entity';
 import { DirectChatsService } from './direct-chats.service';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { UsersService } from '../../../users/users.service';
+import { FirebaseService } from '../../../firebase/firebase.service';
 
 describe('DirectMessagesService', () => {
   let service: DirectMessagesService;
-  let directMessageRepository: jest.Mocked<DirectMessageRepository>;
-  let directChatsService: jest.Mocked<DirectChatsService>;
-
-  const mockDirectMessageRepository = {
-    findById: jest.fn(),
-    findByChatId: jest.fn(),
-    save: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    deleteAllByChatId: jest.fn(),
+  let mockMessageDoc: {
+    get: jest.Mock;
+    set: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
   };
+  let mockMessagesQuery: {
+    orderBy: jest.Mock;
+    get: jest.Mock;
+  };
+  let mockMessagesCollection: {
+    doc: jest.Mock;
+    orderBy: jest.Mock;
+    get: jest.Mock;
+  };
+  let mockChatDoc: {
+    collection: jest.Mock;
+  };
+  let mockChatCollection: {
+    doc: jest.Mock;
+  };
+  let mockFirestore: {
+    collection: jest.Mock;
+    batch: jest.Mock;
+  };
+  let mockFirebaseService: { getFirestore: jest.Mock };
+  let directChatsService: jest.Mocked<DirectChatsService>;
 
   const mockDirectChatsService = {
     validateChatAccess: jest.fn(),
@@ -69,31 +85,70 @@ describe('DirectMessagesService', () => {
     updatedAt: new Date().toISOString(),
   });
 
+  const messageToFirestoreData = (message: DirectMessage): Record<string, unknown> => {
+    const { id, ...data } = message.toJSON();
+    return data;
+  };
+
+  const configureFindMessageById = (message: DirectMessage | null): void => {
+    mockMessageDoc.get.mockResolvedValue({
+      exists: message !== null,
+      id: message?.id ?? 'unknown',
+      data: () => (message ? messageToFirestoreData(message) : undefined),
+    });
+  };
+
+  const configureFindByChatId = (messages: DirectMessage[]): void => {
+    mockMessagesQuery.get.mockResolvedValue({
+      docs: messages.map(message => ({
+        id: message.id,
+        data: () => messageToFirestoreData(message),
+      })),
+    });
+  };
+
   beforeEach(async () => {
+    mockMessageDoc = {
+      get: jest.fn().mockResolvedValue({ exists: false, id: 'unknown', data: () => undefined }),
+      set: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+    };
+    mockMessagesQuery = {
+      orderBy: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
+    };
+    mockMessagesCollection = {
+      doc: jest.fn().mockReturnValue(mockMessageDoc),
+      orderBy: jest.fn().mockReturnValue(mockMessagesQuery),
+      get: jest.fn().mockResolvedValue({ empty: true, docs: [] }),
+    };
+    mockChatDoc = {
+      collection: jest.fn().mockReturnValue(mockMessagesCollection),
+    };
+    mockChatCollection = {
+      doc: jest.fn().mockReturnValue(mockChatDoc),
+    };
+    mockFirestore = {
+      collection: jest.fn().mockReturnValue(mockChatCollection),
+      batch: jest.fn().mockReturnValue({
+        delete: jest.fn(),
+        commit: jest.fn().mockResolvedValue(undefined),
+      }),
+    };
+    mockFirebaseService = {
+      getFirestore: jest.fn().mockReturnValue(mockFirestore),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DirectMessagesService,
-        {
-          provide: DirectMessageRepository,
-          useValue: mockDirectMessageRepository,
-        },
-        {
-          provide: DirectChatsService,
-          useValue: mockDirectChatsService,
-        },
-        {
-          provide: NotificationService,
-          useValue: mockNotificationService,
-        },
-        {
-          provide: UsersService,
-          useValue: mockUsersService,
-        },
+        { provide: FirebaseService, useValue: mockFirebaseService },
+        { provide: DirectChatsService, useValue: mockDirectChatsService },
+        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: UsersService, useValue: mockUsersService },
       ],
     }).compile();
-
     service = await module.resolve(DirectMessagesService);
-    directMessageRepository = module.get(DirectMessageRepository);
     directChatsService = module.get(DirectChatsService);
   });
 
@@ -104,7 +159,6 @@ describe('DirectMessagesService', () => {
   describe('createMessage', () => {
     it('should create a new message in active chat', async () => {
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
-      mockDirectMessageRepository.save.mockImplementation(msg => Promise.resolve(msg));
       mockDirectChatsService.updateLastMessage.mockResolvedValue(undefined);
 
       const result = await service.createMessage('user-1', 'Test User', 'chat-1', {
@@ -115,7 +169,7 @@ describe('DirectMessagesService', () => {
       expect(result.senderId).toBe('user-1');
       expect(result.senderName).toBe('Test User');
       expect(result.content).toBe('Hello!');
-      expect(mockDirectMessageRepository.save).toHaveBeenCalled();
+      expect(mockMessageDoc.set).toHaveBeenCalled();
       expect(mockDirectChatsService.updateLastMessage).toHaveBeenCalled();
     });
 
@@ -131,7 +185,7 @@ describe('DirectMessagesService', () => {
   describe('getMessages', () => {
     it('should return all messages for a chat with isEditable flag', async () => {
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
-      mockDirectMessageRepository.findByChatId.mockResolvedValue([mockMessage]);
+      configureFindByChatId([mockMessage]);
 
       const result = await service.getMessages('user-1', 'chat-1');
 
@@ -142,7 +196,7 @@ describe('DirectMessagesService', () => {
 
     it('should set isEditable to false for other users messages', async () => {
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
-      mockDirectMessageRepository.findByChatId.mockResolvedValue([mockMessage]);
+      configureFindByChatId([mockMessage]);
 
       const result = await service.getMessages('user-2', 'chat-1');
 
@@ -153,8 +207,7 @@ describe('DirectMessagesService', () => {
   describe('updateMessage', () => {
     it('should update own message', async () => {
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
-      mockDirectMessageRepository.findById.mockResolvedValue(mockMessage);
-      mockDirectMessageRepository.update.mockImplementation(msg => Promise.resolve(msg));
+      configureFindMessageById(mockMessage);
 
       const result = await service.updateMessage('user-1', 'chat-1', 'message-1', {
         content: 'Updated content',
@@ -163,11 +216,12 @@ describe('DirectMessagesService', () => {
       expect(result).toBeDefined();
       expect(result.content).toBe('Updated content');
       expect(result.editedAt).toBeDefined();
+      expect(mockMessageDoc.update).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when message not found', async () => {
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
-      mockDirectMessageRepository.findById.mockResolvedValue(null);
+      configureFindMessageById(null);
 
       await expect(
         service.updateMessage('user-1', 'chat-1', 'nonexistent', { content: 'Updated' }),
@@ -176,7 +230,7 @@ describe('DirectMessagesService', () => {
 
     it('should throw ForbiddenException when trying to edit others message', async () => {
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
-      mockDirectMessageRepository.findById.mockResolvedValue(mockMessage);
+      configureFindMessageById(mockMessage);
 
       await expect(
         service.updateMessage('user-2', 'chat-1', 'message-1', { content: 'Updated' }),
@@ -187,17 +241,16 @@ describe('DirectMessagesService', () => {
   describe('deleteMessage', () => {
     it('should delete own message', async () => {
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
-      mockDirectMessageRepository.findById.mockResolvedValue(mockMessage);
-      mockDirectMessageRepository.delete.mockResolvedValue(undefined);
+      configureFindMessageById(mockMessage);
 
       await service.deleteMessage('user-1', 'chat-1', 'message-1');
 
-      expect(mockDirectMessageRepository.delete).toHaveBeenCalledWith('chat-1', 'message-1');
+      expect(mockMessageDoc.delete).toHaveBeenCalled();
     });
 
     it('should throw ForbiddenException when trying to delete others message', async () => {
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
-      mockDirectMessageRepository.findById.mockResolvedValue(mockMessage);
+      configureFindMessageById(mockMessage);
 
       await expect(
         service.deleteMessage('user-2', 'chat-1', 'message-1'),
@@ -208,8 +261,7 @@ describe('DirectMessagesService', () => {
   describe('updateReaction', () => {
     it('should add a reaction to a message', async () => {
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
-      mockDirectMessageRepository.findById.mockResolvedValue(mockMessage);
-      mockDirectMessageRepository.update.mockImplementation(msg => Promise.resolve(msg));
+      configureFindMessageById(mockMessage);
 
       const result = await service.updateReaction('user-2', 'chat-1', 'message-1', {
         type: '👍',
@@ -217,6 +269,7 @@ describe('DirectMessagesService', () => {
 
       expect(result).toBeDefined();
       expect(result.reactions).toContainEqual({ userId: 'user-2', type: '👍' });
+      expect(mockMessageDoc.update).toHaveBeenCalled();
     });
 
     it('should remove existing reaction when same reaction is sent', async () => {
@@ -225,8 +278,7 @@ describe('DirectMessagesService', () => {
         reactions: [{ userId: 'user-2', type: '👍' }],
       });
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
-      mockDirectMessageRepository.findById.mockResolvedValue(messageWithReaction);
-      mockDirectMessageRepository.update.mockImplementation(msg => Promise.resolve(msg));
+      configureFindMessageById(messageWithReaction);
 
       const result = await service.updateReaction('user-2', 'chat-1', 'message-1', {
         type: '👍',
@@ -241,8 +293,7 @@ describe('DirectMessagesService', () => {
         reactions: [{ userId: 'user-2', type: '👍' }],
       });
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
-      mockDirectMessageRepository.findById.mockResolvedValue(messageWithReaction);
-      mockDirectMessageRepository.update.mockImplementation(msg => Promise.resolve(msg));
+      configureFindMessageById(messageWithReaction);
 
       const result = await service.updateReaction('user-2', 'chat-1', 'message-1', {
         type: '❤️',
@@ -253,4 +304,3 @@ describe('DirectMessagesService', () => {
     });
   });
 });
-

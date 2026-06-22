@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CuratedSpotsUserRatingsSettingsService } from './curated-spots-user-ratings-settings.service';
-import { CuratedSpotsUserRatingsSettingsRepository } from '../../domain/repositories/curated-spots-user-ratings-settings.repository';
 import { CuratedSpotsUserRatingsSettings } from '../../domain/entities/curated-spots-user-ratings-settings.entity';
 import { CuratedSpotUserRatingsService } from './curated-spot-user-ratings.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
@@ -9,35 +8,39 @@ import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
 
 describe('CuratedSpotsUserRatingsSettingsService', () => {
   let service: CuratedSpotsUserRatingsSettingsService;
-  const mockRepo = {
-    get: jest.fn(),
-    save: jest.fn(),
-  };
+  let getSpy: jest.SpyInstance;
+  let saveSpy: jest.SpyInstance;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CuratedSpotsUserRatingsSettingsService,
-        { provide: CuratedSpotsUserRatingsSettingsRepository, useValue: mockRepo },
+        { provide: FirebaseService, useValue: { getFirestore: jest.fn() } },
       ],
     }).compile();
     service = module.get(CuratedSpotsUserRatingsSettingsService);
+    getSpy = jest.spyOn(service as any, 'get');
+    saveSpy = jest.spyOn(service as any, 'save');
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('isFeatureEnabled returns settings flag', async () => {
-    mockRepo.get.mockResolvedValue(CuratedSpotsUserRatingsSettings.createDefault());
+    getSpy.mockResolvedValue(CuratedSpotsUserRatingsSettings.createDefault());
     await expect(service.isFeatureEnabled()).resolves.toBe(false);
   });
 
   it('updateSettings saves updated entity', async () => {
     const current = CuratedSpotsUserRatingsSettings.createDefault();
     const saved = current.update({ isEnabled: true }, 'admin-1');
-    mockRepo.get.mockResolvedValue(current);
-    mockRepo.save.mockResolvedValue(saved);
+    getSpy.mockResolvedValue(current);
+    saveSpy.mockResolvedValue(saved);
     const result = await service.updateSettings(true, 'admin-1');
     expect(result.isEnabled).toBe(true);
-    expect(mockRepo.save).toHaveBeenCalled();
+    expect(saveSpy).toHaveBeenCalled();
   });
 });
 

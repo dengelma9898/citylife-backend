@@ -5,26 +5,11 @@ import { ChatMessagesService } from './application/services/chat-messages.servic
 import { ChatMessagesController } from './application/controllers/chat-messages.controller';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { UsersModule } from '../users/users.module';
-import { FirebaseChatroomRepository } from './infrastructure/persistence/firebase-chatroom.repository';
-import { FirebaseChatMessageRepository } from './infrastructure/persistence/firebase-chat-message.repository';
-import { CHATROOM_REPOSITORY } from './domain/repositories/chatroom.repository';
-import { CHAT_MESSAGE_REPOSITORY } from './domain/repositories/chat-message.repository';
 
 @Module({
   imports: [FirebaseModule, UsersModule],
   controllers: [ChatroomsController, ChatMessagesController],
-  providers: [
-    ChatroomsService,
-    ChatMessagesService,
-    {
-      provide: CHATROOM_REPOSITORY,
-      useClass: FirebaseChatroomRepository,
-    },
-    {
-      provide: CHAT_MESSAGE_REPOSITORY,
-      useClass: FirebaseChatMessageRepository,
-    },
-  ],
+  providers: [ChatroomsService, ChatMessagesService],
   exports: [ChatroomsService, ChatMessagesService],
 })
 export class ChatroomsModule {}

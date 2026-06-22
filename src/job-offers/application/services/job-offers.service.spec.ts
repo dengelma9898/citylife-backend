@@ -1,28 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { JobOffersService } from './job-offers.service';
 import { JobOffer } from '../../domain/entities/job-offer.entity';
-import {
-  JobOfferRepository,
-  JOB_OFFER_REPOSITORY,
-} from '../../domain/repositories/job-offer.repository.interface';
 import { CreateJobOfferDto } from '../../dto/create-job-offer.dto';
-import { NotFoundException } from '@nestjs/common';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { UsersService } from '../../../users/users.service';
+import { FirebaseService } from '../../../firebase/firebase.service';
 
 describe('JobOffersService', () => {
   let service: JobOffersService;
-  let repository: JobOfferRepository;
+  let mockDoc: {
+    id: string;
+    exists: boolean;
+    get: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let mockCollection: {
+    doc: jest.Mock;
+    add: jest.Mock;
+    get: jest.Mock;
+  };
   let notificationService: jest.Mocked<Pick<NotificationService, 'sendToUser' | 'sendToUsers'>>;
   let usersService: jest.Mocked<UsersService>;
-
-  const mockJobOfferRepository = {
-    save: jest.fn(),
-    findAll: jest.fn(),
-    findById: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  };
 
   const mockNotificationService = {
     sendToUser: jest.fn(),
@@ -32,8 +32,9 @@ describe('JobOffersService', () => {
     getAllUserProfilesWithIds: jest.fn(),
   };
 
-  const mockJobOffer: JobOffer = JobOffer.create({
+  const mockJobOfferData = {
     title: 'Test Job',
+    companyLogo: '',
     generalDescription: 'Test Description',
     neededProfile: 'Test Profile',
     location: {
@@ -53,16 +54,40 @@ describe('JobOffersService', () => {
     tasks: [],
     benefits: [],
     images: [],
-    companyLogo: '',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  };
+
+  const mockJobOffer: JobOffer = new JobOffer({
+    id: 'job1',
+    ...mockJobOfferData,
   });
 
   beforeEach(async () => {
+    mockDoc = {
+      id: 'job1',
+      exists: true,
+      get: jest.fn().mockResolvedValue({
+        exists: true,
+        id: 'job1',
+        data: () => mockJobOfferData,
+      }),
+      update: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+    };
+    mockCollection = {
+      doc: jest.fn().mockReturnValue(mockDoc),
+      add: jest.fn().mockResolvedValue({ id: 'job-new' }),
+      get: jest.fn().mockResolvedValue({
+        docs: [{ id: 'job1', data: () => mockJobOfferData }],
+      }),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         JobOffersService,
         {
-          provide: JOB_OFFER_REPOSITORY,
-          useValue: mockJobOfferRepository,
+          provide: FirebaseService,
+          useValue: { getFirestore: jest.fn().mockReturnValue({ collection: jest.fn().mockReturnValue(mockCollection) }) },
         },
         {
           provide: NotificationService,
@@ -76,7 +101,6 @@ describe('JobOffersService', () => {
     }).compile();
 
     service = module.get<JobOffersService>(JobOffersService);
-    repository = module.get<JobOfferRepository>(JOB_OFFER_REPOSITORY);
     notificationService = module.get(NotificationService);
     usersService = module.get(UsersService);
   });
@@ -111,15 +135,14 @@ describe('JobOffersService', () => {
         companyLogo: '',
       };
 
-      mockJobOfferRepository.save.mockResolvedValue(mockJobOffer);
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
 
       const result = await service.create(createDto);
 
       expect(result).toBeDefined();
-      expect(result.title).toBe(mockJobOffer.title);
-      expect(result.generalDescription).toBe(mockJobOffer.generalDescription);
-      expect(mockJobOfferRepository.save).toHaveBeenCalled();
+      expect(result.title).toBe(createDto.title);
+      expect(result.generalDescription).toBe(createDto.generalDescription);
+      expect(mockCollection.add).toHaveBeenCalled();
     });
 
     it('should send notification when preference is enabled', async () => {
@@ -148,7 +171,7 @@ describe('JobOffersService', () => {
       };
 
       const savedJobOffer = JobOffer.create(createDto);
-      mockJobOfferRepository.save.mockResolvedValue(savedJobOffer);
+      mockCollection.add.mockResolvedValue({ id: savedJobOffer.id });
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
         {
           id: 'user1',
@@ -204,7 +227,6 @@ describe('JobOffersService', () => {
         companyLogo: '',
       };
 
-      mockJobOfferRepository.save.mockResolvedValue(mockJobOffer);
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
         {
           id: 'user1',
@@ -251,7 +273,6 @@ describe('JobOffersService', () => {
         companyLogo: '',
       };
 
-      mockJobOfferRepository.save.mockResolvedValue(mockJobOffer);
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
         {
           id: 'user1',
@@ -296,7 +317,6 @@ describe('JobOffersService', () => {
         companyLogo: '',
       };
 
-      mockJobOfferRepository.save.mockResolvedValue(mockJobOffer);
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
         {
           id: 'user1',
@@ -322,32 +342,26 @@ describe('JobOffersService', () => {
 
   describe('findAll', () => {
     it('should return all job offers', async () => {
-      mockJobOfferRepository.findAll.mockResolvedValue([mockJobOffer]);
-
       const result = await service.findAll();
 
       expect(result).toBeDefined();
       expect(result).toHaveLength(1);
       expect(result[0].title).toBe(mockJobOffer.title);
-      expect(mockJobOfferRepository.findAll).toHaveBeenCalled();
+      expect(mockCollection.get).toHaveBeenCalled();
     });
   });
 
   describe('findOne', () => {
     it('should return a job offer by id', async () => {
-      mockJobOfferRepository.findById.mockResolvedValue(mockJobOffer);
-
       const result = await service.findOne('job1');
 
       expect(result).toBeDefined();
       expect(result.title).toBe(mockJobOffer.title);
-      expect(mockJobOfferRepository.findById).toHaveBeenCalledWith('job1');
+      expect(mockCollection.doc).toHaveBeenCalledWith('job1');
     });
 
     it('should throw NotFoundException if job offer not found', async () => {
-      mockJobOfferRepository.findById.mockRejectedValue(
-        new NotFoundException('Job offer not found'),
-      );
+      mockDoc.get.mockResolvedValueOnce({ exists: false });
 
       await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
     });
@@ -360,30 +374,34 @@ describe('JobOffersService', () => {
         generalDescription: 'Updated Description',
       };
 
-      const updatedJobOffer = JobOffer.create({
-        ...mockJobOffer,
+      const updatedJobOfferData = {
+        ...mockJobOfferData,
         ...updateDto,
-      });
+      };
 
-      mockJobOfferRepository.findById.mockResolvedValue(mockJobOffer);
-      mockJobOfferRepository.update.mockResolvedValue(updatedJobOffer);
+      mockDoc.get
+        .mockResolvedValueOnce({
+          exists: true,
+          id: 'job1',
+          data: () => mockJobOfferData,
+        })
+        .mockResolvedValueOnce({
+          exists: true,
+          id: 'job1',
+          data: () => updatedJobOfferData,
+        });
 
       const result = await service.update('job1', updateDto);
 
       expect(result).toBeDefined();
       expect(result.title).toBe(updateDto.title);
       expect(result.generalDescription).toBe(updateDto.generalDescription);
-      expect(mockJobOfferRepository.findById).toHaveBeenCalledWith('job1');
-      expect(mockJobOfferRepository.update).toHaveBeenCalledWith(
-        'job1',
-        expect.objectContaining(updateDto),
-      );
+      expect(mockCollection.doc).toHaveBeenCalledWith('job1');
+      expect(mockDoc.update).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if job offer not found', async () => {
-      mockJobOfferRepository.findById.mockRejectedValue(
-        new NotFoundException('Job offer not found'),
-      );
+      mockDoc.get.mockResolvedValueOnce({ exists: false });
 
       await expect(service.update('nonexistent', { title: 'Updated' })).rejects.toThrow(
         NotFoundException,
@@ -393,19 +411,14 @@ describe('JobOffersService', () => {
 
   describe('remove', () => {
     it('should remove a job offer', async () => {
-      mockJobOfferRepository.findById.mockResolvedValue(mockJobOffer);
-      mockJobOfferRepository.delete.mockResolvedValue(undefined);
-
       await service.remove('job1');
 
-      expect(mockJobOfferRepository.findById).toHaveBeenCalledWith('job1');
-      expect(mockJobOfferRepository.delete).toHaveBeenCalledWith('job1');
+      expect(mockCollection.doc).toHaveBeenCalledWith('job1');
+      expect(mockDoc.delete).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if job offer not found', async () => {
-      mockJobOfferRepository.findById.mockRejectedValue(
-        new NotFoundException('Job offer not found'),
-      );
+      mockDoc.get.mockResolvedValueOnce({ exists: false });
 
       await expect(service.remove('nonexistent')).rejects.toThrow(NotFoundException);
     });

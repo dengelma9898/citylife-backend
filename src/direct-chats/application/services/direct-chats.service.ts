@@ -8,13 +8,14 @@ import {
   forwardRef,
   Scope,
 } from '@nestjs/common';
-import { DirectChatRepository } from '../../domain/repositories/direct-chat.repository';
-import { DirectMessageRepository } from '../../domain/repositories/direct-message.repository';
+import { FirebaseService } from '../../../firebase/firebase.service';
+import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
 import { DirectChat, DirectChatProps } from '../../domain/entities/direct-chat.entity';
 import { CreateDirectChatDto } from '../dtos/create-direct-chat.dto';
 import { UsersService } from '../../../users/users.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { UserProfile } from '../../../users/interfaces/user-profile.interface';
+import { DirectMessagesService } from './direct-messages.service';
 
 export interface DirectChatWithParticipantInfo extends DirectChatProps {
   otherParticipantName?: string;
@@ -24,14 +25,159 @@ export interface DirectChatWithParticipantInfo extends DirectChatProps {
 @Injectable({ scope: Scope.REQUEST })
 export class DirectChatsService {
   private readonly logger = new Logger(DirectChatsService.name);
+  private readonly collectionName = 'direct_chats';
 
   constructor(
-    private readonly directChatRepository: DirectChatRepository,
-    private readonly directMessageRepository: DirectMessageRepository,
+    private readonly firebaseService: FirebaseService,
+    @Inject(forwardRef(() => DirectMessagesService))
+    private readonly directMessagesService: DirectMessagesService,
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
     private readonly notificationService: NotificationService,
   ) {}
+
+  private toPlainObject(entity: DirectChat): Omit<DirectChatProps, 'id'> {
+    return toFirestoreData(entity);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private toEntityProps(data: any, id: string): DirectChatProps {
+    return {
+      id,
+      creatorId: data.creatorId,
+      invitedUserId: data.invitedUserId,
+      creatorConfirmed: data.creatorConfirmed,
+      invitedConfirmed: data.invitedConfirmed,
+      status: data.status,
+      lastMessage: data.lastMessage,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt,
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+    };
+  }
+
+  private async findById(id: string): Promise<DirectChat | null> {
+    try {
+      const db = this.firebaseService.getFirestore();
+      const doc = await db.collection(this.collectionName).doc(id).get();
+      if (!doc.exists) return null;
+      return DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id));
+    } catch (error) {
+      this.logger.error(`Error finding direct chat by id ${id}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private async findByUserId(userId: string): Promise<DirectChat[]> {
+    try {
+      const db = this.firebaseService.getFirestore();
+      const [creatorSnapshot, invitedSnapshot] = await Promise.all([
+        db.collection(this.collectionName).where('creatorId', '==', userId).get(),
+        db.collection(this.collectionName).where('invitedUserId', '==', userId).get(),
+      ]);
+      const chats: DirectChat[] = [];
+      creatorSnapshot.docs.forEach(doc => {
+        chats.push(
+          DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id)),
+        );
+      });
+      invitedSnapshot.docs.forEach(doc => {
+        if (!chats.find(c => c.id === doc.id)) {
+          chats.push(
+            DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id)),
+          );
+        }
+      });
+      return chats.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+    } catch (error) {
+      this.logger.error(`Error finding direct chats by user id ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private async findPendingByInvitedUserId(userId: string): Promise<DirectChat[]> {
+    try {
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db
+        .collection(this.collectionName)
+        .where('invitedUserId', '==', userId)
+        .where('status', '==', 'pending')
+        .get();
+      return snapshot.docs.map(doc =>
+        DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id)),
+      );
+    } catch (error) {
+      this.logger.error(`Error finding pending direct chats for user ${userId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private async findExistingChat(userId1: string, userId2: string): Promise<DirectChat | null> {
+    try {
+      const db = this.firebaseService.getFirestore();
+      const [snapshot1, snapshot2] = await Promise.all([
+        db
+          .collection(this.collectionName)
+          .where('creatorId', '==', userId1)
+          .where('invitedUserId', '==', userId2)
+          .limit(1)
+          .get(),
+        db
+          .collection(this.collectionName)
+          .where('creatorId', '==', userId2)
+          .where('invitedUserId', '==', userId1)
+          .limit(1)
+          .get(),
+      ]);
+      if (!snapshot1.empty) {
+        const doc = snapshot1.docs[0];
+        return DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id));
+      }
+      if (!snapshot2.empty) {
+        const doc = snapshot2.docs[0];
+        return DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id));
+      }
+      return null;
+    } catch (error) {
+      this.logger.error(
+        `Error finding existing chat between ${userId1} and ${userId2}: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  private async save(chat: DirectChat): Promise<DirectChat> {
+    try {
+      const db = this.firebaseService.getFirestore();
+      await db.collection(this.collectionName).doc(chat.id).set(this.toPlainObject(chat));
+      return chat;
+    } catch (error) {
+      this.logger.error(`Error saving direct chat: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private async update(chat: DirectChat): Promise<DirectChat> {
+    try {
+      const db = this.firebaseService.getFirestore();
+      await db.collection(this.collectionName).doc(chat.id).update(this.toPlainObject(chat));
+      return chat;
+    } catch (error) {
+      this.logger.error(`Error updating direct chat: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private async delete(id: string): Promise<void> {
+    try {
+      const db = this.firebaseService.getFirestore();
+      await db.collection(this.collectionName).doc(id).delete();
+    } catch (error) {
+      this.logger.error(`Error deleting direct chat ${id}: ${error.message}`);
+      throw error;
+    }
+  }
 
   async createChat(userId: string, dto: CreateDirectChatDto): Promise<DirectChat> {
     this.logger.debug(`User ${userId} creating direct chat with ${dto.invitedUserId}`);
@@ -55,10 +201,7 @@ export class DirectChatsService {
     if (invitedBlockedUserIds.includes(userId)) {
       throw new ForbiddenException('You have been blocked by this user');
     }
-    const existingChat = await this.directChatRepository.findExistingChat(
-      userId,
-      dto.invitedUserId,
-    );
+    const existingChat = await this.findExistingChat(userId, dto.invitedUserId);
     if (existingChat) {
       throw new BadRequestException('A chat with this user already exists');
     }
@@ -66,7 +209,7 @@ export class DirectChatsService {
       creatorId: userId,
       invitedUserId: dto.invitedUserId,
     });
-    await this.directChatRepository.save(chat);
+    await this.save(chat);
     await this.updateUserDirectChatIds(userId, chat.id, 'add');
     await this.updateUserDirectChatIds(dto.invitedUserId, chat.id, 'add');
     await this.sendDirectChatRequestNotification(chat, userProfile);
@@ -75,7 +218,7 @@ export class DirectChatsService {
 
   async getChatsForUser(userId: string): Promise<DirectChatWithParticipantInfo[]> {
     this.logger.debug(`Getting direct chats for user ${userId}`);
-    const chats = await this.directChatRepository.findByUserId(userId);
+    const chats = await this.findByUserId(userId);
     const otherParticipantIds = chats
       .map(chat => chat.getOtherParticipantId(userId))
       .filter(Boolean) as string[];
@@ -93,7 +236,7 @@ export class DirectChatsService {
 
   async getPendingChatsForUser(userId: string): Promise<DirectChatWithParticipantInfo[]> {
     this.logger.debug(`Getting pending direct chats for user ${userId}`);
-    const chats = await this.directChatRepository.findPendingByInvitedUserId(userId);
+    const chats = await this.findPendingByInvitedUserId(userId);
     const creatorIds = chats.map(chat => chat.creatorId);
     const userProfiles = await this.usersService.getUserProfilesByIds(creatorIds);
     return chats.map(chat => {
@@ -108,7 +251,7 @@ export class DirectChatsService {
 
   async getChatById(userId: string, chatId: string): Promise<DirectChatWithParticipantInfo> {
     this.logger.debug(`Getting direct chat ${chatId} for user ${userId}`);
-    const chat = await this.directChatRepository.findById(chatId);
+    const chat = await this.findById(chatId);
     if (!chat) {
       throw new NotFoundException('Chat not found');
     }
@@ -129,7 +272,7 @@ export class DirectChatsService {
 
   async confirmChat(userId: string, chatId: string): Promise<DirectChat> {
     this.logger.debug(`User ${userId} confirming chat ${chatId}`);
-    const chat = await this.directChatRepository.findById(chatId);
+    const chat = await this.findById(chatId);
     if (!chat) {
       throw new NotFoundException('Chat not found');
     }
@@ -140,27 +283,27 @@ export class DirectChatsService {
       throw new BadRequestException('Chat is already confirmed');
     }
     const confirmedChat = chat.confirm();
-    await this.directChatRepository.update(confirmedChat);
+    await this.update(confirmedChat);
     return confirmedChat;
   }
 
   async deleteChat(userId: string, chatId: string): Promise<void> {
     this.logger.debug(`User ${userId} deleting chat ${chatId}`);
-    const chat = await this.directChatRepository.findById(chatId);
+    const chat = await this.findById(chatId);
     if (!chat) {
       throw new NotFoundException('Chat not found');
     }
     if (!chat.isParticipant(userId)) {
       throw new ForbiddenException('You are not a participant of this chat');
     }
-    await this.directMessageRepository.deleteAllByChatId(chatId);
-    await this.directChatRepository.delete(chatId);
+    await this.directMessagesService.deleteAllMessagesByChatId(chatId);
+    await this.delete(chatId);
     await this.updateUserDirectChatIds(chat.creatorId, chatId, 'remove');
     await this.updateUserDirectChatIds(chat.invitedUserId, chatId, 'remove');
   }
 
   async updateLastMessage(chatId: string, content: string, senderId: string): Promise<void> {
-    const chat = await this.directChatRepository.findById(chatId);
+    const chat = await this.findById(chatId);
     if (!chat) return;
     const updatedChat = chat.update({
       lastMessage: {
@@ -169,11 +312,11 @@ export class DirectChatsService {
         sentAt: new Date().toISOString(),
       },
     });
-    await this.directChatRepository.update(updatedChat);
+    await this.update(updatedChat);
   }
 
   async validateChatAccess(userId: string, chatId: string): Promise<DirectChat> {
-    const chat = await this.directChatRepository.findById(chatId);
+    const chat = await this.findById(chatId);
     if (!chat) {
       throw new NotFoundException('Chat not found');
     }

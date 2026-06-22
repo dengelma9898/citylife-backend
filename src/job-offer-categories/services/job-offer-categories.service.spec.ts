@@ -1,46 +1,70 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { JobOfferCategoriesService } from './job-offer-categories.service';
 import { JobCategory } from '../domain/entities/job-category.entity';
-import {
-  JobCategoryRepository,
-  JOB_CATEGORY_REPOSITORY,
-} from '../domain/repositories/job-category.repository';
 import { CreateJobCategoryDto } from '../dto/create-job-category.dto';
-import { NotFoundException } from '@nestjs/common';
+import { FirebaseService } from '../../firebase/firebase.service';
 
 describe('JobOfferCategoriesService', () => {
   let service: JobOfferCategoriesService;
-  let repository: JobCategoryRepository;
-
-  const mockJobCategoryRepository = {
-    save: jest.fn(),
-    findAll: jest.fn(),
-    findById: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
+  let mockDoc: {
+    id: string;
+    exists: boolean;
+    get: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let mockCollection: {
+    doc: jest.Mock;
+    add: jest.Mock;
+    get: jest.Mock;
   };
 
-  const mockJobCategory: JobCategory = JobCategory.create({
+  const mockJobCategoryData = {
     name: 'Test Category',
     description: 'Test Description',
     colorCode: '#FF0000',
     iconName: 'test-icon',
-    fallbackImages: [],
+    fallbackImages: [] as string[],
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  };
+
+  const mockJobCategory: JobCategory = JobCategory.fromProps({
+    id: 'category1',
+    ...mockJobCategoryData,
   });
 
   beforeEach(async () => {
+    mockDoc = {
+      id: 'category1',
+      exists: true,
+      get: jest.fn().mockResolvedValue({
+        exists: true,
+        id: 'category1',
+        data: () => mockJobCategoryData,
+      }),
+      update: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+    };
+    mockCollection = {
+      doc: jest.fn().mockReturnValue(mockDoc),
+      add: jest.fn().mockResolvedValue({ id: 'category-new' }),
+      get: jest.fn().mockResolvedValue({
+        docs: [{ id: 'category1', data: () => mockJobCategoryData }],
+      }),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         JobOfferCategoriesService,
         {
-          provide: JOB_CATEGORY_REPOSITORY,
-          useValue: mockJobCategoryRepository,
+          provide: FirebaseService,
+          useValue: { getFirestore: jest.fn().mockReturnValue({ collection: jest.fn().mockReturnValue(mockCollection) }) },
         },
       ],
     }).compile();
 
     service = module.get<JobOfferCategoriesService>(JobOfferCategoriesService);
-    repository = module.get<JobCategoryRepository>(JOB_CATEGORY_REPOSITORY);
   });
 
   afterEach(() => {
@@ -57,43 +81,37 @@ describe('JobOfferCategoriesService', () => {
         fallbackImages: [],
       };
 
-      mockJobCategoryRepository.save.mockResolvedValue(createDto);
-
       const result = await service.create(createDto);
 
       expect(result).toBeDefined();
       expect(result.name).toBe(createDto.name);
       expect(result.description).toBe(createDto.description);
-      expect(mockJobCategoryRepository.save).toHaveBeenCalled();
+      expect(mockCollection.add).toHaveBeenCalled();
     });
   });
 
   describe('findAll', () => {
     it('should return all job categories', async () => {
-      mockJobCategoryRepository.findAll.mockResolvedValue([mockJobCategory]);
-
       const result = await service.findAll();
 
       expect(result).toBeDefined();
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe(mockJobCategory.name);
-      expect(mockJobCategoryRepository.findAll).toHaveBeenCalled();
+      expect(mockCollection.get).toHaveBeenCalled();
     });
   });
 
   describe('findOne', () => {
     it('should return a job category by id', async () => {
-      mockJobCategoryRepository.findById.mockResolvedValue(mockJobCategory);
-
       const result = await service.findOne('category1');
 
       expect(result).toBeDefined();
       expect(result.name).toBe(mockJobCategory.name);
-      expect(mockJobCategoryRepository.findById).toHaveBeenCalledWith('category1');
+      expect(mockCollection.doc).toHaveBeenCalledWith('category1');
     });
 
     it('should throw NotFoundException if category not found', async () => {
-      mockJobCategoryRepository.findById.mockRejectedValue(new Error('Not found'));
+      mockDoc.get.mockResolvedValueOnce({ exists: false });
 
       await expect(service.findOne('nonexistent')).rejects.toThrow(NotFoundException);
     });
@@ -106,28 +124,17 @@ describe('JobOfferCategoriesService', () => {
         description: 'Updated Description',
       };
 
-      const updatedCategory = JobCategory.create({
-        ...mockJobCategory,
-        ...updateDto,
-      });
-
-      mockJobCategoryRepository.findById.mockResolvedValue(mockJobCategory);
-      mockJobCategoryRepository.update.mockResolvedValue(updatedCategory);
-
       const result = await service.update('category1', updateDto);
 
       expect(result).toBeDefined();
       expect(result.name).toBe(updateDto.name);
       expect(result.description).toBe(updateDto.description);
-      expect(mockJobCategoryRepository.findById).toHaveBeenCalledWith('category1');
-      expect(mockJobCategoryRepository.update).toHaveBeenCalledWith(
-        'category1',
-        expect.objectContaining(updateDto),
-      );
+      expect(mockCollection.doc).toHaveBeenCalledWith('category1');
+      expect(mockDoc.update).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if category not found', async () => {
-      mockJobCategoryRepository.findById.mockRejectedValue(new Error('Not found'));
+      mockDoc.get.mockResolvedValueOnce({ exists: false });
 
       await expect(service.update('nonexistent', { name: 'Updated' })).rejects.toThrow(
         NotFoundException,
@@ -137,17 +144,14 @@ describe('JobOfferCategoriesService', () => {
 
   describe('remove', () => {
     it('should remove a job category', async () => {
-      mockJobCategoryRepository.findById.mockResolvedValue(mockJobCategory);
-      mockJobCategoryRepository.delete.mockResolvedValue(undefined);
-
       await service.remove('category1');
 
-      expect(mockJobCategoryRepository.findById).toHaveBeenCalledWith('category1');
-      expect(mockJobCategoryRepository.delete).toHaveBeenCalledWith('category1');
+      expect(mockCollection.doc).toHaveBeenCalledWith('category1');
+      expect(mockDoc.delete).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if category not found', async () => {
-      mockJobCategoryRepository.findById.mockRejectedValue(new Error('Not found'));
+      mockDoc.get.mockResolvedValueOnce({ exists: false });
 
       await expect(service.remove('nonexistent')).rejects.toThrow(NotFoundException);
     });

@@ -1,16 +1,12 @@
 import {
   Injectable,
-  Inject,
   Logger,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
 import { EasterEgg } from '../../domain/entities/easter-egg.entity';
-import {
-  EasterEggRepository,
-  EASTER_EGG_REPOSITORY,
-} from '../../domain/repositories/easter-egg.repository';
+import { EasterEggService } from './easter-egg.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { UsersService } from '../../../users/users.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
@@ -40,8 +36,7 @@ export class EasterEggHuntService {
   private readonly COLLECTION = 'easterEggHunt';
 
   constructor(
-    @Inject(EASTER_EGG_REPOSITORY)
-    private readonly easterEggRepository: EasterEggRepository,
+    private readonly easterEggService: EasterEggService,
     private readonly firebaseService: FirebaseService,
     private readonly usersService: UsersService,
     private readonly notificationService: NotificationService,
@@ -95,7 +90,7 @@ export class EasterEggHuntService {
     if (!userProfile) {
       throw new ForbiddenException('Only registered users can participate in the easter egg hunt');
     }
-    const egg = await this.easterEggRepository.findById(eggId);
+    const egg = await this.easterEggService.findById(eggId);
     if (!egg) {
       throw new NotFoundException('Easter egg not found');
     }
@@ -106,12 +101,12 @@ export class EasterEggHuntService {
       throw new BadRequestException('User has already participated in this easter egg');
     }
     const updatedEgg = egg.addParticipant(userId);
-    return this.easterEggRepository.update(eggId, updatedEgg);
+    return this.easterEggService.updateEntity(eggId, updatedEgg);
   }
 
   async addWinner(eggId: string, userId: string): Promise<EasterEgg> {
     this.logger.log(`Adding winner ${userId} to easter egg ${eggId}`);
-    const egg = await this.easterEggRepository.findById(eggId);
+    const egg = await this.easterEggService.findById(eggId);
     if (!egg) {
       throw new NotFoundException('Easter egg not found');
     }
@@ -122,14 +117,14 @@ export class EasterEggHuntService {
       throw new BadRequestException('User is already a winner');
     }
     const updatedEgg = egg.addWinner(userId);
-    const result = await this.easterEggRepository.update(eggId, updatedEgg);
+    const result = await this.easterEggService.updateEntity(eggId, updatedEgg);
     await this.sendWinnerNotification(userId, egg);
     return result;
   }
 
   async drawWinners(eggId: string): Promise<EasterEgg> {
     this.logger.log(`Drawing winners for easter egg ${eggId}`);
-    const egg = await this.easterEggRepository.findById(eggId);
+    const egg = await this.easterEggService.findById(eggId);
     if (!egg) {
       throw new NotFoundException('Easter egg not found');
     }
@@ -154,7 +149,7 @@ export class EasterEggHuntService {
     for (const winnerId of selectedWinners) {
       updatedEgg = updatedEgg.addWinner(winnerId);
     }
-    const result = await this.easterEggRepository.update(eggId, updatedEgg);
+    const result = await this.easterEggService.updateEntity(eggId, updatedEgg);
     for (const winnerId of selectedWinners) {
       await this.sendWinnerNotification(winnerId, egg);
     }
@@ -163,7 +158,7 @@ export class EasterEggHuntService {
   }
 
   async getParticipants(eggId: string): Promise<string[]> {
-    const egg = await this.easterEggRepository.findById(eggId);
+    const egg = await this.easterEggService.findById(eggId);
     if (!egg) {
       throw new NotFoundException('Easter egg not found');
     }
@@ -171,7 +166,7 @@ export class EasterEggHuntService {
   }
 
   async getStatistics(): Promise<EasterEggHuntStatistics> {
-    const eggs = await this.easterEggRepository.findAll();
+    const eggs = await this.easterEggService.findAll();
     const uniqueParticipants = new Set<string>();
     const uniqueWinners = new Set<string>();
     const participantsPerEgg = eggs.map(egg => {

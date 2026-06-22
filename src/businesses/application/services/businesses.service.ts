@@ -4,11 +4,8 @@ import {
   BusinessAddress,
   BusinessContact,
   BusinessCustomer,
+  BusinessProps,
 } from '../../domain/entities/business.entity';
-import {
-  BusinessRepository,
-  BUSINESS_REPOSITORY,
-} from '../../domain/repositories/business.repository';
 import { CreateBusinessDto } from '../../dto/create-business.dto';
 import { BusinessCustomerDto } from '../../dto/business-customer.dto';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
@@ -19,14 +16,16 @@ import { DateTimeUtils } from '../../../utils/date-time.utils';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { UsersService } from '../../../users/users.service';
 import { PassScanService } from '../../../pass-stats/application/services/pass-scan.service';
+import { FirebaseService } from '../../../firebase/firebase.service';
+import { removeUndefined } from '../../../firebase/firebase-mapper.util';
 
 @Injectable()
 export class BusinessesService {
   private readonly logger = new Logger(BusinessesService.name);
+  private readonly collection = 'businesses';
 
   constructor(
-    @Inject(BUSINESS_REPOSITORY)
-    private readonly businessRepository: BusinessRepository,
+    private readonly firebaseService: FirebaseService,
     private readonly businessCategoriesService: BusinessCategoriesService,
     private readonly keywordsService: KeywordsService,
     private readonly eventsService: EventsService,
@@ -37,14 +36,118 @@ export class BusinessesService {
     private readonly passScanService: PassScanService,
   ) {}
 
+  private toPlainObject(entity: Business): Omit<BusinessProps, 'id'> {
+    const { id, ...data } = entity.toJSON();
+    const plainObject = removeUndefined(data);
+    if (plainObject.logoUrl === null || plainObject.logoUrl === undefined) {
+      plainObject.logoUrl = '';
+    }
+    return plainObject;
+  }
+
+  private toBusinessProps(data: Record<string, unknown>, id: string): BusinessProps {
+    return {
+      id,
+      name: data.name as string,
+      contact: BusinessContact.create(data.contact as Parameters<typeof BusinessContact.create>[0]),
+      address: BusinessAddress.create(data.address as Parameters<typeof BusinessAddress.create>[0]),
+      categoryIds: (data.categoryIds as string[]) || [],
+      keywordIds: (data.keywordIds as string[]) || [],
+      eventIds: data.eventIds as string[] | undefined,
+      description: data.description as string,
+      logoUrl: data.logoUrl === null || data.logoUrl === undefined ? '' : (data.logoUrl as string),
+      imageUrls: data.imageUrls as string[] | undefined,
+      openingHours: data.openingHours as BusinessProps['openingHours'],
+      detailedOpeningHours: data.detailedOpeningHours as BusinessProps['detailedOpeningHours'],
+      createdAt: data.createdAt as string,
+      updatedAt: data.updatedAt as string,
+      isDeleted: data.isDeleted as boolean | undefined,
+      status: data.status as BusinessStatus,
+      benefit: data.benefit as string,
+      previousBenefits: data.previousBenefits as string[] | undefined,
+      customers: ((data.customers as Record<string, unknown>[]) || []).map(customer =>
+        BusinessCustomer.create(
+          customer as unknown as Parameters<typeof BusinessCustomer.create>[0],
+        ),
+      ),
+      hasAccount: data.hasAccount as boolean,
+      isPromoted: data.isPromoted as boolean | undefined,
+    };
+  }
+
+  private async findAllFromFirestore(): Promise<Business[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db.collection(this.collection).get();
+    return snapshot.docs.map(doc =>
+      Business.fromProps(this.toBusinessProps(doc.data() as Record<string, unknown>, doc.id)),
+    );
+  }
+
+  private async findByIdFromFirestore(id: string): Promise<Business | null> {
+    const db = this.firebaseService.getFirestore();
+    const doc = await db.collection(this.collection).doc(id).get();
+    if (!doc.exists) {
+      return null;
+    }
+    return Business.fromProps(this.toBusinessProps(doc.data() as Record<string, unknown>, doc.id));
+  }
+
+  private async createInFirestore(business: Business): Promise<Business> {
+    const db = this.firebaseService.getFirestore();
+    const docRef = await db.collection(this.collection).add(this.toPlainObject(business));
+    return Business.fromProps({
+      ...business.toJSON(),
+      id: docRef.id,
+    });
+  }
+
+  private async updateInFirestore(id: string, business: Business): Promise<Business> {
+    const db = this.firebaseService.getFirestore();
+    const docRef = db.collection(this.collection).doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      throw new NotFoundException('Business not found');
+    }
+    await docRef.update(this.toPlainObject(business));
+    return Business.fromProps({
+      ...business.toJSON(),
+      id,
+    });
+  }
+
+  private async deleteFromFirestore(id: string): Promise<void> {
+    const db = this.firebaseService.getFirestore();
+    const docRef = db.collection(this.collection).doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      throw new NotFoundException('Business not found');
+    }
+    await docRef.delete();
+  }
+
+  private async findByStatusAndHasAccountFromFirestore(
+    status: BusinessStatus,
+    hasAccount: boolean,
+  ): Promise<Business[]> {
+    const db = this.firebaseService.getFirestore();
+    const snapshot = await db
+      .collection(this.collection)
+      .where('status', '==', status)
+      .where('hasAccount', '==', hasAccount)
+      .get();
+    return snapshot.docs.map(doc =>
+      Business.fromProps(this.toBusinessProps(doc.data() as Record<string, unknown>, doc.id)),
+    );
+  }
+
   public async getAll(): Promise<Business[]> {
     this.logger.debug('Getting all businesses');
-    return this.businessRepository.findAll();
+    return this.findAllFromFirestore();
   }
 
   public async getById(id: string): Promise<Business | null> {
     this.logger.debug(`Getting business ${id}`);
-    return this.businessRepository.findById(id);
+    return this.findByIdFromFirestore(id);
   }
 
   public async create(data: CreateBusinessDto): Promise<Business> {
@@ -66,8 +169,7 @@ export class BusinessesService {
       status: initialStatus,
       logoUrl: '',
     });
-
-    const createdBusiness = await this.businessRepository.create(business);
+    const createdBusiness = await this.createInFirestore(business);
     this.logger.debug(
       `Created business ${createdBusiness.id} with status ${createdBusiness.status}`,
     );
@@ -86,7 +188,7 @@ export class BusinessesService {
 
   public async update(id: string, data: Partial<Business>): Promise<Business> {
     this.logger.debug(`Updating business ${id} with data: ${JSON.stringify(data)}`);
-    const existingBusiness = await this.businessRepository.findById(id);
+    const existingBusiness = await this.findByIdFromFirestore(id);
     if (!existingBusiness) {
       this.logger.warn(`Business ${id} not found`);
       throw new NotFoundException('Business not found');
@@ -114,7 +216,7 @@ export class BusinessesService {
         ...data,
         previousBenefits: limitedPreviousBenefits,
       });
-      const savedBusiness = await this.businessRepository.update(id, updatedBusiness);
+      const savedBusiness = await this.updateInFirestore(id, updatedBusiness);
       if (isStatusChangeToActive) {
         this.logger.log(`Sending notification for business ${id} after status change`);
         await this.sendNewBusinessNotification(savedBusiness);
@@ -122,7 +224,7 @@ export class BusinessesService {
       return savedBusiness;
     }
     const updatedBusiness = existingBusiness.update(data);
-    const savedBusiness = await this.businessRepository.update(id, updatedBusiness);
+    const savedBusiness = await this.updateInFirestore(id, updatedBusiness);
     if (isStatusChangeToActive) {
       this.logger.log(`Sending notification for business ${id} after status change`);
       await this.sendNewBusinessNotification(savedBusiness);
@@ -132,21 +234,20 @@ export class BusinessesService {
 
   public async delete(id: string): Promise<void> {
     this.logger.debug(`Deleting business ${id}`);
-    return this.businessRepository.delete(id);
+    return this.deleteFromFirestore(id);
   }
 
   public async updateStatus(id: string, status: BusinessStatus): Promise<Business> {
     this.logger.debug(`Updating business status ${id} to ${status}`);
-    const existingBusiness = await this.businessRepository.findById(id);
+    const existingBusiness = await this.findByIdFromFirestore(id);
     if (!existingBusiness) {
       this.logger.warn(`Business ${id} not found`);
       throw new NotFoundException('Business not found');
     }
-
     const previousStatus = existingBusiness.status;
     this.logger.debug(`Previous status: ${previousStatus}, new status: ${status}`);
     const updatedBusiness = existingBusiness.updateStatus(status);
-    const savedBusiness = await this.businessRepository.update(id, updatedBusiness);
+    const savedBusiness = await this.updateInFirestore(id, updatedBusiness);
     if (previousStatus === BusinessStatus.PENDING && status === BusinessStatus.ACTIVE) {
       this.logger.log(
         `Status change detected: PENDING -> ACTIVE for business ${id}. Sending notifications.`,
@@ -166,11 +267,10 @@ export class BusinessesService {
     scanData: BusinessCustomerDto,
   ): Promise<Business> {
     this.logger.debug(`Adding customer scan to business ${businessId}`);
-    const existingBusiness = await this.businessRepository.findById(businessId);
+    const existingBusiness = await this.findByIdFromFirestore(businessId);
     if (!existingBusiness) {
       throw new NotFoundException('Business not found');
     }
-
     const customer: BusinessCustomer = BusinessCustomer.create({
       customerId: scanData.customerId,
       scannedAt: DateTimeUtils.getBerlinTime(),
@@ -179,9 +279,8 @@ export class BusinessesService {
       additionalInfo: scanData.additionalInfo,
       benefit: existingBusiness.benefit,
     });
-
     const updatedBusiness = existingBusiness.addCustomer(customer);
-    const savedBusiness = await this.businessRepository.update(businessId, updatedBusiness);
+    const savedBusiness = await this.updateInFirestore(businessId, updatedBusiness);
     try {
       await this.passScanService.recordScanFromBusinessScan({
         businessId,
@@ -199,13 +298,12 @@ export class BusinessesService {
 
   public async updateBenefit(id: string, benefit: string): Promise<Business> {
     this.logger.debug(`Updating business benefit ${id}`);
-    const existingBusiness = await this.businessRepository.findById(id);
+    const existingBusiness = await this.findByIdFromFirestore(id);
     if (!existingBusiness) {
       throw new NotFoundException('Business not found');
     }
-
     const updatedBusiness = existingBusiness.updateBenefit(benefit);
-    return this.businessRepository.update(id, updatedBusiness);
+    return this.updateInFirestore(id, updatedBusiness);
   }
 
   public async getBusinessesByStatus(filter: {
@@ -215,18 +313,17 @@ export class BusinessesService {
     this.logger.debug(
       `Getting businesses with status ${filter.status} and hasAccount ${filter.hasAccount}`,
     );
-    return this.businessRepository.findByStatusAndHasAccount(filter.status, filter.hasAccount);
+    return this.findByStatusAndHasAccountFromFirestore(filter.status, filter.hasAccount);
   }
 
   public async updateHasAccount(id: string, hasAccount: boolean): Promise<Business> {
     this.logger.debug(`Updating business hasAccount status ${id} to ${hasAccount}`);
-    const existingBusiness = await this.businessRepository.findById(id);
+    const existingBusiness = await this.findByIdFromFirestore(id);
     if (!existingBusiness) {
       throw new NotFoundException('Business not found');
     }
-
     const updatedBusiness = existingBusiness.update({ hasAccount });
-    return this.businessRepository.update(id, updatedBusiness);
+    return this.updateInFirestore(id, updatedBusiness);
   }
 
   private async sendNewBusinessNotification(business: Business): Promise<void> {
