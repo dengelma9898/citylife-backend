@@ -17,7 +17,7 @@ import { CreateDirectMessageDto } from '../dtos/create-direct-message.dto';
 import { UpdateDirectMessageDto } from '../dtos/update-direct-message.dto';
 import { UpdateDirectMessageReactionDto } from '../dtos/update-message-reaction.dto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
-import { UserProfileLoader } from '../../../core/loaders/user-profile.loader';
+import { UsersService } from '../../../users/users.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class DirectMessagesService {
@@ -27,7 +27,7 @@ export class DirectMessagesService {
     private readonly directMessageRepository: DirectMessageRepository,
     private readonly directChatsService: DirectChatsService,
     private readonly notificationService: NotificationService,
-    private readonly userProfileLoader: UserProfileLoader,
+    private readonly usersService: UsersService,
   ) {}
 
   async createMessage(
@@ -75,7 +75,7 @@ export class DirectMessagesService {
     chat: any,
   ): Promise<void> {
     try {
-      const recipientProfile = await this.userProfileLoader.load(recipientId);
+      const recipientProfile = await this.usersService.getUserProfile(recipientId);
       if (!recipientProfile) {
         this.logger.warn(`Recipient profile not found for user ${recipientId}`);
         return;

@@ -91,6 +91,14 @@ npm test -- taxi-stands
 rg "TAXI_STAND_REPOSITORY|FirebaseTaxiStandRepository" src
 ```
 
+## Validierung (Plan abgeschlossen)
+
+```bash
+npm test
+npm run build
+npm run start:dev   # Nest bootstrap ohne DI-Fehler; danach beenden
+```
+
 ## Risiken
 
 - **Hoch:** Große Diff-Fläche – **ein Modul pro PR**

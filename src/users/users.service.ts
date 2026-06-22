@@ -586,7 +586,7 @@ export class UsersService {
       // Hole fehlende Profile aus der Datenbank
       this.logger.debug(`Cache miss for ${uncachedIds.length} user profiles, fetching from DB`);
       const db = this.firebaseService.getFirestore();
-      const chunks = this.chunkArray(uncachedIds, 10);
+      const chunks = this.chunkArray(uncachedIds, 30);
       const chunkPromises = chunks.map(chunk =>
         db
           .collection(this.usersCollection)

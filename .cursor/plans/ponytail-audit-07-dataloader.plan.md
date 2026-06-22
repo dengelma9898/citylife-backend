@@ -64,6 +64,8 @@ Request-scoped Cache optional via Nest `Scope.REQUEST` auf einem kleinen `UserPr
 ```bash
 rg "dataloader|UserProfileLoader" src
 npm test -- direct-chats
+npm run build
+npm run start:dev   # Nest bootstrap ohne DI-Fehler; danach beenden
 ```
 
 ## Risiken

@@ -53,6 +53,8 @@ export type NotificationData =
 ```bash
 rg "extends NotificationService|notification-data.interface" src
 npm test -- notifications
+npm run build
+npm run start:dev   # Nest bootstrap ohne DI-Fehler; danach beenden
 ```
 
 ## Risiken

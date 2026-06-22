@@ -4,12 +4,11 @@ import { UsersController } from './users.controller';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { EventsModule } from '../events/events.module';
 import { BusinessesModule } from '../businesses/businesses.module';
-import { UserProfileLoader } from '../core/loaders/user-profile.loader';
 
 @Module({
   imports: [FirebaseModule, forwardRef(() => EventsModule), forwardRef(() => BusinessesModule)],
-  providers: [UsersService, UserProfileLoader],
+  providers: [UsersService],
   controllers: [UsersController],
-  exports: [UsersService, UserProfileLoader],
+  exports: [UsersService],
 })
 export class UsersModule {}

@@ -58,7 +58,8 @@ npm run lint
 npm run format:check
 npx tsc --noEmit
 npm test
-npm run build:dev
+npm run build
+npm run start:dev   # Nest bootstrap ohne DI-Fehler; danach beenden
 ```
 
 ## Abhängigkeiten zwischen Phasen

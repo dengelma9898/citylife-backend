@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { getMessaging } from 'firebase-admin/messaging';
 import { NotificationPayload } from '../../domain/interfaces/notification-payload.interface';
 import { UsersService } from '../../../users/users.service';
@@ -7,7 +7,10 @@ import { UsersService } from '../../../users/users.service';
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
 
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService,
+  ) {}
 
   async sendToUser(userId: string, payload: NotificationPayload): Promise<void> {
     try {

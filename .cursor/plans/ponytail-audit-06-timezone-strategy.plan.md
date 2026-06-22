@@ -75,8 +75,10 @@ Services mit `DateTimeUtils.getBerlinTime()` beim Schreiben (~15 Dateien):
 ## Validierung
 
 ```bash
-rg "getBerlinTime\(\)" src --glob "*.service.ts"  # Ziel: 0 Schreib-Aufrufe
+rg "getBerlinTime\(\)" src --glob "*.service.ts"  # Ziel: 0 Schreib-Aufrufe (Option A) bzw. konsistent (Option B)
 npm test
+npm run build
+npm run start:dev   # Nest bootstrap ohne DI-Fehler; danach beenden
 ```
 
 ## Risiken

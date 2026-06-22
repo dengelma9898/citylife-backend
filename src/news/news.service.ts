@@ -17,7 +17,6 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { DateTimeUtils } from '../utils/date-time.utils';
 import { NotificationService } from '../notifications/application/services/notification.service';
-import { UserProfileLoader } from '../core/loaders/user-profile.loader';
 
 import { removeUndefined } from '../firebase/firebase-mapper.util';
 @Injectable({ scope: Scope.REQUEST })
@@ -31,7 +30,6 @@ export class NewsService {
     private readonly firebaseService: FirebaseService,
     private readonly firebaseStorageService: FirebaseStorageService,
     private readonly notificationService: NotificationService,
-    private readonly userProfileLoader: UserProfileLoader,
   ) {}
 
   public async getAll(): Promise<NewsItem[]> {
@@ -88,7 +86,7 @@ export class NewsService {
         return newsItems;
       }
 
-      const userProfiles = await this.userProfileLoader.loadManyAsMap(authorIds);
+      const userProfiles = await this.usersService.getUserProfilesByIds(authorIds);
 
       return newsItems.map(item => {
         if (item.createdBy) {

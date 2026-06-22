@@ -65,6 +65,14 @@ isProject: true
 
 Phase 09 und 10 **nicht** starten ohne abgeschlossene Entscheidung hier.
 
+## Validierung (Plan abgeschlossen)
+
+```bash
+npm test
+npm run build
+npm run start:dev   # Nest bootstrap ohne DI-Fehler; danach beenden
+```
+
 ## Referenzen
 
 - `docs/architecture.md`

@@ -6,7 +6,7 @@ Dieses Dokument erläutert alle gesetzten Konfigurationswerte für Rate-Limiting
 
 1. [Rate-Limiting](#rate-limiting)
 2. [Caching](#caching)
-3. [DataLoader](#dataloader)
+3. [User-Profile Batch-Load](#user-profile-batch-load)
 4. [Health-Checks](#health-checks)
 5. [Umgebungsabhängige Konfigurationen](#umgebungsabhängige-konfigurationen)
 6. [Performance-Überlegungen](#performance-überlegungen)
@@ -166,63 +166,25 @@ Erst relevant, wenn das Deployment **über einen einzelnen VPS-Container** hinau
 
 ---
 
-## DataLoader
+## User-Profile Batch-Load
 
-DataLoader löst N+1 Query-Probleme durch Request-scoped Batching und Caching.
+`UsersService.getUserProfilesByIds()` lädt mehrere Profile in einem Batch und vermeidet N+1-Queries.
 
-### Cache
+### Verhalten
 
-- **Wert:** `true` (aktiviert)
-- **Begründung:** 
-  - Verhindert mehrfache Abfragen für dieselbe ID innerhalb eines Requests
-  - Request-scoped: Cache wird nach jedem Request automatisch geleert
-- **Warum dieser Wert:**
-  - Reduziert N+1 Query-Probleme erheblich
-  - Kein Risiko von veralteten Daten, da Request-scoped
-  - Keine zusätzliche Memory-Belastung über Requests hinweg
-- **Anpassung:** 
-  - Sollte immer `true` sein für optimale Performance
-  - Bei speziellen Anforderungen: `false` für immer frische Daten
+- **Deduplizierung:** IDs werden vor dem Laden eindeutig gemacht
+- **Cache:** Treffer aus `user-profile:{id}` (5 Min TTL, siehe Caching-Tabelle)
+- **Firestore:** `where('__name__', 'in', chunk)` in Chunks à **30** IDs (Firebase-Limit)
+- **Rückgabe:** `Map<string, UserProfile>` – fehlende IDs sind nicht in der Map
 
-### Batch
+### Verwendung
 
-- **Wert:** `true` (aktiviert)
-- **Begründung:** 
-  - Sammelt alle Anfragen innerhalb eines Request-Zyklus
-  - Führt alle gesammelten IDs in einem einzigen Batch aus
-- **Warum dieser Wert:**
-  - Reduziert Datenbankabfragen von N auf 1 pro Request
-  - Optimiert Netzwerk-Latenz
-  - Nutzt Firebase `in`-Queries effizient
-- **Anpassung:** 
-  - Sollte immer `true` sein für optimale Performance
-
-### Max Batch Size
-
-- **Wert:** 100
-- **Begründung:** 
-  - Begrenzt die maximale Anzahl IDs pro Batch
-  - Verhindert zu große Queries
-- **Warum dieser Wert:**
-  - Firebase unterstützt `in`-Queries bis zu 10 Items
-  - UserProfileLoader chunked automatisch in 10er-Gruppen
-  - 100 als obere Grenze für Sicherheit
-- **Anpassung:** 
-  - Bei Bedarf erhöhen für größere Batches
-  - Bei Memory-Problemen reduzieren
-
-### Konfiguration im Code
+Listen-Anreicherung (z. B. Direct Chats, News): `getUserProfilesByIds(ids)` statt einzelner `getUserProfile()`-Aufrufe in Schleifen.
 
 ```typescript
-// src/core/loaders/user-profile.loader.ts
-this.loader = new DataLoader<string, UserProfile | null>(
-  async (ids: readonly string[]) => { /* ... */ },
-  {
-    cache: true,      // Request-scoped Caching
-    batch: true,      // Batching aktiviert
-    maxBatchSize: 100 // Maximale Batch-Größe
-  }
-);
+// src/users/users.service.ts
+const profiles = await this.usersService.getUserProfilesByIds(authorIds);
+const author = profiles.get(item.createdBy);
 ```
 
 ---

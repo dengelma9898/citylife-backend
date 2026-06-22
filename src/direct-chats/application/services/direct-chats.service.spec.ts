@@ -5,7 +5,6 @@ import { DirectMessageRepository } from '../../domain/repositories/direct-messag
 import { DirectChat } from '../../domain/entities/direct-chat.entity';
 import { UsersService } from '../../../users/users.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
-import { UserProfileLoader } from '../../../core/loaders/user-profile.loader';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 
 describe('DirectChatsService', () => {
@@ -36,12 +35,8 @@ describe('DirectChatsService', () => {
 
   const mockUsersService = {
     update: jest.fn(),
-  };
-
-  const mockUserProfileLoader = {
-    load: jest.fn(),
-    loadMany: jest.fn(),
-    loadManyAsMap: jest.fn(),
+    getUserProfile: jest.fn(),
+    getUserProfilesByIds: jest.fn(),
   };
 
   const mockNotificationService = {
@@ -99,10 +94,6 @@ describe('DirectChatsService', () => {
           provide: NotificationService,
           useValue: mockNotificationService,
         },
-        {
-          provide: UserProfileLoader,
-          useValue: mockUserProfileLoader,
-        },
       ],
     }).compile();
 
@@ -124,12 +115,16 @@ describe('DirectChatsService', () => {
         ...mockUserProfile,
         notificationPreferences: { directChatRequests: true },
       };
-      mockUserProfileLoader.load
-        .mockResolvedValueOnce(senderProfile) // First call: get sender profile in createChat
-        .mockResolvedValueOnce(invitedProfile) // Second call: get invited profile for block check in createChat
-        .mockResolvedValueOnce(senderProfile) // Third call: get sender profile in updateUserDirectChatIds
-        .mockResolvedValueOnce(invitedProfile) // Fourth call: get invited profile in updateUserDirectChatIds
-        .mockResolvedValueOnce(invitedProfile); // Fifth call: get invited profile for notification check
+      mockUsersService.getUserProfilesByIds.mockResolvedValue(
+        new Map([
+          ['user-1', senderProfile],
+          ['user-2', invitedProfile],
+        ]),
+      );
+      mockUsersService.getUserProfile
+        .mockResolvedValueOnce(senderProfile)
+        .mockResolvedValueOnce(invitedProfile)
+        .mockResolvedValueOnce(invitedProfile);
       mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
       mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
       mockUsersService.update.mockResolvedValue(mockUserProfile);
@@ -162,12 +157,16 @@ describe('DirectChatsService', () => {
         ...mockUserProfile,
         notificationPreferences: { directChatRequests: false },
       };
-      mockUserProfileLoader.load
-        .mockResolvedValueOnce(senderProfile) // First call: get sender profile in createChat
-        .mockResolvedValueOnce(invitedProfile) // Second call: get invited profile for block check in createChat
-        .mockResolvedValueOnce(senderProfile) // Third call: get sender profile in updateUserDirectChatIds
-        .mockResolvedValueOnce(invitedProfile) // Fourth call: get invited profile in updateUserDirectChatIds
-        .mockResolvedValueOnce(invitedProfile); // Fifth call: get invited profile for notification check
+      mockUsersService.getUserProfilesByIds.mockResolvedValue(
+        new Map([
+          ['user-1', senderProfile],
+          ['user-2', invitedProfile],
+        ]),
+      );
+      mockUsersService.getUserProfile
+        .mockResolvedValueOnce(senderProfile)
+        .mockResolvedValueOnce(invitedProfile)
+        .mockResolvedValueOnce(invitedProfile);
       mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
       mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
       mockUsersService.update.mockResolvedValue(mockUserProfile);
@@ -185,12 +184,16 @@ describe('DirectChatsService', () => {
         ...mockUserProfile,
         notificationPreferences: {},
       };
-      mockUserProfileLoader.load
-        .mockResolvedValueOnce(senderProfile) // First call: get sender profile in createChat
-        .mockResolvedValueOnce(invitedProfile) // Second call: get invited profile for block check in createChat
-        .mockResolvedValueOnce(senderProfile) // Third call: get sender profile in updateUserDirectChatIds
-        .mockResolvedValueOnce(invitedProfile) // Fourth call: get invited profile in updateUserDirectChatIds
-        .mockResolvedValueOnce(invitedProfile); // Fifth call: get invited profile for notification check
+      mockUsersService.getUserProfilesByIds.mockResolvedValue(
+        new Map([
+          ['user-1', senderProfile],
+          ['user-2', invitedProfile],
+        ]),
+      );
+      mockUsersService.getUserProfile
+        .mockResolvedValueOnce(senderProfile)
+        .mockResolvedValueOnce(invitedProfile)
+        .mockResolvedValueOnce(invitedProfile);
       mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
       mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
       mockUsersService.update.mockResolvedValue(mockUserProfile);
@@ -208,12 +211,16 @@ describe('DirectChatsService', () => {
         ...mockUserProfile,
         notificationPreferences: { directChatRequests: true },
       };
-      mockUserProfileLoader.load
-        .mockResolvedValueOnce(senderProfile) // First call: get sender profile in createChat
-        .mockResolvedValueOnce(invitedProfile) // Second call: get invited profile for block check in createChat
-        .mockResolvedValueOnce(senderProfile) // Third call: get sender profile in updateUserDirectChatIds
-        .mockResolvedValueOnce(invitedProfile) // Fourth call: get invited profile in updateUserDirectChatIds
-        .mockResolvedValueOnce(invitedProfile); // Fifth call: get invited profile for notification check
+      mockUsersService.getUserProfilesByIds.mockResolvedValue(
+        new Map([
+          ['user-1', senderProfile],
+          ['user-2', invitedProfile],
+        ]),
+      );
+      mockUsersService.getUserProfile
+        .mockResolvedValueOnce(senderProfile)
+        .mockResolvedValueOnce(invitedProfile)
+        .mockResolvedValueOnce(invitedProfile);
       mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
       mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
       mockUsersService.update.mockResolvedValue(mockUserProfile);
@@ -232,12 +239,16 @@ describe('DirectChatsService', () => {
         ...mockUserProfile,
         notificationPreferences: { directChatRequests: true },
       };
-      mockUserProfileLoader.load
-        .mockResolvedValueOnce(senderProfile) // First call: get sender profile in createChat
-        .mockResolvedValueOnce(invitedProfile) // Second call: get invited profile for block check in createChat
-        .mockResolvedValueOnce(senderProfile) // Third call: get sender profile in updateUserDirectChatIds
-        .mockResolvedValueOnce(invitedProfile) // Fourth call: get invited profile in updateUserDirectChatIds
-        .mockResolvedValueOnce(invitedProfile); // Fifth call: get invited profile for notification check
+      mockUsersService.getUserProfilesByIds.mockResolvedValue(
+        new Map([
+          ['user-1', senderProfile],
+          ['user-2', invitedProfile],
+        ]),
+      );
+      mockUsersService.getUserProfile
+        .mockResolvedValueOnce(senderProfile)
+        .mockResolvedValueOnce(invitedProfile)
+        .mockResolvedValueOnce(invitedProfile);
       mockDirectChatRepository.findExistingChat.mockResolvedValue(null);
       mockDirectChatRepository.save.mockImplementation(chat => Promise.resolve(chat));
       mockUsersService.update.mockResolvedValue(mockUserProfile);
@@ -264,10 +275,17 @@ describe('DirectChatsService', () => {
     });
 
     it('should throw BadRequestException when user is blocked', async () => {
-      mockUserProfileLoader.load.mockResolvedValueOnce({
-        ...mockUserProfile,
-        blockedUserIds: ['user-2'],
-      });
+      mockUsersService.getUserProfilesByIds.mockResolvedValue(
+        new Map([
+          [
+            'user-1',
+            {
+              ...mockUserProfile,
+              blockedUserIds: ['user-2'],
+            },
+          ],
+        ]),
+      );
 
       await expect(
         service.createChat('user-1', { invitedUserId: 'user-2' }),
@@ -275,12 +293,18 @@ describe('DirectChatsService', () => {
     });
 
     it('should throw ForbiddenException when blocked by invited user', async () => {
-      mockUserProfileLoader.load
-        .mockResolvedValueOnce(mockUserProfile)
-        .mockResolvedValueOnce({
-          ...mockUserProfile,
-          blockedUserIds: ['user-1'],
-        });
+      mockUsersService.getUserProfilesByIds.mockResolvedValue(
+        new Map([
+          ['user-1', mockUserProfile],
+          [
+            'user-2',
+            {
+              ...mockUserProfile,
+              blockedUserIds: ['user-1'],
+            },
+          ],
+        ]),
+      );
 
       await expect(
         service.createChat('user-1', { invitedUserId: 'user-2' }),
@@ -288,9 +312,12 @@ describe('DirectChatsService', () => {
     });
 
     it('should throw BadRequestException when chat already exists', async () => {
-      mockUserProfileLoader.load
-        .mockResolvedValueOnce(mockUserProfile)
-        .mockResolvedValueOnce(mockUserProfile);
+      mockUsersService.getUserProfilesByIds.mockResolvedValue(
+        new Map([
+          ['user-1', mockUserProfile],
+          ['user-2', mockUserProfile],
+        ]),
+      );
       mockDirectChatRepository.findExistingChat.mockResolvedValue(mockChat);
 
       await expect(
@@ -302,7 +329,7 @@ describe('DirectChatsService', () => {
   describe('getChatsForUser', () => {
     it('should return all chats for a user', async () => {
       mockDirectChatRepository.findByUserId.mockResolvedValue([mockChat]);
-      mockUserProfileLoader.loadManyAsMap.mockResolvedValue(
+      mockUsersService.getUserProfilesByIds.mockResolvedValue(
         new Map([['user-2', mockUserProfile]]),
       );
 
@@ -317,7 +344,7 @@ describe('DirectChatsService', () => {
   describe('getChatById', () => {
     it('should return a chat by id', async () => {
       mockDirectChatRepository.findById.mockResolvedValue(mockChat);
-      mockUserProfileLoader.load.mockResolvedValue(mockUserProfile);
+      mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
 
       const result = await service.getChatById('user-1', 'chat-1');
 
@@ -376,7 +403,7 @@ describe('DirectChatsService', () => {
       mockDirectChatRepository.findById.mockResolvedValue(mockChat);
       mockDirectMessageRepository.deleteAllByChatId.mockResolvedValue(undefined);
       mockDirectChatRepository.delete.mockResolvedValue(undefined);
-      mockUserProfileLoader.load.mockResolvedValue(mockUserProfile);
+      mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
       mockUsersService.update.mockResolvedValue(mockUserProfile);
 
       await service.deleteChat('user-1', 'chat-1');

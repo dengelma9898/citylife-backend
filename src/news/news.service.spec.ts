@@ -4,7 +4,6 @@ import { UsersService } from '../users/users.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { NotificationService } from '../notifications/application/services/notification.service';
-import { UserProfileLoader } from '../core/loaders/user-profile.loader';
 import {
   TextNewsItem,
   ImageNewsItem,
@@ -76,13 +75,9 @@ describe('NewsService', () => {
     getFirestore: jest.fn().mockReturnValue(createFirestoreMock()),
   };
 
-  const mockUserProfileLoader = {
-    load: jest.fn(),
-    loadManyAsMap: jest.fn().mockResolvedValue(new Map()),
-  };
-
   const mockUsersService = {
     getAllUserProfilesWithIds: jest.fn(),
+    getUserProfilesByIds: jest.fn().mockResolvedValue(new Map()),
   };
 
   const mockFirebaseStorageService = {
@@ -159,10 +154,6 @@ describe('NewsService', () => {
           provide: NotificationService,
           useValue: mockNotificationService,
         },
-        {
-          provide: UserProfileLoader,
-          useValue: mockUserProfileLoader,
-        },
       ],
     }).compile();
 
@@ -179,7 +170,7 @@ describe('NewsService', () => {
     it('should return all news items with author info', async () => {
       const mockFirestore = createFirestoreMock(mockTextNewsItem);
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
-      mockUserProfileLoader.loadManyAsMap.mockResolvedValue(
+      mockUsersService.getUserProfilesByIds.mockResolvedValue(
         new Map([
           [
             'user1',
@@ -202,7 +193,7 @@ describe('NewsService', () => {
     it('should return a news item by id with author info', async () => {
       const mockFirestore = createFirestoreMock(mockTextNewsItem);
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
-      mockUserProfileLoader.loadManyAsMap.mockResolvedValue(
+      mockUsersService.getUserProfilesByIds.mockResolvedValue(
         new Map([
           [
             'user1',

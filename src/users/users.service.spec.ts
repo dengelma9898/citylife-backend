@@ -18,7 +18,11 @@ describe('UsersService', () => {
   let eventsService: EventsService;
   let businessesService: BusinessesService;
 
-  const createFirestoreMock = (mockData: any = {}) => {
+  const createFirestoreMock = (
+    mockData: any = {},
+    options?: { userProfileExists?: boolean },
+  ) => {
+    const userProfileExists = options?.userProfileExists ?? true;
     const mockDoc = {
       get: jest.fn().mockResolvedValue({
         exists: true,
@@ -40,7 +44,21 @@ describe('UsersService', () => {
 
     const mockCollection = {
       doc: jest.fn().mockReturnValue(mockDoc),
-      where: jest.fn().mockReturnValue(mockQuery),
+      where: jest.fn().mockImplementation((field: string, op: string, value: unknown) => {
+        if (field === '__name__' && op === 'in' && Array.isArray(value)) {
+          return {
+            get: jest.fn().mockResolvedValue({
+              docs: userProfileExists
+                ? value.map((id: string) => ({
+                    id,
+                    data: () => mockData,
+                  }))
+                : [],
+            }),
+          };
+        }
+        return mockQuery;
+      }),
       get: jest.fn().mockResolvedValue({
         docs: [{ data: () => mockData }],
       }),
@@ -139,6 +157,9 @@ describe('UsersService', () => {
     businessesService = module.get<BusinessesService>(BusinessesService);
 
     jest.clearAllMocks();
+    mockCacheManager.get.mockResolvedValue(null);
+    mockCacheManager.set.mockResolvedValue(undefined);
+    mockCacheManager.del.mockResolvedValue(undefined);
   });
 
   describe('getAll', () => {
@@ -193,13 +214,66 @@ describe('UsersService', () => {
     });
 
     it('should return null if user not found', async () => {
-      const mockFirestore = createFirestoreMock();
+      const mockFirestore = createFirestoreMock({}, { userProfileExists: false });
       mockFirestore.collection().doc().get.mockResolvedValue({ exists: false });
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
 
       const result = await service.getById('nonexistent');
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('getUserProfilesByIds', () => {
+    it('should return empty map for empty ids', async () => {
+      const result = await service.getUserProfilesByIds([]);
+      expect(result.size).toBe(0);
+      expect(mockFirebaseService.getFirestore).not.toHaveBeenCalled();
+    });
+
+    it('should batch load user profiles and deduplicate ids', async () => {
+      const user2Profile = { ...mockUserProfile, name: 'User 2' };
+      const mockInQuery = {
+        get: jest.fn().mockResolvedValue({
+          docs: [
+            { id: 'user1', data: () => mockUserProfile },
+            { id: 'user2', data: () => user2Profile },
+          ],
+        }),
+      };
+      const mockCollection = {
+        where: jest.fn().mockReturnValue(mockInQuery),
+      };
+      mockFirebaseService.getFirestore.mockReturnValue({
+        collection: jest.fn().mockReturnValue(mockCollection),
+      });
+      const result = await service.getUserProfilesByIds(['user1', 'user2', 'user1']);
+      expect(mockCollection.where).toHaveBeenCalledTimes(1);
+      expect(mockCollection.where).toHaveBeenCalledWith('__name__', 'in', ['user1', 'user2']);
+      expect(result.get('user1')).toEqual(mockUserProfile);
+      expect(result.get('user2')).toEqual(user2Profile);
+      expect(result.has('unknown')).toBe(false);
+    });
+
+    it('should return cached profiles without firestore query', async () => {
+      mockCacheManager.get.mockImplementation(async (key: string) => {
+        if (key === 'user-profile:user1') {
+          return mockUserProfile;
+        }
+        return null;
+      });
+      const mockInQuery = {
+        get: jest.fn().mockResolvedValue({ docs: [] }),
+      };
+      const mockCollection = {
+        where: jest.fn().mockReturnValue(mockInQuery),
+      };
+      mockFirebaseService.getFirestore.mockReturnValue({
+        collection: jest.fn().mockReturnValue(mockCollection),
+      });
+      const result = await service.getUserProfilesByIds(['user1']);
+      expect(result.get('user1')).toEqual(mockUserProfile);
+      expect(mockCollection.where).not.toHaveBeenCalled();
     });
   });
 

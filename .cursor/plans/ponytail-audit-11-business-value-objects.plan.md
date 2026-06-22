@@ -81,6 +81,14 @@ rg "BusinessContact\.create|BusinessAddress\.create|BusinessCustomer\.create" sr
 npm test -- businesses pass-stats
 ```
 
+## Validierung (Plan abgeschlossen)
+
+```bash
+npm test
+npm run build
+npm run start:dev   # Nest bootstrap ohne DI-Fehler; danach beenden
+```
+
 ## Risiken
 
 - **Mittel:** `businesses` ist zentral – eigener PR, nach kleineren Modulen in Phase 10 Erfahrung sammeln

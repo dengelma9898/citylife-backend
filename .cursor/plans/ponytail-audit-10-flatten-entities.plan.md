@@ -79,11 +79,19 @@ Gleiche Priorität wie Phase 09 (klein → groß). `businesses` zuletzt (komplex
 | `legal-documents` | Factory-Methoden für verschiedene Dokumenttypen |
 | `direct-chats` | 4 Entities, enge Beziehungen |
 
-## Validierung
+## Validierung pro Modul
 
 ```bash
 rg "static create\(|static fromProps\(|\.toJSON\(\)" src/<modul>
 npm test -- <modul>
+```
+
+## Validierung (Plan abgeschlossen)
+
+```bash
+npm test
+npm run build
+npm run start:dev   # Nest bootstrap ohne DI-Fehler; danach beenden
 ```
 
 ## Risiken

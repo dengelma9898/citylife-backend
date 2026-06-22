@@ -150,7 +150,7 @@ export class Entity {
 - **MUST** invalidate cache on all write operations (Create/Update/Delete)
 - **MUST** add debug logging for cache hit/miss
 - **MUST** add tests for cache hit, cache miss, and cache invalidation
-- For user profile enrichment in lists: use `UserProfileLoader` (request-scoped) instead of N individual `getUserProfile()` calls
+- For user profile enrichment in lists: use `UsersService.getUserProfilesByIds()` instead of N individual `getUserProfile()` calls
 - **Future option:** Shared Redis cache when running multiple backend replicas – see `docs/configuration-values.md` (Zukünftige Option: Shared Cache)
 
 ### Testing
