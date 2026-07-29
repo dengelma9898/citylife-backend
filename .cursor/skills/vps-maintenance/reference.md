@@ -43,17 +43,18 @@ Siehe `README.md`:
 # Dev
 docker stop nuernbergspots-test && docker rm nuernbergspots-test
 docker pull dengelma/nuernbergspots-test
-docker run -d --name nuernbergspots-test -p 3000:3000 --restart unless-stopped \
+docker run -d --name nuernbergspots-test -p 127.0.0.1:3000:3000 --restart unless-stopped \
   -e PORT=3000 -e NODE_ENV=dev -e BASE_URL=/dev dengelma/nuernbergspots-test
 
 # Prod
 docker stop nuernbergspots && docker rm nuernbergspots
 docker pull dengelma/nuernbergspots
-docker run -d --name nuernbergspots -p 3100:3100 --restart unless-stopped \
+docker run -d --name nuernbergspots -p 127.0.0.1:3100:3100 --restart unless-stopped \
   -e PORT=3100 -e NODE_ENV=prd -e BASE_URL=/prd dengelma/nuernbergspots
 ```
 
 ## Risiken
 
-- **RAM:** 1,8 GiB, kein Swap
+- **RAM:** 1,8 GiB + 2 GiB Swap
 - **Downtime:** Reboot ~2–5 Min
+- **SSH:** Passwort-Login aktiv; fail2ban sperrt nach fehlgeschlagenen Logins

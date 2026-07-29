@@ -2,6 +2,7 @@
 
 > Erstellt am 2026-06-16 per SSH-Inventur (`87.106.208.51`).  
 > Aktualisiert am 2026-06-16: OBD/OBG-Berliner-Döner-Stack entfernt.  
+> Aktualisiert am 2026-07-29: Block A Security Hardening (Swap, localhost-Binding, UFW, fail2ban, SSH-Keys).  
 > Hosting: IONOS VPS (klassisch, kein IONOS Cloud). Zugang: `ssh root@87.106.208.51`
 
 ## Übersicht
@@ -14,7 +15,7 @@
 | Architektur | x86_64 |
 | CPU | 2 vCPUs (AMD EPYC-Milan) |
 | RAM | 1,8 GiB gesamt |
-| Swap | **keiner** konfiguriert |
+| Swap | **2 GiB** (`/swapfile`, seit 2026-07-29) |
 | Disk | 77 GiB (`/dev/vda1`), ~15 % belegt |
 | Load | niedrig |
 
@@ -32,8 +33,8 @@
 | 22 | SSH | `0.0.0.0` / `::` |
 | 80 | nginx (HTTP → HTTPS Redirect) | `0.0.0.0` |
 | 443 | nginx (TLS, Reverse Proxy) | `0.0.0.0` |
-| 3000 | Docker: `nuernbergspots-test` (Dev-Backend) | `0.0.0.0` |
-| 3100 | Docker: `nuernbergspots` (Prod-Backend) | `0.0.0.0` |
+| 3000 | Docker: `nuernbergspots-test` (Dev-Backend) | `127.0.0.1` only |
+| 3100 | Docker: `nuernbergspots` (Prod-Backend) | `127.0.0.1` only |
 
 ## Docker
 
@@ -46,8 +47,8 @@
 
 | Name | Image | Host-Port | Restart |
 |------|-------|-----------|---------|
-| `nuernbergspots` | `dengelma/nuernbergspots:latest` | `3100→3100` | `unless-stopped` |
-| `nuernbergspots-test` | `dengelma/nuernbergspots-test:latest` | `3000→3000` | `unless-stopped` |
+| `nuernbergspots` | `dengelma/nuernbergspots:latest` | `127.0.0.1:3100→3100` | `unless-stopped` |
+| `nuernbergspots-test` | `dengelma/nuernbergspots-test:latest` | `127.0.0.1:3000→3000` | `unless-stopped` |
 
 ### Images
 
@@ -125,15 +126,19 @@
 | `docker.service` | active |
 | `nginx.service` | active |
 | `ssh.service` | active |
+| `fail2ban.service` | active |
 | `unattended-upgrades` | active |
 
 ## Sicherheit & Hardening
 
 | Thema | Status |
 |-------|--------|
-| UFW Firewall | inaktiv |
-| fail2ban | nicht aktiv |
-| SSH Root + Passwort | aktiv |
+| UFW Firewall | **aktiv** (22, 80, 443 inbound; default deny) |
+| fail2ban | **aktiv** (`sshd` Jail, `/etc/fail2ban/jail.local`) |
+| SSH Keys | CI-Key + Admin-Key in `authorized_keys` (3 Keys) |
+| SSH Passwort-Login | **aktiv** (Block B/C: Rotation / key-only noch offen) |
+| Backend-Ports öffentlich | **geschlossen** (`127.0.0.1` Binding) |
+| Swap | **2 GiB** `/swapfile` |
 | Automatische Security-Updates | aktiv |
 
 ## Verzeichnisse
@@ -146,20 +151,20 @@
 
 **Entfernt:** `/srv/berliner-doener/`
 
-Deployments per `docker run` — siehe `README.md`.
+Deployments per `docker run` — siehe `README.md`. CI bindet Ports auf `127.0.0.1` (`.github/workflows/deployment.yml`).
 
 ## Deploy-Bezug (Projekt)
 
 - CI: `.github/workflows/deployment.yml` → `appleboy/ssh-action` auf `87.106.208.51`
-- Dev: `dengelma/nuernbergspots-test` → Port 3000
-- Prod: `dengelma/nuernbergspots` → Port 3100
+- Dev: `dengelma/nuernbergspots-test` → `127.0.0.1:3000`
+- Prod: `dengelma/nuernbergspots` → `127.0.0.1:3100`
 
 ## Auffälligkeiten / Empfehlungen
 
-1. **RAM entlastet** durch Entfernung von 2 Containern (~800 MB Images) — weiterhin kein Swap.
-2. **Docker-Image optimiert (2026-06-16):** Multi-Stage-`Dockerfile` ohne Chromium — nach Deploy deutlich kleinere Images und kein Puppeteer-Runtime-Cache mehr auf Prod.
-3. **Sicherheit:** UFW, fail2ban, SSH-Key statt Passwort.
-4. **Docker-Updates:** apt-upgradable Pakete vorhanden.
+1. **Block A umgesetzt (2026-07-29):** Swap, localhost-Binding, UFW, fail2ban, SSH-Keys.
+2. **Offen (Block B):** Root-Passwort rotieren.
+3. **Offen (Block C):** `PasswordAuthentication no` nach stabilem Key-Workflow.
+4. **Docker-Image optimiert (2026-06-16):** Multi-Stage-`Dockerfile` ohne Chromium — nach Deploy deutlich kleinere Images.
 
 ## Nützliche Befehle
 
@@ -168,6 +173,8 @@ ssh root@87.106.208.51
 docker ps -a
 docker logs -f nuernbergspots
 nginx -t && systemctl reload nginx
+ufw status verbose
+fail2ban-client status sshd
 
 # Verifikation (lokal aus backend/)
 eval "$(grep '^export IONOS_' ~/.zshrc)"

@@ -61,6 +61,44 @@ for spec in "3000:nuernbergspots-test" "3100:nuernbergspots" "80:nginx" "443:ngi
     check "port-$port-$name" "not listening"
   fi
 done
+if ss -tln 2>/dev/null | grep -q '127.0.0.1:3000'; then
+  check "bind-localhost-3000" "ok"
+else
+  check "bind-localhost-3000" "not bound to 127.0.0.1"
+fi
+if ss -tln 2>/dev/null | grep -q '127.0.0.1:3100'; then
+  check "bind-localhost-3100" "ok"
+else
+  check "bind-localhost-3100" "not bound to 127.0.0.1"
+fi
+if ss -tln 2>/dev/null | grep -qE '0.0.0.0:3000|:::3000'; then
+  check "bind-public-3000-closed" "still exposed on 0.0.0.0"
+else
+  check "bind-public-3000-closed" "ok"
+fi
+if ss -tln 2>/dev/null | grep -qE '0.0.0.0:3100|:::3100'; then
+  check "bind-public-3100-closed" "still exposed on 0.0.0.0"
+else
+  check "bind-public-3100-closed" "ok"
+fi
+
+echo "--- security hardening ---"
+if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q 'Status: active'; then
+  check "ufw-active" "ok"
+else
+  check "ufw-active" "not active"
+fi
+if command -v fail2ban-client >/dev/null && fail2ban-client status sshd 2>/dev/null | grep -q 'Status for the jail'; then
+  check "fail2ban-sshd" "ok"
+else
+  check "fail2ban-sshd" "jail not active"
+fi
+swap_total=$(free -m 2>/dev/null | awk '/^Swap:/ {print $2}')
+if [ -n "$swap_total" ] && [ "$swap_total" -gt 0 ]; then
+  check "swap-configured" "ok"
+else
+  check "swap-configured" "no swap"
+fi
 
 echo "--- nginx config ---"
 if nginx -t 2>&1 | grep -q "successful"; then

@@ -51,6 +51,12 @@ npm run start:test
 npm run start:prod
 ```
 
+## API-Dokumentation
+
+- Swagger UI: `GET /api` (lokal z. B. `http://localhost:3000/api`)
+- **Cold-Start-Bundle:** `GET /bootstrap` – aggregiert App-Settings, Kategorien, Keywords, Downtime und optional App-Version-Check; Details in [docs/api-bootstrap.md](docs/api-bootstrap.md)
+- Weitere Integrations-Guides: `docs/`
+
 ## Docker Konfiguration
 
 ### Lokale Entwicklung mit Docker Compose
@@ -89,6 +95,10 @@ docker buildx build --platform linux/amd64 \
   --push .
 ```
 
+## VPS & Security
+
+Produktions-Hosting auf IONOS VPS (`nuernbergspots.de`). Inventar, Hardening-Status und Verifikation: [docs/vps-server-inventory.md](docs/vps-server-inventory.md). Backend-Container binden auf `127.0.0.1` — öffentlicher Zugriff nur via nginx (`/dev/`, `/prd/`).
+
 ## Docker Deployment
 
 ### Test-Umgebung (nuernbergspots.de/dev)
@@ -96,7 +106,7 @@ docker buildx build --platform linux/amd64 \
 2. `docker stop nuernbergspots-test`
 3. `docker rm nuernbergspots-test`
 4. `docker pull dengelma/nuernbergspots-test`
-5. `docker run -d --name nuernbergspots-test -p 3000:3000 --restart unless-stopped \
+5. `docker run -d --name nuernbergspots-test -p 127.0.0.1:3000:3000 --restart unless-stopped \
     -e PORT=3000 \
     -e NODE_ENV=dev \
     -e BASE_URL=/dev \
@@ -107,7 +117,7 @@ docker buildx build --platform linux/amd64 \
 2. `docker stop nuernbergspots`
 3. `docker rm nuernbergspots`
 4. `docker pull dengelma/nuernbergspots`
-5. `docker run -d --name nuernbergspots -p 3100:3100 --restart unless-stopped \
+5. `docker run -d --name nuernbergspots -p 127.0.0.1:3100:3100 --restart unless-stopped \
     -e PORT=3100 \
     -e NODE_ENV=prd \
     -e BASE_URL=/prd \
