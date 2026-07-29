@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppVersionsAdminController } from './app-versions-admin.controller';
 import { AppVersionsService } from '../services/app-versions.service';
-import { AppVersion } from '../../domain/entities/app-version.entity';
-import { VersionChangelog } from '../../domain/entities/version-changelog.entity';
+import { AppVersion } from '../../interfaces/app-version.interface';
+import { VersionChangelog } from '../../interfaces/version-changelog.interface';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 
@@ -44,7 +44,12 @@ describe('AppVersionsAdminController', () => {
 
   describe('getMinimumVersion', () => {
     it('should return current minimum version', async () => {
-      const mockVersion = AppVersion.create({ minimumVersion: '1.2.0' });
+      const mockVersion: AppVersion = {
+        id: 'current',
+        minimumVersion: '1.2.0',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
       mockAppVersionsService.getMinimumVersion.mockResolvedValue(mockVersion);
 
       const result = await controller.getMinimumVersion();
@@ -66,7 +71,12 @@ describe('AppVersionsAdminController', () => {
 
   describe('setMinimumVersion', () => {
     it('should set minimum version successfully', async () => {
-      const mockVersion = AppVersion.create({ minimumVersion: '1.3.0' });
+      const mockVersion: AppVersion = {
+        id: 'current',
+        minimumVersion: '1.3.0',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
       mockAppVersionsService.setMinimumVersion.mockResolvedValue(mockVersion);
 
       const dto = { minimumVersion: '1.3.0' };
@@ -105,11 +115,14 @@ describe('AppVersionsAdminController', () => {
 
   describe('createChangelog', () => {
     it('should create changelog successfully', async () => {
-      const mockChangelog = VersionChangelog.create({
+      const mockChangelog: VersionChangelog = {
+        id: 'changelog-1',
         version: '1.2.3',
         content: '# Changelog',
         createdBy: 'user123',
-      });
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
       mockAppVersionsService.createChangelog.mockResolvedValue(mockChangelog);
 
       const dto = { version: '1.2.3', content: '# Changelog' };
@@ -133,9 +146,23 @@ describe('AppVersionsAdminController', () => {
 
   describe('getAllChangelogs', () => {
     it('should return all changelogs', async () => {
-      const changelogs = [
-        VersionChangelog.create({ version: '1.3.0', content: '# v1.3.0', createdBy: 'user1' }),
-        VersionChangelog.create({ version: '1.2.0', content: '# v1.2.0', createdBy: 'user2' }),
+      const changelogs: VersionChangelog[] = [
+        {
+          id: 'changelog-1',
+          version: '1.3.0',
+          content: '# v1.3.0',
+          createdBy: 'user1',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'changelog-2',
+          version: '1.2.0',
+          content: '# v1.2.0',
+          createdBy: 'user2',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
       ];
       mockAppVersionsService.getAllChangelogs.mockResolvedValue(changelogs);
 
@@ -156,11 +183,14 @@ describe('AppVersionsAdminController', () => {
 
   describe('getChangelogByVersion', () => {
     it('should return changelog for version', async () => {
-      const mockChangelog = VersionChangelog.create({
+      const mockChangelog: VersionChangelog = {
+        id: 'changelog-1',
         version: '1.2.3',
         content: '# Changelog',
         createdBy: 'user123',
-      });
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
       mockAppVersionsService.getChangelogForVersion.mockResolvedValue(mockChangelog);
 
       const result = await controller.getChangelogByVersion('1.2.3');
@@ -179,11 +209,14 @@ describe('AppVersionsAdminController', () => {
 
   describe('updateChangelog', () => {
     it('should update changelog successfully', async () => {
-      const mockChangelog = VersionChangelog.create({
+      const mockChangelog: VersionChangelog = {
+        id: 'changelog-1',
         version: '1.2.3',
         content: '# Updated',
         createdBy: 'user123',
-      });
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
       mockAppVersionsService.updateChangelog.mockResolvedValue(mockChangelog);
 
       const dto = { content: '# Updated' };

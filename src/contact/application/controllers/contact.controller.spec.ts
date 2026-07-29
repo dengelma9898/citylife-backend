@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ContactController } from './contact.controller';
 import { ContactService } from '../services/contact.service';
-import { ContactRequest, ContactRequestType } from '../../domain/entities/contact-request.entity';
-import { ContactMessage } from '../../domain/entities/contact-message.entity';
+import { ContactRequest, ContactRequestType } from '../../interfaces/contact-request.interface';
+import { ContactMessage } from '../../interfaces/contact-message.interface';
 import { NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseService } from '../../../firebase/firebase.service';
@@ -74,11 +74,11 @@ describe('ContactController', () => {
       message: 'Test message',
     };
 
-    const mockContactRequest = ContactRequest.create({
+    const mockContactRequest = ({
       type: ContactRequestType.GENERAL,
       userId: mockData.userId,
       messages: [
-        ContactMessage.create({
+        ({
           message: mockData.message,
           userId: mockData.userId,
           isAdminResponse: false,
@@ -100,17 +100,23 @@ describe('ContactController', () => {
   describe('getById', () => {
     const mockUserId = 'user123';
     const mockRequestId = 'request123';
-    const mockContactRequest = ContactRequest.create({
+    const mockContactRequest: ContactRequest = {
+      id: mockRequestId,
       type: ContactRequestType.GENERAL,
       userId: mockUserId,
       messages: [
-        ContactMessage.create({
+        {
           message: 'Test message',
           userId: mockUserId,
           isAdminResponse: false,
-        }),
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
       ],
-    });
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      responded: false,
+      isProcessed: false,
+    };
 
     it('should return contact request if found', async () => {
       mockContactService.getById.mockResolvedValue(mockContactRequest);
@@ -135,16 +141,16 @@ describe('ContactController', () => {
     const mockUserId = 'user123';
     const mockRequestId = 'request123';
     const mockMessage = { message: 'New message' };
-    const mockContactRequest = ContactRequest.create({
+    const mockContactRequest = ({
       type: ContactRequestType.GENERAL,
       userId: mockUserId,
       messages: [
-        ContactMessage.create({
+        ({
           message: 'Old message',
           userId: mockUserId,
           isAdminResponse: false,
         }),
-        ContactMessage.create({
+        ({
           message: mockMessage.message,
           userId: mockUserId,
           isAdminResponse: false,

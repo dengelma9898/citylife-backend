@@ -1,24 +1,41 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { Response } from 'express';
-import { DateTimeUtils } from 'src/utils/date-time.utils';
+import { DateTimeUtils } from '../../utils/date-time.utils';
 
 interface ExceptionResponse {
   message: string;
   [key: string]: unknown;
 }
 
-@Catch(HttpException)
+@Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
-  public catch(exception: HttpException, host: ArgumentsHost): void {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
+  public catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const status = exception.getStatus();
-    const exceptionResponse = exception.getResponse() as ExceptionResponse;
-
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+    if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logger.error('Unhandled Internal Server Error', exception);
+    }
+    const message =
+      exception instanceof HttpException
+        ? (exception.getResponse() as ExceptionResponse).message || exception.message
+        : 'Internal server error';
     response.status(status).json({
       statusCode: status,
       timestamp: DateTimeUtils.getBerlinTime(),
-      message: exceptionResponse.message || exception.message,
+      message,
     });
   }
 }

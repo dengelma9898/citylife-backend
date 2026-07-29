@@ -1,7 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import { EasterEgg, EasterEggProps } from '../../domain/entities/easter-egg.entity';
+import { EasterEgg, isEasterEggActive } from '../../interfaces/easter-egg.interface';
 import { CreateEasterEggDto } from '../../dto/create-easter-egg.dto';
 import { UpdateEasterEggDto } from '../../dto/update-easter-egg.dto';
 
@@ -12,7 +13,7 @@ export class EasterEggService {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private toEasterEggProps(data: Record<string, unknown>, id: string): EasterEggProps {
+  private toEasterEgg(data: Record<string, unknown>, id: string): EasterEgg {
     return {
       id,
       title: data.title as string,
@@ -22,7 +23,7 @@ export class EasterEggService {
       numberOfWinners: data.numberOfWinners as number | undefined,
       startDate: data.startDate as string,
       endDate: data.endDate as string,
-      location: (data.location as EasterEggProps['location']) || {
+      location: (data.location as EasterEgg['location']) || {
         address: '',
         latitude: 0,
         longitude: 0,
@@ -38,7 +39,7 @@ export class EasterEggService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).get();
     return snapshot.docs.map(doc =>
-      EasterEgg.fromProps(this.toEasterEggProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toEasterEgg(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -48,7 +49,7 @@ export class EasterEggService {
     if (!doc.exists) {
       return null;
     }
-    return EasterEgg.fromProps(this.toEasterEggProps(doc.data() as Record<string, unknown>, doc.id));
+    return this.toEasterEgg(doc.data() as Record<string, unknown>, doc.id);
   }
 
   async updateEntity(id: string, egg: EasterEgg): Promise<EasterEgg> {
@@ -58,12 +59,9 @@ export class EasterEggService {
     if (!doc.exists) {
       throw new NotFoundException('Easter egg not found');
     }
-    await docRef.update(toFirestoreData(egg));
+    await docRef.update(toFirestoreData(egg as unknown as Record<string, unknown>));
     this.logger.log(`Updated easter egg with id: ${id}`);
-    return EasterEgg.fromProps({
-      ...egg.toJSON(),
-      id,
-    });
+    return { ...egg, id };
   }
 
   async getAll(): Promise<EasterEgg[]> {
@@ -73,7 +71,7 @@ export class EasterEggService {
 
   async getActive(): Promise<EasterEgg[]> {
     const eggs = await this.findAll();
-    return eggs.filter(egg => egg.isActive());
+    return eggs.filter(egg => isEasterEggActive(egg));
   }
 
   async getById(id: string): Promise<EasterEgg> {
@@ -87,7 +85,9 @@ export class EasterEggService {
 
   async create(dto: CreateEasterEggDto): Promise<EasterEgg> {
     this.logger.log(`Creating easter egg: ${dto.title}`);
-    const egg = EasterEgg.create({
+    const now = new Date().toISOString();
+    const egg: EasterEgg = {
+      id: randomUUID(),
       title: dto.title,
       description: dto.description,
       prizeDescription: dto.prizeDescription,
@@ -99,14 +99,15 @@ export class EasterEggService {
         latitude: dto.latitude,
         longitude: dto.longitude,
       },
-    });
+      participants: [],
+      winners: [],
+      createdAt: now,
+      updatedAt: now,
+    };
     const db = this.firebaseService.getFirestore();
-    const docRef = await db.collection(this.collection).add(toFirestoreData(egg));
+    const docRef = await db.collection(this.collection).add(toFirestoreData(egg as unknown as Record<string, unknown>));
     this.logger.log(`Created easter egg with id: ${docRef.id}`);
-    return EasterEgg.fromProps({
-      ...egg.toJSON(),
-      id: docRef.id,
-    });
+    return { ...egg, id: docRef.id };
   }
 
   async update(id: string, dto: UpdateEasterEggDto): Promise<EasterEgg> {
@@ -115,7 +116,7 @@ export class EasterEggService {
     if (!existingEgg) {
       throw new NotFoundException('Easter egg not found');
     }
-    const updateProps: Record<string, unknown> = {};
+    const updateProps: Partial<EasterEgg> = {};
     if (dto.title !== undefined) updateProps.title = dto.title;
     if (dto.description !== undefined) updateProps.description = dto.description;
     if (dto.prizeDescription !== undefined) updateProps.prizeDescription = dto.prizeDescription;
@@ -129,7 +130,11 @@ export class EasterEggService {
         longitude: dto.longitude ?? existingEgg.location.longitude,
       };
     }
-    const updatedEgg = existingEgg.update(updateProps);
+    const updatedEgg: EasterEgg = {
+      ...existingEgg,
+      ...updateProps,
+      updatedAt: new Date().toISOString(),
+    };
     return this.updateEntity(id, updatedEgg);
   }
 
@@ -139,7 +144,11 @@ export class EasterEggService {
     if (!existingEgg) {
       throw new NotFoundException('Easter egg not found');
     }
-    const updatedEgg = existingEgg.update({ imageUrl });
+    const updatedEgg: EasterEgg = {
+      ...existingEgg,
+      imageUrl,
+      updatedAt: new Date().toISOString(),
+    };
     return this.updateEntity(id, updatedEgg);
   }
 

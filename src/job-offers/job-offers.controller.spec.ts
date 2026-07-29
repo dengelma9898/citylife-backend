@@ -4,7 +4,7 @@ import { JobOffersService } from './application/services/job-offers.service';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { CreateJobOfferDto } from './dto/create-job-offer.dto';
 import { NotFoundException } from '@nestjs/common';
-import { JobOffer } from './domain/entities/job-offer.entity';
+import { JobOffer } from './interfaces/job-offer.interface';
 import { Readable } from 'stream';
 
 describe('JobOffersController', () => {
@@ -25,7 +25,8 @@ describe('JobOffersController', () => {
     deleteFile: jest.fn(),
   };
 
-  const mockJobOffer: JobOffer = JobOffer.create({
+  const mockJobOffer: JobOffer = {
+    id: 'job1',
     title: 'Test Job',
     generalDescription: 'Test Description',
     neededProfile: 'Test Profile',
@@ -47,7 +48,9 @@ describe('JobOffersController', () => {
     benefits: [],
     images: [],
     companyLogo: '',
-  });
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({

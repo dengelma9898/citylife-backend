@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SpotKeywordsService } from './spot-keywords.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { SpotKeyword } from '../../domain/entities/spot-keyword.entity';
+import { SpotKeyword } from '../../interfaces/spot-keyword.interface';
 
 describe('SpotKeywordsService', () => {
   let service: SpotKeywordsService;
@@ -12,7 +12,7 @@ describe('SpotKeywordsService', () => {
   let mockCollection: { doc: jest.Mock };
   let mockFirestore: { collection: jest.Mock };
 
-  const existing = SpotKeyword.fromProps({
+  const existing = ({
     id: 'kw-1',
     name: 'Biergarten',
     nameLower: 'biergarten',
@@ -59,7 +59,7 @@ describe('SpotKeywordsService', () => {
       mockDoc.get.mockResolvedValue({
         exists: true,
         id: 'kw-1',
-        data: () => existing.toJSON(),
+        data: () => existing,
       });
       const result = await service.findById('kw-1');
       expect(result?.id).toBe('kw-1');
@@ -84,7 +84,7 @@ describe('SpotKeywordsService', () => {
     it('should create when new', async () => {
       findByNameLowerSpy.mockResolvedValue(null);
       createKeywordSpy.mockImplementation(k =>
-        Promise.resolve(SpotKeyword.fromProps({ ...k.toJSON(), id: 'new-id' })),
+        Promise.resolve(({ ...k, id: 'new-id' })),
       );
       const result = await service.create({ name: 'Neu' });
       expect(createKeywordSpy).toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe('SpotKeywordsService', () => {
     it('should create missing and dedupe', async () => {
       findByNameLowerSpy.mockResolvedValueOnce(null).mockResolvedValueOnce(existing);
       createKeywordSpy.mockImplementation(k =>
-        Promise.resolve(SpotKeyword.fromProps({ ...k.toJSON(), id: 'new-kw' })),
+        Promise.resolve(({ ...k, id: 'new-kw' })),
       );
       const ids = await service.resolveNewKeywordNamesToIds(['  Neu ', 'Biergarten']);
       expect(ids).toContain('new-kw');

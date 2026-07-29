@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nürnbergspots Backend – Deployment & Infrastruktur Analyse</title>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-primary: #38bdf8;
+      --accent-success: #22c55e;
+      --accent-warning: #f59e0b;
+      --accent-danger: #ef4444;
+      --accent-purple: #a855f7;
+      --accent-teal: #2dd4bf;
+      --border-color: #334155;
+      --code-bg: #090d16;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 30px 20px;
+    }
+
+    .container { max-width: 1300px; margin: 0 auto; }
+
+    header {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: var(--accent-teal);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h2 { margin-bottom: 20px; color: var(--text-main); }
+    h3 { margin: 18px 0 10px; color: var(--accent-primary); }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-critical { background: rgba(239, 68, 68, 0.2); color: var(--accent-danger); border: 1px solid var(--accent-danger); }
+    .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--accent-warning); border: 1px solid var(--accent-warning); }
+    .badge-success { background: rgba(34, 197, 94, 0.2); color: var(--accent-success); border: 1px solid var(--accent-success); }
+    .badge-info { background: rgba(56, 189, 248, 0.2); color: var(--accent-primary); border: 1px solid var(--accent-primary); }
+    .badge-purple { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); border: 1px solid var(--accent-purple); }
+    .badge-teal { background: rgba(45, 212, 191, 0.2); color: var(--accent-teal); border: 1px solid var(--accent-teal); }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 35px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent-teal);
+    }
+
+    .stat-number { font-size: 2rem; font-weight: 800; margin-top: 5px; }
+    .stat-label { font-size: 0.85rem; color: var(--text-muted); }
+
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 30px;
+      overflow-x: auto;
+      padding-bottom: 5px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 10px 16px;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover { color: var(--text-main); background: var(--bg-card-hover); }
+    .tab-btn.active {
+      color: var(--accent-teal);
+      border-bottom: 3px solid var(--accent-teal);
+      background: var(--bg-card);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .finding-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 25px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .finding-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 15px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .finding-title { font-size: 1.2rem; color: var(--text-main); font-weight: 700; }
+
+    .finding-location {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: var(--accent-primary);
+      background: rgba(56, 189, 248, 0.1);
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-top: 5px;
+      display: inline-block;
+    }
+
+    .finding-desc { color: var(--text-muted); margin-bottom: 15px; }
+
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: var(--bg-card);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 0.92rem;
+    }
+
+    .matrix-table th, .matrix-table td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: top;
+    }
+
+    .matrix-table th {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+    }
+
+    .matrix-table tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+    .score-bar {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .score-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--border-color);
+    }
+
+    .score-dot.filled-high { background: var(--accent-success); }
+    .score-dot.filled-mid { background: var(--accent-warning); }
+    .score-dot.filled-low { background: var(--accent-danger); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+
+    .feature-card.priority-high::before { background: var(--accent-success); }
+    .feature-card.priority-mid::before { background: var(--accent-warning); }
+    .feature-card.priority-low::before { background: var(--accent-danger); }
+    .feature-card.alt::before { background: var(--accent-purple); }
+
+    .roadmap {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-top: 20px;
+    }
+
+    .roadmap-item {
+      display: flex;
+      gap: 20px;
+      padding: 20px 0;
+      border-left: 3px solid var(--border-color);
+      margin-left: 20px;
+      padding-left: 25px;
+      position: relative;
+    }
+
+    .roadmap-item::before {
+      content: '';
+      position: absolute;
+      left: -9px;
+      top: 24px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent-teal);
+      border: 3px solid var(--bg-primary);
+    }
+
+    .roadmap-phase {
+      font-weight: 700;
+      color: var(--accent-teal);
+      min-width: 100px;
+    }
+
+    .ref-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .ref-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-muted);
+    }
+
+    .ref-list a { color: var(--accent-primary); text-decoration: none; }
+    .ref-list a:hover { text-decoration: underline; }
+
+    .cost-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .cost-free { background: rgba(34, 197, 94, 0.15); color: var(--accent-success); }
+    .cost-low { background: rgba(56, 189, 248, 0.15); color: var(--accent-primary); }
+    .cost-mid { background: rgba(245, 158, 11, 0.15); color: var(--accent-warning); }
+    .cost-high { background: rgba(239, 68, 68, 0.15); color: var(--accent-danger); }
+
+    .architecture-diagram {
+      background: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin: 20px 0;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>🚢 Deployment & Infrastruktur Analyse</h1>
+        <p style="color: var(--text-muted);">Brainstorming · Kosten/Nutzen · Alternativen zu Docker · Out-of-the-Box</p>
+      </div>
+      <div>
+        <span class="badge badge-teal">IONOS VPS</span>
+        <span class="badge badge-info">Docker + nginx</span>
+        <span class="badge badge-purple">GitHub Actions</span>
+        <span class="badge badge-success">29.07.2026</span>
+      </div>
+    </header>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">VPS-Ressourcen</div>
+      <div class="stat-number" style="color: var(--accent-warning);">2 vCPU · 1,8 GB RAM</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Container auf VPS</div>
+      <div class="stat-number" style="color: var(--accent-primary);">2</div>
+      <div class="stat-label">dev (3000) + prd (3100)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Deploy-Downtime</div>
+      <div class="stat-number" style="color: var(--accent-danger);">~10–30 s</div>
+      <div class="stat-label">stop → rm → pull → run</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Geschätzte VPS-Kosten</div>
+      <div class="stat-number" style="color: var(--accent-success);">~5–12 €/Mo</div>
+      <div class="stat-label">IONOS VPS S/M (Schätzung)</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="openTab(event, 'ist')">📋 Ist-Zustand</button>
+    <button class="tab-btn" onclick="openTab(event, 'quickwins')">⚡ Quick Wins</button>
+    <button class="tab-btn" onclick="openTab(event, 'docker')">🐳 Docker optimieren</button>
+    <button class="tab-btn" onclick="openTab(event, 'alternativen')">🔀 Alternativen</button>
+    <button class="tab-btn" onclick="openTab(event, 'matrix')">📊 Kosten/Nutzen-Matrix</button>
+    <button class="tab-btn" onclick="openTab(event, 'roadmap')">🗺️ Empfohlene Roadmap</button>
+  </div>
+
+  <!-- TAB: Ist-Zustand -->
+  <div id="ist" class="tab-content active">
+    <h2>Aktuelle Architektur</h2>
+
+    <div class="architecture-diagram">
+Internet (HTTPS)
+    │
+    ▼
+┌─────────────────────────────────────────────────────────┐
+│  IONOS VPS · 87.106.208.51 · Ubuntu 24.04               │
+│  2 vCPU · 1,8 GB RAM · kein Swap · 77 GB Disk             │
+│                                                           │
+│  ┌─────────────┐    ┌──────────────────────────────────┐ │
+│  │ nginx :443  │───▶│ /dev/  → localhost:3000          │ │
+│  │ TLS Wildcard│    │ /prd/  → localhost:3100          │ │
+│  │ /health 200 │    │ /      → Redirect /dev/          │ │
+│  └─────────────┘    └──────────────────────────────────┘ │
+│         │                        │                        │
+│         ▼                        ▼                        │
+│  ┌──────────────────┐  ┌──────────────────┐              │
+│  │ nuernbergspots-  │  │ nuernbergspots   │              │
+│  │ test (Docker)    │  │ (Docker)         │              │
+│  │ NODE_ENV=dev     │  │ NODE_ENV=prd     │              │
+│  │ Port 3000        │  │ Port 3100        │              │
+│  └──────────────────┘  └──────────────────┘              │
+│                                                           │
+│  Extern: Firebase (Firestore, Auth, Storage, FCM)         │
+│          HERE Maps API                                   │
+└─────────────────────────────────────────────────────────┘
+
+CI/CD: GitHub Actions (.github/workflows/deployment.yml)
+  test → build Docker image → push Docker Hub → SSH deploy (appleboy/ssh-action)
+    </div>
+
+    <div class="finding-card">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">Was funktioniert gut</div>
+        </div>
+        <span class="badge badge-success">Stabil</span>
+      </div>
+      <div class="finding-desc">
+        <ul style="padding-left: 20px; color: var(--text-muted);">
+          <li><strong>Multi-Stage Dockerfile</strong> – Build und Runtime getrennt, Chromium entfernt (<a href="brainstorming-performance-und-features.md">docs/brainstorming-performance-und-features.md</a>)</li>
+          <li><strong>Automatisierte Pipeline</strong> – Lint, Tests, Build, Push, Deploy bei Push auf <code>main</code></li>
+          <li><strong>nginx Reverse Proxy</strong> – TLS, HSTS, Gzip, Security-Headers, Pfad-basiertes Routing</li>
+          <li><strong>Dev + Prod auf einem VPS</strong> – Kosteneffizient für aktuelle Nutzerzahl</li>
+          <li><strong>In-Memory Cache</strong> – Ausreichend für Single-Container-Setup (<a href="configuration-values.md">docs/configuration-values.md</a>)</li>
+          <li><strong>Health-Check</strong> – nginx <code>/health</code> → 200; Backend erfordert Auth (korrekt)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="finding-card">
+      <div class="finding-header">
+        <div>
+          <div class="finding-title">Bekannte Schwachstellen & Risiken</div>
+          <div class="finding-location">docs/vps-server-inventory.md</div>
+        </div>
+        <span class="badge badge-warning">Handlungsbedarf</span>
+      </div>
+      <div class="finding-desc">
+        <table class="matrix-table">
+          <thead>
+            <tr><th>Thema</th><th>Status</th><th>Risiko</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Kein Swap (1,8 GB RAM, 2 Container)</td><td><span class="badge badge-warning">Offen</span></td><td>OOM-Kill bei Memory-Spike</td></tr>
+            <tr><td>UFW Firewall</td><td><span class="badge badge-critical">Inaktiv</span></td><td>Ports 3000/3100 öffentlich erreichbar</td></tr>
+            <tr><td>fail2ban</td><td><span class="badge badge-critical">Nicht aktiv</span></td><td>Brute-Force auf SSH</td></tr>
+            <tr><td>SSH Root + Passwort</td><td><span class="badge badge-critical">Aktiv</span></td><td>Kompromittierung des gesamten Stacks</td></tr>
+            <tr><td>Deploy = Downtime</td><td><span class="badge badge-warning">By Design</span></td><td>~10–30 s Ausfall pro Deploy</td></tr>
+            <tr><td>Backend-Ports öffentlich</td><td><span class="badge badge-warning">0.0.0.0:3000/3100</span></td><td>Umgehung nginx möglich</td></tr>
+            <tr><td>Kein Monitoring/Alerting</td><td><span class="badge badge-warning">Offen</span></td><td>Ausfälle erst durch Nutzer gemeldet</td></tr>
+            <tr><td>docker run statt Compose</td><td><span class="badge badge-info">Technisch</span></td><td>Manuelle Flags, schwer reproduzierbar</td></tr>
+            <tr><td>Secrets auf Server</td><td><span class="badge badge-info">/app/certificates</span></td><td>Service Account per Deploy geschrieben</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Quick Wins -->
+  <div id="quickwins" class="tab-content">
+    <h2>Quick Wins – hoher Nutzen, geringer Aufwand</h2>
+    <p style="color: var(--text-muted); margin-bottom: 25px;">
+      Maßnahmen, die <strong>ohne Plattformwechsel</strong> den größten Hebel bieten. Referenz: <a href="vps-server-inventory.md" style="color: var(--accent-primary);">docs/vps-server-inventory.md</a>, <a href="../.cursor/skills/vps-maintenance/SKILL.md" style="color: var(--accent-primary);">.cursor/skills/vps-maintenance/</a>
+    </p>
+
+    <div class="grid-2">
+      <div class="feature-card priority-high">
+        <h3>🔒 Security Hardening</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">
+          UFW: nur 22, 80, 443. fail2ban für SSH. SSH-Key-only, kein Root-Login mit Passwort.
+          Backend-Ports 3000/3100 nur auf <code>127.0.0.1</code> binden (<code>-p 127.0.0.1:3000:3000</code>).
+        </p>
+        <p><span class="cost-tag cost-free">0 €</span> <span class="badge badge-success">Aufwand: 2–4 h</span></p>
+        <p style="margin-top: 8px;"><strong>Nutzen:</strong> Schließt größtes operatives Risiko. Kein Feature-Gewinn, aber Pflicht vor Skalierung.</p>
+      </div>
+
+      <div class="feature-card priority-high">
+        <h3>💾 1–2 GB Swap aktivieren</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">
+          Auf 1,8 GB RAM ohne Swap kann ein Memory-Spike (GC, Deploy, npm) zum OOM-Kill führen.
+          Swap ist kein Performance-Booster, aber ein Crash-Preventer.
+        </p>
+        <p><span class="cost-tag cost-free">0 €</span> <span class="badge badge-success">Aufwand: 30 min</span></p>
+      </div>
+
+      <div class="feature-card priority-high">
+        <h3>📦 Docker Compose statt docker run</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">
+          <code>docker-compose.yml</code> existiert bereits im Repo. CI und Server auf Compose umstellen:
+          reproduzierbare Config, ein Befehl für Restart, einfacheres Hinzufügen von Redis/Uptime-Kuma.
+        </p>
+        <p><span class="cost-tag cost-free">0 €</span> <span class="badge badge-success">Aufwand: 2–3 h</span></p>
+      </div>
+
+      <div class="feature-card priority-mid">
+        <h3>🔄 Zero-Downtime Deploy (Blue-Green)</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">
+          Neuen Container starten (z. B. <code>nuernbergspots-new</code> auf Port 3101), Health-Check,
+          nginx upstream umschalten, alten Container stoppen. Oder: <strong>Kamal</strong> / <strong>Watchtower</strong> mit Rolling-Strategie.
+        </p>
+        <p><span class="cost-tag cost-free">0 €</span> <span class="badge badge-warning">Aufwand: 4–8 h</span></p>
+      </div>
+
+      <div class="feature-card priority-mid">
+        <h3>📡 Monitoring (Uptime Kuma)</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">
+          Self-hosted auf dem VPS: HTTP-Checks für <code>/health</code>, <code>/prd/health</code>,
+          Container-Status, Disk/RAM. Alerts per E-Mail, Telegram oder Pushover.
+        </p>
+        <p><span class="cost-tag cost-free">0 €</span> <span class="badge badge-warning">Aufwand: 2–3 h</span></p>
+      </div>
+
+      <div class="feature-card priority-mid">
+        <h3>🏗️ CI: Build-Cache + GHCR</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">
+          Docker Layer Cache in GitHub Actions (<code>cache-from/cache-to</code>). Optional Docker Hub →
+          GitHub Container Registry (GHCR): keine Rate-Limits, Secrets bereits in GitHub.
+        </p>
+        <p><span class="cost-tag cost-free">0 €</span> <span class="badge badge-success">Aufwand: 1–2 h</span></p>
+      </div>
+
+      <div class="feature-card priority-mid">
+        <h3>✅ Post-Deploy Smoke Test</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">
+          Nach SSH-Deploy in CI: <code>curl -sf https://nuernbergspots.de/health</code> und optional
+          authentifizierter Bootstrap-Check. Rollback-Hinweis bei Fehler.
+        </p>
+        <p><span class="cost-tag cost-free">0 €</span> <span class="badge badge-success">Aufwand: 1 h</span></p>
+      </div>
+
+      <div class="feature-card priority-low">
+        <h3>📜 Zentralisierte Logs</h3>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">
+          <code>docker logs</code> reicht für jetzt. Bei Wachstum: Loki + Grafana oder Papertrail/Logtail (Free Tier).
+        </p>
+        <p><span class="cost-tag cost-low">0–5 €/Mo</span> <span class="badge badge-info">Aufwand: variabel</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Docker optimieren -->
+  <div id="docker" class="tab-content">
+    <h2>Docker-Stack vertiefen (ohne Wechsel)</h2>
+
+    <div class="finding-card">
+      <div class="finding-header">
+        <div class="finding-title">Image-Größe & Runtime</div>
+        <span class="badge badge-success">Teilweise umgesetzt</span>
+      </div>
+      <div class="finding-desc">
+        <table class="matrix-table">
+          <thead>
+            <tr><th>Maßnahme</th><th>Status</th><th>Ersparnis / Nutzen</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Multi-Stage Build</td><td>✅ Umgesetzt</td><td>~2 GB → ~400–600 MB</td></tr>
+            <tr><td>Chromium/Puppeteer entfernt</td><td>✅ Umgesetzt</td><td>~680 MB</td></tr>
+            <tr><td><code>node:24-slim</code> statt full</td><td>✅ Umgesetzt</td><td>~100 MB</td></tr>
+            <tr><td><code>node:24-alpine</code></td><td>⬜ Offen</td><td>~30–50 MB extra; musl kann bei native deps brechen</td></tr>
+            <tr><td><code>distroless</code> Runtime</td><td>⬜ Offen</td><td>Kleiner + sicherer, kein Shell im Container</td></tr>
+            <tr><td>Swagger nur in dev</td><td>⬜ Offen</td><td>Weniger Startup-Memory in prd</td></tr>
+            <tr><td><code>.env.prd</code> nicht im Image</td><td>⚠️ Prüfen</td><td>Secrets per Runtime-Env/Volume statt Build</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="finding-card">
+      <div class="finding-header">
+        <div class="finding-title">Redis als Compose-Service (wenn nötig)</div>
+        <span class="badge badge-info">Bewusst zurückgestellt</span>
+      </div>
+      <div class="finding-desc">
+        Laut <a href="configuration-values.md" style="color: var(--accent-primary);">docs/configuration-values.md</a> (Zukünftige Option: Shared Cache):
+        Redis lohnt sich erst bei mehreren Replikas, Zero-Downtime-Deploys mit zwei Containern oder Cache über Restarts.
+        <br><br>
+        <strong>Kosten:</strong> ~50–100 MB RAM auf dem VPS. <strong>Nutzen:</strong> Shared Cache, Session-Persistenz, Rate-Limit-Store.
+        Für aktuelles Single-Container-Setup: <span class="badge badge-warning">YAGNI</span>
+      </div>
+    </div>
+
+    <div class="finding-card">
+      <div class="finding-header">
+        <div class="finding-title">Podman als Docker-Alternative (gleicher VPS)</div>
+        <span class="badge badge-purple">Marginaler Nutzen</span>
+      </div>
+      <div class="finding-desc">
+        <strong>Podman</strong> ist Docker-kompatibel (gleiche Images, <code>podman run</code>), läuft rootless, kein Daemon.
+        <br><br>
+        <table class="matrix-table">
+          <thead><tr><th>Pro</th><th>Contra</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Rootless = weniger Angriffsfläche</td>
+              <td>Migration-Aufwand, CI-Anpassung</td>
+            </tr>
+            <tr>
+              <td>Kein Docker-Daemon (weniger RAM)</td>
+              <td>Compose-Support (<code>podman-compose</code>) weniger ausgereift</td>
+            </tr>
+            <tr>
+              <td>OCI-konform, gleiche Images</td>
+              <td>Kein echter Kosten-/Feature-Gewinn vs. gehärtetes Docker</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top: 15px;"><strong>Empfehlung:</strong> Nur wenn Security-Hardening mit rootless Containern gewünscht – sonst Docker + UFW + localhost-Binding reicht.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Alternativen -->
+  <div id="alternativen" class="tab-content">
+    <h2>Alternativen & Out-of-the-Box-Optionen</h2>
+
+    <div class="finding-card">
+      <div class="finding-header">
+        <div class="finding-title">Kategorie A: Gleicher VPS, anderer Deploy-Mechanismus</div>
+      </div>
+
+      <table class="matrix-table">
+        <thead>
+          <tr><th>Option</th><th>Beschreibung</th><th>Kosten</th><th>Für Nürnbergspots?</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>systemd + Node direkt</strong></td>
+            <td>Kein Container: <code>npm ci && node dist/main.js</code> als systemd-Service. Deploy per rsync/git pull.</td>
+            <td><span class="cost-tag cost-free">0 €</span></td>
+            <td>⚠️ Weniger RAM (~100 MB), aber keine Isolation, Node-Version-Management auf Host, Dev+Prod-Konflikte</td>
+          </tr>
+          <tr>
+            <td><strong>Kamal (ehem. MRSK)</strong></td>
+            <td>Docker-Deploy-Tool von 37signals. Zero-Downtime, Health-Checks, kein Kubernetes. Nutzt weiterhin Docker auf VPS.</td>
+            <td><span class="cost-tag cost-free">0 €</span></td>
+            <td>✅ Guter Fit: professionelles Deploy ohne K8s-Komplexität</td>
+          </tr>
+          <tr>
+            <td><strong>Coolify</strong></td>
+            <td>Self-hosted PaaS auf eigenem VPS. UI für Deploys, Env-Management, SSL, Monitoring.</td>
+            <td><span class="cost-tag cost-free">0 €</span> (+ RAM ~200 MB)</td>
+            <td>✅ Wenn UI gewünscht; overhead auf kleinem VPS</td>
+          </tr>
+          <tr>
+            <td><strong>Dokku</strong></td>
+            <td>Heroku-ähnlich auf VPS. <code>git push dokku main</code>.</td>
+            <td><span class="cost-tag cost-free">0 €</span></td>
+            <td>⚠️ Gut für einfache Apps; NestJS + Firebase-Certs brauchen Custom-Config</td>
+          </tr>
+          <tr>
+            <td><strong>CapRover</strong></td>
+            <td>Self-hosted PaaS mit One-Click-Apps, ähnlich Coolify.</td>
+            <td><span class="cost-tag cost-free">0 €</span></td>
+            <td>⚠️ Ähnlich Coolify; mehr RAM-Bedarf</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="finding-card">
+      <div class="finding-header">
+        <div class="finding-title">Kategorie B: Managed PaaS / Cloud (Weg vom VPS)</div>
+      </div>
+
+      <table class="matrix-table">
+        <thead>
+          <tr><th>Option</th><th>Beschreibung</th><th>Kosten (Schätzung)</th><th>Für Nürnbergspots?</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Google Cloud Run</strong></td>
+            <td>Container-as-a-Service, skaliert auf 0, Firebase bereits auf GCP. NestJS als Container.</td>
+            <td><span class="cost-tag cost-low">~0–15 €/Mo</span><br><small>bei kleiner Traffic</small></td>
+            <td>✅✅ <strong>Top-Kandidat</strong> – gleicher Cloud-Anbieter wie Firebase, weniger Server-Ops</td>
+          </tr>
+          <tr>
+            <td><strong>Fly.io</strong></td>
+            <td>Global Edge-Deploy, Docker-Images, einfaches CLI.</td>
+            <td><span class="cost-tag cost-low">~5–20 €/Mo</span></td>
+            <td>✅ Guter Fit; Free Tier eingeschränkt; EU-Region Frankfurt verfügbar</td>
+          </tr>
+          <tr>
+            <td><strong>Railway / Render</strong></td>
+            <td>Git-push Deploy, managed Infra, wenig Config.</td>
+            <td><span class="cost-tag cost-mid">~7–25 €/Mo</span></td>
+            <td>✅ Sehr einfach; Kosten steigen mit Usage</td>
+          </tr>
+          <tr>
+            <td><strong>Hetzner Cloud</strong></td>
+            <td>CX22: 2 vCPU, 4 GB RAM, ~4 €/Mo. Gleiches Setup wie IONOS, mehr RAM.</td>
+            <td><span class="cost-tag cost-low">~4–8 €/Mo</span></td>
+            <td>✅ VPS-Wechsel statt Plattform-Wechsel – mehr RAM für gleichen Preis</td>
+          </tr>
+          <tr>
+            <td><strong>Firebase Cloud Functions</strong></td>
+            <td>Serverless Functions für Teile der API.</td>
+            <td><span class="cost-tag cost-low">Pay-per-use</span></td>
+            <td>❌ NestJS-Monolith schlecht aufteilbar; Cold Starts; kein Full-Framework-Support</td>
+          </tr>
+          <tr>
+            <td><strong>AWS Lambda + API GW</strong></td>
+            <td>Serverless mit NestJS via <code>@vendia/serverless-express</code>.</td>
+            <td><span class="cost-tag cost-mid">variabel</span></td>
+            <td>⚠️ Hoher Migrationsaufwand; Firebase bleibt extern</td>
+          </tr>
+          <tr>
+            <td><strong>Kubernetes (k3s)</strong></td>
+            <td>Orchestrierung, Auto-Scaling, Self-Healing.</td>
+            <td><span class="cost-tag cost-high">Ops-Aufwand</span></td>
+            <td>❌ Overkill für 1 VPS, 2 Container</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="finding-card">
+      <div class="finding-header">
+        <div class="finding-title">Kategorie C: Out-of-the-Box / Zukunft</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="feature-card alt">
+          <h3>🌐 Cloudflare als Edge-Layer</h3>
+          <p style="color: var(--text-muted); font-size: 0.92rem;">
+            Proxy vor nginx: DDoS-Schutz, CDN für statische Assets, WAF, Bot-Management.
+            Origin bleibt IONOS VPS. Free Tier für Basis-Features.
+          </p>
+          <p><span class="cost-tag cost-free">0 €</span> (Pro: ~20 €/Mo)</p>
+        </div>
+
+        <div class="feature-card alt">
+          <h3>🔥 Firebase App Hosting</h3>
+          <p style="color: var(--text-muted); font-size: 0.92rem;">
+            Google's neues Hosting für Full-Stack mit Firebase. Primär für Web-Frontends;
+            Backend-API-Support wächst. NestJS-Support prüfen – aktuell kein Standard-Pfad.
+          </p>
+          <p><span class="cost-tag cost-low">Pay-per-use</span></p>
+        </div>
+
+        <div class="feature-card alt">
+          <h3>📱 Edge Functions (nur für Teile)</h3>
+          <p style="color: var(--text-muted); font-size: 0.92rem;">
+            z. B. Bootstrap-Bundle, Location-Cache, Health am Edge – nicht der ganze NestJS-Stack.
+            Hybrid: leichte Endpunkte am Edge, Rest auf VPS/Cloud Run.
+          </p>
+          <p><span class="cost-tag cost-low">variabel</span></p>
+        </div>
+
+        <div class="feature-card alt">
+          <h3>🏗️ Separater Prod-VPS</h3>
+          <p style="color: var(--text-muted); font-size: 0.92rem;">
+            Dev auf kleinem VPS, Prod auf separatem Server. Blast-Radius-Trennung,
+            unabhängige Deploys. Doppelte Kosten, aber Prod isoliert von Dev-Experimenten.
+          </p>
+          <p><span class="cost-tag cost-mid">~10–24 €/Mo</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Kosten/Nutzen Matrix -->
+  <div id="matrix" class="tab-content">
+    <h2>Kosten/Nutzen-Matrix (priorisiert)</h2>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">
+      Bewertungsskala: Nutzen / Aufwand / Risiko-Reduktion (1 = niedrig, 5 = hoch).
+      Monatliche Kosten sind Schätzungen für das Nürnbergspots-Setup (kleine App, DE-Traffic).
+    </p>
+
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Maßnahme / Option</th>
+          <th>Kosten/Monat</th>
+          <th>Aufwand</th>
+          <th>Nutzen</th>
+          <th>Risiko↓</th>
+          <th>Empfehlung</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><strong>Security Hardening</strong> (UFW, fail2ban, SSH, localhost-Binding)</td>
+          <td><span class="cost-tag cost-free">0 €</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span></div></td>
+          <td><span class="badge badge-success">SOFORT</span></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>Swap aktivieren</strong></td>
+          <td><span class="cost-tag cost-free">0 €</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-success">SOFORT</span></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>Docker Compose + localhost Ports</strong></td>
+          <td><span class="cost-tag cost-free">0 €</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-success">Kurzfristig</span></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><strong>Uptime Monitoring</strong> (Uptime Kuma)</td>
+          <td><span class="cost-tag cost-free">0 €</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-success">Kurzfristig</span></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><strong>Zero-Downtime Deploy</strong> (Blue-Green / Kamal)</td>
+          <td><span class="cost-tag cost-free">0 €</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-warning">Mittelfristig</span></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><strong>CI Build-Cache + GHCR</strong></td>
+          <td><span class="cost-tag cost-free">0 €</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-success">Kurzfristig</span></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><strong>Cloudflare Proxy</strong> (DDoS, WAF)</td>
+          <td><span class="cost-tag cost-free">0 €</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-warning">Mittelfristig</span></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><strong>Hetzner statt IONOS</strong> (mehr RAM)</td>
+          <td><span class="cost-tag cost-low">~4 €/Mo</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-info">Optional</span></td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><strong>Redis (Shared Cache)</strong></td>
+          <td><span class="cost-tag cost-free">0 €</span> (auf VPS)</td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-info">Nur bei Skalierung</span></td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><strong>Google Cloud Run</strong> (Migration)</td>
+          <td><span class="cost-tag cost-low">~0–15 €/Mo</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-purple">Langfristig</span></td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td><strong>Fly.io / Railway</strong></td>
+          <td><span class="cost-tag cost-mid">~7–25 €/Mo</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-purple">Alternative</span></td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td><strong>systemd ohne Docker</strong></td>
+          <td><span class="cost-tag cost-free">0 €</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-critical">Nicht empfohlen</span></td>
+        </tr>
+        <tr>
+          <td>13</td>
+          <td><strong>Kubernetes / k3s</strong></td>
+          <td><span class="cost-tag cost-high">Ops ↑</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span><span class="score-dot filled-high"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-critical">Overkill</span></td>
+        </tr>
+        <tr>
+          <td>14</td>
+          <td><strong>Podman statt Docker</strong></td>
+          <td><span class="cost-tag cost-free">0 €</span></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-low"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><div class="score-bar"><span class="score-dot filled-mid"></span><span class="score-dot filled-mid"></span><span class="score-dot"></span><span class="score-dot"></span><span class="score-dot"></span></div></td>
+          <td><span class="badge badge-info">Optional</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="finding-card" style="margin-top: 30px;">
+      <div class="finding-header">
+        <div class="finding-title">Kostenvergleich: Szenarien (monatlich)</div>
+      </div>
+      <table class="matrix-table">
+        <thead>
+          <tr><th>Szenario</th><th>Infrastruktur</th><th>Geschätzte Kosten</th><th>Ops-Aufwand</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>A: Status quo + Hardening</strong></td>
+            <td>IONOS VPS + Docker + nginx (optimiert)</td>
+            <td>~5–12 €</td>
+            <td>Niedrig (1–2 h/Monat Wartung)</td>
+          </tr>
+          <tr>
+            <td><strong>B: VPS Upgrade</strong></td>
+            <td>Hetzner CX22 (4 GB RAM) + gleiches Setup</td>
+            <td>~4–6 €</td>
+            <td>Niedrig + einmalige Migration</td>
+          </tr>
+          <tr>
+            <td><strong>C: VPS + Coolify/Kamal</strong></td>
+            <td>Self-hosted PaaS auf VPS</td>
+            <td>~5–12 €</td>
+            <td>Sehr niedrig (UI/CLI-Deploys)</td>
+          </tr>
+          <tr>
+            <td><strong>D: Cloud Run</strong></td>
+            <td>GCP Cloud Run + Firebase (bestehend)</td>
+            <td>~0–15 € (Traffic-abhängig)</td>
+            <td>Minimal (kein Server)</td>
+          </tr>
+          <tr>
+            <td><strong>E: Fly.io / Railway</strong></td>
+            <td>Managed PaaS</td>
+            <td>~7–25 €</td>
+            <td>Minimal</td>
+          </tr>
+          <tr>
+            <td><strong>F: Dev + Prod getrennt</strong></td>
+            <td>2× VPS oder VPS + Cloud Run (Prod)</td>
+            <td>~10–30 €</td>
+            <td>Mittel</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: Roadmap -->
+  <div id="roadmap" class="tab-content">
+    <h2>Empfohlene Roadmap</h2>
+
+    <div class="finding-card">
+      <div class="finding-header">
+        <div class="finding-title">Kernaussage</div>
+        <span class="badge badge-teal">Fazit</span>
+      </div>
+      <div class="finding-desc" style="color: var(--text-main);">
+        <strong>Docker ist für Nürnbergspots der richtige Default</strong> – nicht weil es das Beste ist,
+        sondern weil Image, CI und VPS bereits darauf ausgerichtet sind. Ein Wechsel zu systemd,
+        Podman oder Serverless bringt ohne klaren Trigger (Skalierung, Team-Wachstum, Compliance)
+        mehr Migration-Risiko als Nutzen.
+        <br><br>
+        Der <strong>größte Hebel liegt nicht in der Container-Technologie</strong>, sondern in:
+        <ol style="padding-left: 20px; margin-top: 10px;">
+          <li>Security Hardening (sofort)</li>
+          <li>Deploy-Reliability (Zero-Downtime, Smoke Tests)</li>
+          <li>Observability (Monitoring, Alerts)</li>
+          <li>Langfristig: Cloud Run als Firebase-nativer Nachfolger des VPS</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="roadmap">
+      <div class="roadmap-item">
+        <div class="roadmap-phase">Phase 0<br><small>1–2 Tage</small></div>
+        <div>
+          <strong>Security & Stabilität</strong>
+          <p style="color: var(--text-muted);">UFW, fail2ban, SSH-Keys, Swap, Backend-Ports auf localhost, Docker Compose. Referenz: <code>docs/vps-server-inventory.md</code></p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-phase">Phase 1<br><small>1 Woche</small></div>
+        <div>
+          <strong>Deploy-Qualität</strong>
+          <p style="color: var(--text-muted);">Post-Deploy Smoke Tests in CI, Uptime Kuma, CI Build-Cache. Optional: Blue-Green oder Kamal.</p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-phase">Phase 2<br><small>2–4 Wochen</small></div>
+        <div>
+          <strong>Edge & Schutz</strong>
+          <p style="color: var(--text-muted);">Cloudflare Proxy vor nginx. Secrets nicht im Image (<code>.env.prd</code> → Runtime). GHCR statt Docker Hub.</p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-phase">Phase 3<br><small>bei Bedarf</small></div>
+        <div>
+          <strong>Skalierung</strong>
+          <p style="color: var(--text-muted);">Redis (laut <code>configuration-values.md</code>), VPS-RAM-Upgrade oder Hetzner-Migration, Zero-Downtime als Standard.</p>
+        </div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-phase">Phase 4<br><small>langfristig</small></div>
+        <div>
+          <strong>Plattform-Evaluation</strong>
+          <p style="color: var(--text-muted);">Cloud Run PoC: gleiches Docker-Image deployen, Traffic-Vergleich, Kosten messen. Trigger: &gt;10k MAU, Team ohne VPS-Ops-Kapazität, oder Compliance-Anforderungen.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 40px;">Projekt-Referenzen</h3>
+    <ul class="ref-list">
+      <li><a href="vps-server-inventory.md">docs/vps-server-inventory.md</a> – VPS-Inventar, Ports, Container, Sicherheitsstatus</li>
+      <li><a href="configuration-values.md">docs/configuration-values.md</a> – Cache (In-Memory vs. Redis), TTLs, Skalierungs-Trigger</li>
+      <li><a href="brainstorming-performance-und-features.md">docs/brainstorming-performance-und-features.md</a> – Docker-Optimierung (Multi-Stage), Performance</li>
+      <li><a href="../README.md">README.md</a> – Docker Build, Deploy-Befehle, Umgebungsvariablen</li>
+      <li><a href="../.github/workflows/deployment.yml">.github/workflows/deployment.yml</a> – CI/CD Pipeline</li>
+      <li><a href="../.cursor/skills/vps-maintenance/SKILL.md">.cursor/skills/vps-maintenance/</a> – VPS-Wartung, Verifikation</li>
+      <li><a href="api-bootstrap.md">docs/api-bootstrap.md</a> – Bootstrap-Endpoint (Smoke-Test-Kandidat)</li>
+      <li><a href="nestjs-expert-audit-report.html">docs/nestjs-expert-audit-report.html</a> – Security & Architektur-Audit</li>
+    </ul>
+  </div>
+
+  <footer>
+    Nürnbergspots Backend · Deployment & Infrastruktur Analyse · Erstellt 29.07.2026<br>
+    Basis: Codebase, VPS-Inventur, CI-Konfiguration und Projekt-Dokumentation
+  </footer>
+  </div>
+
+  <script>
+    function openTab(evt, tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      evt.currentTarget.classList.add('active');
+    }
+  </script>
+</body>
+</html>

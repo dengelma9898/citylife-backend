@@ -34,7 +34,7 @@ import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 import { FileValidationPipe } from '../../../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../../../firebase/firebase-storage.service';
 import { EasterEggHuntEnabledGuard } from '../guards/easter-egg-hunt-enabled.guard';
-import { EasterEgg } from '../../domain/entities/easter-egg.entity';
+import { EasterEgg } from '../../interfaces/easter-egg.interface';
 
 @ApiTags('easter-egg-hunt')
 @Controller('easter-egg-hunt')

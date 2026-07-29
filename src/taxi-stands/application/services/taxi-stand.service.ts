@@ -1,8 +1,9 @@
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import { TaxiStand, TaxiStandProps } from '../../domain/entities/taxi-stand.entity';
+import { TaxiStand } from '../../interfaces/taxi-stand.interface';
 import { CreateTaxiStandDto } from '../../dto/create-taxi-stand.dto';
 import { UpdateTaxiStandDto } from '../../dto/update-taxi-stand.dto';
 
@@ -18,14 +19,14 @@ export class TaxiStandService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  private toTaxiStandProps(data: Record<string, unknown>, id: string): TaxiStandProps {
+  private toTaxiStand(data: Record<string, unknown>, id: string): TaxiStand {
     return {
       id,
       title: data.title as string,
       description: data.description as string,
       numberOfTaxis: data.numberOfTaxis as number,
       phoneNumber: data.phoneNumber as string,
-      location: (data.location as TaxiStandProps['location']) || {
+      location: (data.location as TaxiStand['location']) || {
         address: '',
         latitude: 0,
         longitude: 0,
@@ -42,7 +43,7 @@ export class TaxiStandService {
     if (!doc.exists) {
       return null;
     }
-    return TaxiStand.fromProps(this.toTaxiStandProps(doc.data() as Record<string, unknown>, doc.id));
+    return this.toTaxiStand(doc.data() as Record<string, unknown>, doc.id);
   }
 
   async updateEntity(id: string, taxiStand: TaxiStand): Promise<TaxiStand> {
@@ -55,10 +56,7 @@ export class TaxiStandService {
     await docRef.update(toFirestoreData(taxiStand));
     this.logger.log(`Updated taxi stand with id: ${id}`);
     await this.invalidateCache();
-    return TaxiStand.fromProps({
-      ...taxiStand.toJSON(),
-      id,
-    });
+    return { ...taxiStand, id };
   }
 
   async getAll(): Promise<TaxiStand[]> {
@@ -71,7 +69,7 @@ export class TaxiStandService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).get();
     const taxiStands = snapshot.docs.map(doc =>
-      TaxiStand.fromProps(this.toTaxiStandProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toTaxiStand(doc.data() as Record<string, unknown>, doc.id),
     );
     await this.cacheManager.set(this.CACHE_KEY, taxiStands, this.CACHE_TTL);
     return taxiStands;
@@ -88,7 +86,9 @@ export class TaxiStandService {
 
   async create(dto: CreateTaxiStandDto): Promise<TaxiStand> {
     this.logger.log(`Creating taxi stand: ${dto.address}`);
-    const taxiStand = TaxiStand.create({
+    const now = new Date().toISOString();
+    const taxiStand: TaxiStand = {
+      id: randomUUID(),
       title: dto.title,
       description: dto.description,
       numberOfTaxis: dto.numberOfTaxis,
@@ -98,14 +98,14 @@ export class TaxiStandService {
         latitude: dto.latitude,
         longitude: dto.longitude,
       },
-    });
+      phoneClickTimestamps: [],
+      createdAt: now,
+      updatedAt: now,
+    };
     const db = this.firebaseService.getFirestore();
     const docRef = await db.collection(this.collection).add(toFirestoreData(taxiStand));
     this.logger.log(`Created taxi stand with id: ${docRef.id}`);
-    const created = TaxiStand.fromProps({
-      ...taxiStand.toJSON(),
-      id: docRef.id,
-    });
+    const created = { ...taxiStand, id: docRef.id };
     await this.invalidateCache();
     return created;
   }
@@ -116,7 +116,7 @@ export class TaxiStandService {
     if (!existingTaxiStand) {
       throw new NotFoundException('Taxi stand not found');
     }
-    const updateProps: Record<string, unknown> = {};
+    const updateProps: Partial<TaxiStand> = {};
     if (dto.title !== undefined) updateProps.title = dto.title;
     if (dto.description !== undefined) updateProps.description = dto.description;
     if (dto.numberOfTaxis !== undefined) updateProps.numberOfTaxis = dto.numberOfTaxis;
@@ -128,7 +128,11 @@ export class TaxiStandService {
         longitude: dto.longitude ?? existingTaxiStand.location.longitude,
       };
     }
-    const updatedTaxiStand = existingTaxiStand.update(updateProps);
+    const updatedTaxiStand: TaxiStand = {
+      ...existingTaxiStand,
+      ...updateProps,
+      updatedAt: new Date().toISOString(),
+    };
     const updated = await this.updateEntity(id, updatedTaxiStand);
     return updated;
   }

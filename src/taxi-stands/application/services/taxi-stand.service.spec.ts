@@ -3,7 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { TaxiStandService } from './taxi-stand.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { TaxiStand } from '../../domain/entities/taxi-stand.entity';
+import { TaxiStand } from '../../interfaces/taxi-stand.interface';
 
 describe('TaxiStandService', () => {
   let service: TaxiStandService;
@@ -38,7 +38,7 @@ describe('TaxiStandService', () => {
     ...mockTaxiStandData,
   };
 
-  const mockTaxiStand = TaxiStand.fromProps(mockTaxiStandProps);
+  const mockTaxiStand: TaxiStand = mockTaxiStandProps;
 
   const mockCacheManager = {
     get: jest.fn(),

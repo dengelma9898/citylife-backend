@@ -20,8 +20,8 @@ import { VersionChangelogResponseDto } from '../../dto/version-changelog-respons
 import { Roles } from '../../../core/decorators/roles.decorator';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
-import { AppVersion } from '../../domain/entities/app-version.entity';
-import { VersionChangelog } from '../../domain/entities/version-changelog.entity';
+import { AppVersion } from '../../interfaces/app-version.interface';
+import { VersionChangelog } from '../../interfaces/version-changelog.interface';
 
 @ApiTags('app-versions-admin')
 @Controller('app-versions/admin')

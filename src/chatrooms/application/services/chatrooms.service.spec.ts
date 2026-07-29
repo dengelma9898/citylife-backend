@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatroomsService } from './chatrooms.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { Chatroom } from '../../domain/entities/chatroom.entity';
+import { Chatroom } from '../../interfaces/chatroom.interface';
 import { NotFoundException } from '@nestjs/common';
 
 describe('ChatroomsService', () => {
@@ -20,12 +20,12 @@ describe('ChatroomsService', () => {
   let mockFirestore: { collection: jest.Mock };
 
   const chatroomToFirestoreData = (chatroom: Chatroom): Record<string, unknown> => {
-    const { id, ...data } = chatroom.toJSON();
+    const { id, ...data } = chatroom;
     return data;
   };
 
   const mockChatrooms = [
-    Chatroom.fromProps({
+    ({
       id: 'chatroom1',
       title: 'Test Chatroom 1',
       description: 'Description 1',
@@ -36,7 +36,7 @@ describe('ChatroomsService', () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }),
-    Chatroom.fromProps({
+    ({
       id: 'chatroom2',
       title: 'Test Chatroom 2',
       description: 'Description 2',

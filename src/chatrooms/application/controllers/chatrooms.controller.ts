@@ -12,7 +12,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ChatroomsService } from '../services/chatrooms.service';
-import { Chatroom } from '../../domain/entities/chatroom.entity';
+import { Chatroom } from '../../interfaces/chatroom.interface';
 import { CreateChatroomDto } from '../dtos/create-chatroom.dto';
 import { UpdateChatroomDto } from '../dtos/update-chatroom.dto';
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';

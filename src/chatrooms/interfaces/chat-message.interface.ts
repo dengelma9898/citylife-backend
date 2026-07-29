@@ -1,0 +1,20 @@
+export interface Reaction {
+  userId: string;
+  type: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  /**
+   * @deprecated Use isEditable instead. This property will be removed in a future version.
+   */
+  senderId: string;
+  senderName: string;
+  content: string;
+  isEditable: boolean;
+  reactions?: Reaction[];
+  createdAt: string;
+  updatedAt: string;
+  editedAt?: string;
+  editedByAdmin?: boolean;
+}

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TaxiStandsController } from './taxi-stands.controller';
 import { TaxiStandsFeatureService } from '../services/taxi-stands-feature.service';
 import { TaxiStandService } from '../services/taxi-stand.service';
-import { TaxiStand } from '../../domain/entities/taxi-stand.entity';
+import { TaxiStand } from '../../interfaces/taxi-stand.interface';
 import { UsersService } from '../../../users/users.service';
 
 describe('TaxiStandsController', () => {
@@ -22,7 +22,7 @@ describe('TaxiStandsController', () => {
     updatedAt: '2026-01-01T00:00:00.000Z',
   };
 
-  const mockTaxiStand = TaxiStand.fromProps(mockTaxiStandProps);
+  const mockTaxiStand: TaxiStand = mockTaxiStandProps;
 
   beforeEach(async () => {
     mockTaxiStandsFeatureService = {
@@ -104,7 +104,7 @@ describe('TaxiStandsController', () => {
 
   describe('update', () => {
     it('should update a taxi stand', async () => {
-      const updatedStand = TaxiStand.fromProps({ ...mockTaxiStandProps, title: 'Aktualisiert' });
+      const updatedStand: TaxiStand = { ...mockTaxiStandProps, title: 'Aktualisiert' };
       mockTaxiStandService.update.mockResolvedValue(updatedStand);
       const result = await controller.update('stand-1', { title: 'Aktualisiert' });
       expect(result.title).toBe('Aktualisiert');
@@ -121,10 +121,10 @@ describe('TaxiStandsController', () => {
 
   describe('trackPhoneClick', () => {
     it('should track a phone click', async () => {
-      const updatedStand = TaxiStand.fromProps({
+      const updatedStand: TaxiStand = {
         ...mockTaxiStandProps,
         phoneClickTimestamps: [...mockTaxiStandProps.phoneClickTimestamps, '2026-02-01T12:00:00.000Z'],
-      });
+      };
       mockTaxiStandsFeatureService.trackPhoneClick.mockResolvedValue(updatedStand);
       const result = await controller.trackPhoneClick('stand-1');
       expect(result.phoneClickTimestamps).toHaveLength(2);
@@ -151,12 +151,12 @@ describe('TaxiStandsController', () => {
     });
 
     it('should handle optional fields being undefined', async () => {
-      const minimalStand = TaxiStand.fromProps({
+      const minimalStand: TaxiStand = {
         ...mockTaxiStandProps,
         title: undefined,
         description: undefined,
         numberOfTaxis: undefined,
-      });
+      };
       mockTaxiStandService.getById.mockResolvedValue(minimalStand);
       const result = await controller.getById('stand-1');
       expect(result.title).toBeUndefined();

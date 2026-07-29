@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BusinessCategoriesController } from './business-categories.controller';
 import { BusinessCategoriesService } from '../services/business-categories.service';
-import { BusinessCategory } from '../../domain/entities/business-category.entity';
+import { BusinessCategory } from '../../interfaces/business-category.interface';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseService } from '../../../firebase/firebase.service';
 
@@ -63,7 +63,7 @@ describe('BusinessCategoriesController', () => {
 
   describe('getAll', () => {
     const mockCategories = [
-      BusinessCategory.fromProps({
+      ({
         id: 'category1',
         name: 'Restaurant',
         iconName: 'restaurant',
@@ -72,7 +72,7 @@ describe('BusinessCategoriesController', () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }),
-      BusinessCategory.fromProps({
+      ({
         id: 'category2',
         name: 'Retail',
         iconName: 'shopping',
@@ -98,7 +98,7 @@ describe('BusinessCategoriesController', () => {
 
   describe('getAllWithKeywords', () => {
     const mockCategories = [
-      BusinessCategory.fromProps({
+      ({
         id: 'category1',
         name: 'Restaurant',
         iconName: 'restaurant',
@@ -129,7 +129,7 @@ describe('BusinessCategoriesController', () => {
   });
 
   describe('getById', () => {
-    const mockCategory = BusinessCategory.fromProps({
+    const mockCategory = ({
       id: 'category1',
       name: 'Restaurant',
       iconName: 'restaurant',
@@ -167,7 +167,7 @@ describe('BusinessCategoriesController', () => {
       keywordIds: ['keyword1', 'keyword2'],
     };
 
-    const mockCreatedCategory = BusinessCategory.fromProps({
+    const mockCreatedCategory = ({
       id: 'new-category',
       ...createDto,
       createdAt: new Date().toISOString(),
@@ -197,7 +197,7 @@ describe('BusinessCategoriesController', () => {
       keywordIds: ['keyword3'],
     };
 
-    const mockUpdatedCategory = BusinessCategory.fromProps({
+    const mockUpdatedCategory = ({
       id: 'category1',
       ...updateDto,
       createdAt: new Date().toISOString(),

@@ -2,7 +2,7 @@ import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
 import { UsersService } from '../../../users/users.service';
 import { FirebasePassScanRepository } from '../../infrastructure/persistence/firebase-pass-scan.repository';
 import { buildPassScanId } from '../../domain/utils/pass-scan-id.util';
-import { BusinessCustomer } from '../../../businesses/domain/entities/business.entity';
+import { BusinessCustomer } from '../../../businesses/interfaces/business.interface';
 import { BusinessCustomerDto } from '../../../businesses/dto/business-customer.dto';
 
 export interface RecordPassScanParams {

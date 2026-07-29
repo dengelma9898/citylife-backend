@@ -22,7 +22,7 @@ import { TaxiStandResponseDto } from '../../dto/taxi-stand-response.dto';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 import { Roles } from '../../../core/decorators/roles.decorator';
 import { TaxiStandsEnabledGuard } from '../guards/taxi-stands-enabled.guard';
-import { TaxiStand } from '../../domain/entities/taxi-stand.entity';
+import { TaxiStand } from '../../interfaces/taxi-stand.interface';
 
 @ApiTags('taxi-stands')
 @Controller('taxi-stands')

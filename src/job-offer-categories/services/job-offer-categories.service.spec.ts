@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { JobOfferCategoriesService } from './job-offer-categories.service';
-import { JobCategory } from '../domain/entities/job-category.entity';
+import { JobCategory } from '../interfaces/job-category.interface';
 import { CreateJobCategoryDto } from '../dto/create-job-category.dto';
 import { FirebaseService } from '../../firebase/firebase.service';
 
@@ -30,10 +30,10 @@ describe('JobOfferCategoriesService', () => {
     updatedAt: new Date('2024-01-01'),
   };
 
-  const mockJobCategory: JobCategory = JobCategory.fromProps({
+  const mockJobCategory: JobCategory = {
     id: 'category1',
     ...mockJobCategoryData,
-  });
+  };
 
   beforeEach(async () => {
     mockDoc = {

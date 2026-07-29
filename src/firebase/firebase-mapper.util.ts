@@ -20,10 +20,10 @@ export function removeUndefined(obj: any): any {
 }
 
 /**
- * Strips `id` from entity JSON and prepares data for Firestore writes.
+ * Strips `id` from a record and prepares data for Firestore writes.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function toFirestoreData(entity: { toJSON(): object }): any {
-  const { id, ...data } = entity.toJSON() as Record<string, unknown> & { id?: unknown };
-  return removeUndefined(data);
+export function toFirestoreData(data: object): any {
+  const { id, ...rest } = data as Record<string, unknown>;
+  return removeUndefined(rest);
 }

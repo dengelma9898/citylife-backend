@@ -1,10 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import {
-  DirectChatSettings,
-  DirectChatSettingsProps,
-} from '../../domain/entities/direct-chat-settings.entity';
+import { DirectChatSettings } from '../../interfaces/direct-chat-settings.interface';
 
 @Injectable()
 export class DirectChatSettingsService {
@@ -14,17 +11,24 @@ export class DirectChatSettingsService {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private toPlainObject(entity: DirectChatSettings): Omit<DirectChatSettingsProps, 'id'> {
-    return toFirestoreData(entity);
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private toEntityProps(data: any, id: string): DirectChatSettingsProps {
+  private toSettings(data: Record<string, unknown>, id: string): DirectChatSettings {
+    const updatedAt = data.updatedAt as { toDate?: () => Date } | string | undefined;
     return {
       id,
-      isEnabled: data.isEnabled ?? true,
-      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt || new Date().toISOString(),
-      updatedBy: data.updatedBy,
+      isEnabled: (data.isEnabled as boolean) ?? true,
+      updatedAt:
+        typeof updatedAt === 'object' && updatedAt?.toDate
+          ? updatedAt.toDate().toISOString()
+          : (updatedAt as string) || new Date().toISOString(),
+      updatedBy: data.updatedBy as string | undefined,
+    };
+  }
+
+  private createDefaultSettings(): DirectChatSettings {
+    return {
+      id: this.documentId,
+      isEnabled: true,
+      updatedAt: new Date().toISOString(),
     };
   }
 
@@ -33,13 +37,11 @@ export class DirectChatSettingsService {
       const db = this.firebaseService.getFirestore();
       const doc = await db.collection(this.collectionName).doc(this.documentId).get();
       if (!doc.exists) {
-        const defaultSettings = DirectChatSettings.createDefault();
+        const defaultSettings = this.createDefaultSettings();
         await this.saveToFirestore(defaultSettings);
         return defaultSettings;
       }
-      return DirectChatSettings.fromProps(
-        this.toEntityProps(doc.data(), doc.id),
-      );
+      return this.toSettings(doc.data() as Record<string, unknown>, doc.id);
     } catch (error) {
       this.logger.error(`Error getting direct chat settings: ${error.message}`);
       throw error;
@@ -52,7 +54,7 @@ export class DirectChatSettingsService {
       await db
         .collection(this.collectionName)
         .doc(this.documentId)
-        .set(this.toPlainObject(settings));
+        .set(toFirestoreData(settings as unknown as Record<string, unknown>));
       return settings;
     } catch (error) {
       this.logger.error(`Error saving direct chat settings: ${error.message}`);
@@ -75,7 +77,12 @@ export class DirectChatSettingsService {
       `Updating direct chat settings: isEnabled=${isEnabled}, updatedBy=${updatedBy}`,
     );
     const currentSettings = await this.getFromFirestore();
-    const updatedSettings = currentSettings.update({ isEnabled }, updatedBy);
+    const updatedSettings: DirectChatSettings = {
+      ...currentSettings,
+      isEnabled,
+      updatedBy: updatedBy || currentSettings.updatedBy,
+      updatedAt: new Date().toISOString(),
+    };
     return this.saveToFirestore(updatedSettings);
   }
 }

@@ -32,13 +32,12 @@ describe('removeUndefined', () => {
 
 describe('toFirestoreData', () => {
   it('should strip id and remove undefined fields', () => {
-    const entity = {
-      toJSON: () => ({
+    expect(
+      toFirestoreData({
         id: 'doc-1',
         name: 'Test',
         optional: undefined,
       }),
-    };
-    expect(toFirestoreData(entity)).toEqual({ name: 'Test', optional: null });
+    ).toEqual({ name: 'Test', optional: null });
   });
 });

@@ -5,7 +5,12 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { EasterEgg } from '../../domain/entities/easter-egg.entity';
+import {
+  EasterEgg,
+  addEasterEggParticipant,
+  addEasterEggWinner,
+  isEasterEggActive,
+} from '../../interfaces/easter-egg.interface';
 import { EasterEggService } from './easter-egg.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { UsersService } from '../../../users/users.service';
@@ -94,13 +99,13 @@ export class EasterEggHuntService {
     if (!egg) {
       throw new NotFoundException('Easter egg not found');
     }
-    if (!egg.isActive()) {
+    if (!isEasterEggActive(egg)) {
       throw new BadRequestException('This easter egg is not currently active');
     }
     if (egg.participants.includes(userId)) {
       throw new BadRequestException('User has already participated in this easter egg');
     }
-    const updatedEgg = egg.addParticipant(userId);
+    const updatedEgg = addEasterEggParticipant(egg, userId);
     return this.easterEggService.updateEntity(eggId, updatedEgg);
   }
 
@@ -116,7 +121,7 @@ export class EasterEggHuntService {
     if (egg.winners.includes(userId)) {
       throw new BadRequestException('User is already a winner');
     }
-    const updatedEgg = egg.addWinner(userId);
+    const updatedEgg = addEasterEggWinner(egg, userId);
     const result = await this.easterEggService.updateEntity(eggId, updatedEgg);
     await this.sendWinnerNotification(userId, egg);
     return result;
@@ -147,7 +152,7 @@ export class EasterEggHuntService {
     const selectedWinners = shuffled.slice(0, winnersToSelect);
     let updatedEgg = egg;
     for (const winnerId of selectedWinners) {
-      updatedEgg = updatedEgg.addWinner(winnerId);
+      updatedEgg = addEasterEggWinner(updatedEgg, winnerId);
     }
     const result = await this.easterEggService.updateEntity(eggId, updatedEgg);
     for (const winnerId of selectedWinners) {
@@ -179,7 +184,7 @@ export class EasterEggHuntService {
         winnerCount: egg.winners.length,
       };
     });
-    const activeEggs = eggs.filter(egg => egg.isActive()).length;
+    const activeEggs = eggs.filter(egg => isEasterEggActive(egg)).length;
     return {
       totalEggs: eggs.length,
       activeEggs,

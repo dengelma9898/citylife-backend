@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DirectMessagesController } from './direct-messages.controller';
 import { DirectMessagesService } from '../services/direct-messages.service';
-import { DirectMessage } from '../../domain/entities/direct-message.entity';
+import { DirectMessage } from '../../interfaces/direct-message.interface';
 import { AuthGuard } from '../../../core/guards/auth.guard';
 import { DirectChatEnabledGuard } from '../guards/direct-chat-enabled.guard';
 
@@ -17,7 +17,7 @@ describe('DirectMessagesController', () => {
     updateReaction: jest.fn(),
   };
 
-  const mockMessage = DirectMessage.fromProps({
+  const mockMessage = ({
     id: 'message-1',
     chatId: 'chat-1',
     senderId: 'user-1',
@@ -77,7 +77,7 @@ describe('DirectMessagesController', () => {
 
   describe('getMessages', () => {
     it('should return all messages for a chat', async () => {
-      mockDirectMessagesService.getMessages.mockResolvedValue([mockMessage.toJSON()]);
+      mockDirectMessagesService.getMessages.mockResolvedValue([mockMessage]);
 
       const result = await controller.getMessages(mockRequest, 'chat-1');
 
@@ -89,8 +89,8 @@ describe('DirectMessagesController', () => {
 
   describe('updateMessage', () => {
     it('should update a message', async () => {
-      const updatedMessage = DirectMessage.fromProps({
-        ...mockMessage.toJSON(),
+      const updatedMessage = ({
+        ...mockMessage,
         content: 'Updated content',
         editedAt: new Date().toISOString(),
       });
@@ -126,8 +126,8 @@ describe('DirectMessagesController', () => {
 
   describe('updateReaction', () => {
     it('should update reaction on a message', async () => {
-      const messageWithReaction = DirectMessage.fromProps({
-        ...mockMessage.toJSON(),
+      const messageWithReaction = ({
+        ...mockMessage,
         reactions: [{ userId: 'user-1', type: '👍' }],
       });
       mockDirectMessagesService.updateReaction.mockResolvedValue(messageWithReaction);

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CuratedSpotsUserRatingsSettingsService } from './curated-spots-user-ratings-settings.service';
-import { CuratedSpotsUserRatingsSettings } from '../../domain/entities/curated-spots-user-ratings-settings.entity';
+import { CuratedSpotsUserRatingsSettings } from '../../interfaces/curated-spots-user-ratings-settings.interface';
 import { CuratedSpotUserRatingsService } from './curated-spot-user-ratings.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
@@ -28,14 +28,25 @@ describe('CuratedSpotsUserRatingsSettingsService', () => {
     jest.restoreAllMocks();
   });
 
+  const defaultSettings: CuratedSpotsUserRatingsSettings = {
+    id: 'curated_spots_user_ratings_settings',
+    isEnabled: false,
+    updatedAt: new Date().toISOString(),
+  };
+
   it('isFeatureEnabled returns settings flag', async () => {
-    getSpy.mockResolvedValue(CuratedSpotsUserRatingsSettings.createDefault());
+    getSpy.mockResolvedValue(defaultSettings);
     await expect(service.isFeatureEnabled()).resolves.toBe(false);
   });
 
   it('updateSettings saves updated entity', async () => {
-    const current = CuratedSpotsUserRatingsSettings.createDefault();
-    const saved = current.update({ isEnabled: true }, 'admin-1');
+    const current = defaultSettings;
+    const saved: CuratedSpotsUserRatingsSettings = {
+      ...current,
+      isEnabled: true,
+      updatedBy: 'admin-1',
+      updatedAt: new Date().toISOString(),
+    };
     getSpy.mockResolvedValue(current);
     saveSpy.mockResolvedValue(saved);
     const result = await service.updateSettings(true, 'admin-1');

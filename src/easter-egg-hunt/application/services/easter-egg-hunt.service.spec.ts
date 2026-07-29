@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { EasterEggHuntService } from './easter-egg-hunt.service';
 import { EasterEggService } from './easter-egg.service';
-import { EasterEgg } from '../../domain/entities/easter-egg.entity';
+import { EasterEgg } from '../../interfaces/easter-egg.interface';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { UsersService } from '../../../users/users.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
@@ -30,7 +30,7 @@ describe('EasterEggHuntService', () => {
     updatedAt: '2026-01-01T00:00:00.000Z',
   };
 
-  const mockEgg = EasterEgg.fromProps(mockEggProps);
+  const mockEgg: EasterEgg = mockEggProps;
 
   const mockFirestoreDoc = {
     exists: true,
@@ -105,7 +105,7 @@ describe('EasterEggHuntService', () => {
   describe('participate', () => {
     it('should allow participation', async () => {
       mockUsersService.getUserProfile.mockResolvedValue({ email: 'test@test.com', userType: 'user' });
-      const eggWithoutUser = EasterEgg.fromProps({ ...mockEggProps, participants: [] });
+      const eggWithoutUser: EasterEgg = { ...mockEggProps, participants: [] };
       mockEasterEggService.findById.mockResolvedValue(eggWithoutUser);
       mockEasterEggService.updateEntity.mockImplementation((id, egg) => Promise.resolve(egg));
       const result = await service.participate('egg-1', 'new-user');
@@ -125,7 +125,7 @@ describe('EasterEggHuntService', () => {
 
     it('should reject when egg is not active', async () => {
       mockUsersService.getUserProfile.mockResolvedValue({ email: 'test@test.com' });
-      const futureEgg = EasterEgg.fromProps({ ...mockEggProps, startDate: '2099-01-01', participants: [] });
+      const futureEgg: EasterEgg = { ...mockEggProps, startDate: '2099-01-01', participants: [] };
       mockEasterEggService.findById.mockResolvedValue(futureEgg);
       await expect(service.participate('egg-1', 'user-1')).rejects.toThrow(BadRequestException);
     });
@@ -152,7 +152,7 @@ describe('EasterEggHuntService', () => {
     });
 
     it('should reject duplicate winner', async () => {
-      const eggWithWinner = EasterEgg.fromProps({ ...mockEggProps, winners: ['user-1'] });
+      const eggWithWinner: EasterEgg = { ...mockEggProps, winners: ['user-1'] };
       mockEasterEggService.findById.mockResolvedValue(eggWithWinner);
       await expect(service.addWinner('egg-1', 'user-1')).rejects.toThrow(BadRequestException);
     });
@@ -173,7 +173,7 @@ describe('EasterEggHuntService', () => {
     });
 
     it('should reject when no participants', async () => {
-      const emptyEgg = EasterEgg.fromProps({ ...mockEggProps, participants: [] });
+      const emptyEgg: EasterEgg = { ...mockEggProps, participants: [] };
       mockEasterEggService.findById.mockResolvedValue(emptyEgg);
       await expect(service.drawWinners('egg-1')).rejects.toThrow(BadRequestException);
     });
@@ -184,11 +184,11 @@ describe('EasterEggHuntService', () => {
     });
 
     it('should reject when max winners already reached', async () => {
-      const eggWithWinners = EasterEgg.fromProps({
+      const eggWithWinners: EasterEgg = {
         ...mockEggProps,
         numberOfWinners: 2,
         winners: ['user-1', 'user-2'],
-      });
+      };
       mockEasterEggService.findById.mockResolvedValue(eggWithWinners);
       await expect(service.drawWinners('egg-1')).rejects.toThrow(BadRequestException);
     });
@@ -209,19 +209,19 @@ describe('EasterEggHuntService', () => {
 
   describe('getStatistics', () => {
     it('should return statistics', async () => {
-      const egg1 = EasterEgg.fromProps({
+      const egg1: EasterEgg = {
         ...mockEggProps,
         id: 'egg-1',
         participants: ['user-1', 'user-2'],
         winners: ['user-1'],
-      });
-      const egg2 = EasterEgg.fromProps({
+      };
+      const egg2: EasterEgg = {
         ...mockEggProps,
         id: 'egg-2',
         title: 'Silbernes Ei',
         participants: ['user-2', 'user-3'],
         winners: [],
-      });
+      };
       mockEasterEggService.findAll.mockResolvedValue([egg1, egg2]);
       const result = await service.getStatistics();
       expect(result.totalEggs).toBe(2);

@@ -135,12 +135,19 @@ export class Entity {
 - There are no public endpoints without authentication - all endpoints require a valid Firebase token
 - Anonymous users are automatically created by the client apps and have valid Firebase tokens
 
-### Authorization (RolesGuard)
+### Authorization & Security (RolesGuard & Ownership)
 - **IMPORTANT**: Modules that use `@UseGuards(RolesGuard)` in their controllers MUST import `UsersModule`
 - The `RolesGuard` requires `UsersService` as a dependency to check user roles
 - If a module uses `RolesGuard` but doesn't import `UsersModule`, the endpoints will return 404 errors
 - Example: If `AppVersionsAdminController` uses `@UseGuards(RolesGuard)`, then `AppVersionsModule` must import `UsersModule`
-- Always check if controllers use `RolesGuard` and ensure the module imports `UsersModule`
+- **Resource Ownership Verification**: Any endpoint operating on user-specific resources (e.g., `/users/:id/*`) **MUST** verify that `req.user.uid` matches the `:id` parameter or that the requester is a `super_admin`. NEVER trust URL path parameters alone for ownership.
+- **Never Trust URL Parameters for Role/Permission Checks**: DO NOT load user profiles or check roles based on a `:userId` parameter passed in the URL (e.g., `getUserProfile(params.userId)`). ALWAYS rely on `req.user` set by `AuthGuard` and role metadata checked via `RolesGuard`.
+- **Explicit Guards on Mutation Endpoints**: All write/mutation endpoints (`POST`, `PUT`, `PATCH`, `DELETE`) **MUST** explicitly specify appropriate `@UseGuards(RolesGuard)` and `@Roles(...)` decorators unless specifically intended for all authenticated users (where ownership MUST be verified).
+- **Mass Assignment Protection**: ALWAYS define strict DTOs using `class-validator` decorators. Global `ValidationPipe` with `whitelist: true` strips unexpected properties automatically.
+
+### Controllers & DTOs
+- **Thin Controllers**: Controllers must strictly handle request/response routing and parameter extraction.
+- **No Complex Transformations in Controllers**: Delegate legacy payload transformations, data mappings, or business logic to services, mappers, or custom pipes.
 
 ### Caching (Mandatory for New Modules)
 - **IMPORTANT**: Every new module with read-heavy endpoints **MUST** implement caching
@@ -302,6 +309,25 @@ private toEntityProps(data: any, id: string) {
   - Document architectural decisions and their rationale
   - Remove outdated or conflicting rules
   - Ensure rules are scoped appropriately (project-wide vs. domain-specific)
+
+### README Maintenance
+- **IMPORTANT**: After completing any task, **MUST** review `README.md` for necessary updates before marking the task as complete
+- A task is not complete until the README accurately reflects the current state of the project (or no update was needed)
+- **MUST** update `README.md` when the task introduced or changed any of the following:
+  - Environment variables (new, renamed, or removed)
+  - npm scripts (`package.json` start/build/test/lint commands)
+  - Setup or installation steps
+  - Docker configuration (build args, compose usage, ports, env files)
+  - New modules, features, or API endpoints that developers need to know about
+  - Architecture or project structure changes
+  - External service integrations or credentials
+  - Deployment or CI/CD workflow changes
+- **MUST NOT** update `README.md` for purely internal refactors with no developer-facing impact (e.g., renaming private methods, test-only changes)
+- When updating the README:
+  - Keep existing structure and tone (German for user-facing docs in this repo)
+  - Remove outdated sections that no longer apply
+  - Prefer linking to `docs/` for detailed configuration (e.g., `docs/configuration-values.md`) instead of duplicating long reference tables
+  - Mention README updates briefly in the task summary when changes were made
 
 ### Testing Requirements
 - **MANDATORY**: Every feature implementation MUST include tests

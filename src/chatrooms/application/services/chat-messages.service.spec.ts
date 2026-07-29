@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ChatMessagesService } from './chat-messages.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { UsersService } from '../../../users/users.service';
-import { ChatMessage } from '../../domain/entities/chat-message.entity';
+import { ChatMessage } from '../../interfaces/chat-message.interface';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ReactionType, UpdateChatMessageReactionDto } from '../dtos/update-message-reaction.dto';
 import { UserType } from '../../../users/enums/user-type.enum';
@@ -26,7 +26,7 @@ describe('ChatMessagesService', () => {
   let mockFirestore: { collection: jest.Mock };
 
   const messageToFirestoreData = (message: ChatMessage): Record<string, unknown> => {
-    const { id, isEditable, ...data } = message.toJSON();
+    const { id, isEditable, ...data } = message;
     return data;
   };
 
@@ -35,7 +35,7 @@ describe('ChatMessagesService', () => {
   };
 
   const mockMessages = [
-    ChatMessage.fromProps({
+    ({
       id: 'message1',
       content: 'Test Message 1',
       senderId: 'user1',
@@ -46,7 +46,7 @@ describe('ChatMessagesService', () => {
       updatedAt: new Date().toISOString(),
       editedByAdmin: false,
     }),
-    ChatMessage.fromProps({
+    ({
       id: 'message2',
       content: 'Test Message 2',
       senderId: 'user2',
@@ -139,7 +139,7 @@ describe('ChatMessagesService', () => {
     });
 
     it('should set isEditable to true for own messages', async () => {
-      const ownMessage = ChatMessage.fromProps({
+      const ownMessage = ({
         ...mockMessages[0],
         senderId: 'user1',
       });
@@ -154,7 +154,7 @@ describe('ChatMessagesService', () => {
     });
 
     it('should set isEditable to false for other users messages', async () => {
-      const otherMessage = ChatMessage.fromProps({
+      const otherMessage = ({
         ...mockMessages[0],
         senderId: 'user2',
       });
@@ -169,7 +169,7 @@ describe('ChatMessagesService', () => {
     });
 
     it('should set isEditable to true for super admin on all messages', async () => {
-      const otherMessage = ChatMessage.fromProps({
+      const otherMessage = ({
         ...mockMessages[0],
         senderId: 'user2',
       });
@@ -211,7 +211,7 @@ describe('ChatMessagesService', () => {
     });
 
     it('should set isEditable to true for own message', async () => {
-      const ownMessage = ChatMessage.fromProps({
+      const ownMessage = ({
         ...mockMessages[0],
         senderId: 'user1',
       });
@@ -225,7 +225,7 @@ describe('ChatMessagesService', () => {
     });
 
     it('should set isEditable to true for super admin', async () => {
-      const otherMessage = ChatMessage.fromProps({
+      const otherMessage = ({
         ...mockMessages[0],
         senderId: 'user2',
       });
@@ -280,7 +280,7 @@ describe('ChatMessagesService', () => {
     };
 
     it('should update an existing message when user is owner', async () => {
-      const existingMessage = ChatMessage.fromProps({
+      const existingMessage = ({
         ...mockMessages[0],
         senderId: 'user1',
       });
@@ -297,7 +297,7 @@ describe('ChatMessagesService', () => {
     });
 
     it('should update message when user is super admin', async () => {
-      const existingMessage = ChatMessage.fromProps({
+      const existingMessage = ({
         ...mockMessages[0],
         senderId: 'user2',
       });
@@ -313,7 +313,7 @@ describe('ChatMessagesService', () => {
     });
 
     it('should throw BadRequestException when user is not owner and not super admin', async () => {
-      const existingMessage = ChatMessage.fromProps({
+      const existingMessage = ({
         ...mockMessages[0],
         senderId: 'user2',
       });
@@ -346,7 +346,7 @@ describe('ChatMessagesService', () => {
 
   describe('remove', () => {
     it('should remove a message if user is sender', async () => {
-      const ownMessage = ChatMessage.fromProps({
+      const ownMessage = ({
         ...mockMessages[0],
         senderId: 'user1',
       });
@@ -361,7 +361,7 @@ describe('ChatMessagesService', () => {
     });
 
     it('should remove a message if user is super admin', async () => {
-      const otherMessage = ChatMessage.fromProps({
+      const otherMessage = ({
         ...mockMessages[0],
         senderId: 'user2',
       });
@@ -376,7 +376,7 @@ describe('ChatMessagesService', () => {
     });
 
     it('should throw BadRequestException if user is not sender and not super admin', async () => {
-      const otherMessage = ChatMessage.fromProps({
+      const otherMessage = ({
         ...mockMessages[0],
         senderId: 'user2',
       });
@@ -420,7 +420,7 @@ describe('ChatMessagesService', () => {
 
   describe('removeReaction', () => {
     it('should remove a reaction from a message', async () => {
-      const messageWithReaction = ChatMessage.fromProps({
+      const messageWithReaction = ({
         ...mockMessages[0],
         reactions: [{ userId: 'user1', type: ReactionType.LIKE }],
       });

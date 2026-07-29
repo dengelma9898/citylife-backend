@@ -10,7 +10,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { BusinessCategoriesService } from '../services/business-categories.service';
-import { BusinessCategory } from '../../domain/entities/business-category.entity';
+import { BusinessCategory } from '../../interfaces/business-category.interface';
 import { CreateBusinessCategoryDto } from '../../dto/create-business-category.dto';
 import { UpdateBusinessCategoryDto } from '../../dto/update-business-category.dto';
 

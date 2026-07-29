@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { TaxiStand } from '../../domain/entities/taxi-stand.entity';
+import { TaxiStand } from '../../interfaces/taxi-stand.interface';
 import { TaxiStandService } from './taxi-stand.service';
 
 export interface FeatureStatus {
@@ -67,7 +67,11 @@ export class TaxiStandsFeatureService {
     if (!taxiStand) {
       throw new NotFoundException('Taxi stand not found');
     }
-    const updatedTaxiStand = taxiStand.addPhoneClick();
+    const updatedTaxiStand: TaxiStand = {
+      ...taxiStand,
+      phoneClickTimestamps: [...taxiStand.phoneClickTimestamps, new Date().toISOString()],
+      updatedAt: new Date().toISOString(),
+    };
     return this.taxiStandService.updateEntity(taxiStandId, updatedTaxiStand);
   }
 }

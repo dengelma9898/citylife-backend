@@ -5,7 +5,7 @@ import { RolesGuard } from '../core/guards/roles.guard';
 import { LegalDocumentService } from './application/services/legal-document.service';
 import { CreateLegalDocumentDto } from './application/dto/create-legal-document.dto';
 import { LegalDocumentResponseDto } from './application/dto/legal-document-response.dto';
-import { LegalDocument, LegalDocumentType } from './domain/entities/legal-document.entity';
+import { LegalDocument, LegalDocumentType } from './interfaces/legal-document.interface';
 import { CurrentUser } from '../core/decorators/current-user.decorator';
 
 @ApiTags('legal-documents')

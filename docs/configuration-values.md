@@ -163,6 +163,7 @@ Erst relevant, wenn das Deployment **über einen einzelnen VPS-Container** hinau
 | User-Profiles | `user-profile:{id}` | 5 Min | Profile-Update |
 | Event-Kategorien | `event-categories:all` | 10 Min | Create/Update/Delete |
 | Business-Kategorien | `business-categories:all` | 10 Min | Create/Update/Delete |
+| Bootstrap Bundle | `bootstrap:public`, `bootstrap:public:{version}` | 5 Min | TTL-basiert (`userProfile` nicht im Bundle) |
 
 ---
 
@@ -348,6 +349,7 @@ async health() { ... }
 | Rate-Limit | 60/60s | Production |
 | Rate-Limit | 100/60s | Development |
 | Cache TTL | 5 Min | Alle |
+| Cache TTL Bootstrap Bundle | 5 Min | Alle |
 | Cache TTL Kategorien | 10 Min | Alle |
 | Cache TTL Keywords | 10 Min | Alle |
 | Cache TTL App-Settings | 15 Min | Alle |

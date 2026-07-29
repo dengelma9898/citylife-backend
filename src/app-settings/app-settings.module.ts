@@ -7,5 +7,6 @@ import { FirebaseModule } from '../firebase/firebase.module';
   imports: [FirebaseModule],
   controllers: [AppSettingsController],
   providers: [AppSettingsService],
+  exports: [AppSettingsService],
 })
 export class AppSettingsModule {}

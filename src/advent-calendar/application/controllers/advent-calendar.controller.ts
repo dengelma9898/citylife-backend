@@ -64,7 +64,7 @@ export class AdventCalendarController {
   public async getAll(): Promise<AdventCalendarEntryResponseDto[]> {
     this.logger.log('GET /advent-calendar');
     const entries = await this.adventCalendarService.getAll();
-    return entries.map(entry => entry.toJSON());
+    return entries;
   }
 
   @Get(':id')
@@ -80,7 +80,7 @@ export class AdventCalendarController {
   public async getById(@Param('id') id: string): Promise<AdventCalendarEntryResponseDto> {
     this.logger.log(`GET /advent-calendar/${id}`);
     const entry = await this.adventCalendarService.getById(id);
-    return entry.toJSON();
+    return entry;
   }
 
   @Post()
@@ -97,7 +97,7 @@ export class AdventCalendarController {
   ): Promise<AdventCalendarEntryResponseDto> {
     this.logger.log('POST /advent-calendar');
     const entry = await this.adventCalendarService.create(createDto);
-    return entry.toJSON();
+    return entry;
   }
 
   @Patch(':id')
@@ -116,7 +116,7 @@ export class AdventCalendarController {
   ): Promise<AdventCalendarEntryResponseDto> {
     this.logger.log(`PATCH /advent-calendar/${id}`);
     const entry = await this.adventCalendarService.update(id, updateDto);
-    return entry.toJSON();
+    return entry;
   }
 
   @Delete(':id')
@@ -148,7 +148,7 @@ export class AdventCalendarController {
   ): Promise<AdventCalendarEntryResponseDto> {
     this.logger.log(`PATCH /advent-calendar/${id}/participate - User: ${userId}`);
     const entry = await this.adventCalendarService.participate(id, userId);
-    return entry.toJSON();
+    return entry;
   }
 
   @Patch(':id/winners')
@@ -168,7 +168,7 @@ export class AdventCalendarController {
   ): Promise<AdventCalendarEntryResponseDto> {
     this.logger.log(`PATCH /advent-calendar/${id}/winners - Winner: ${addWinnerDto.userId}`);
     const entry = await this.adventCalendarService.addWinner(id, addWinnerDto.userId);
-    return entry.toJSON();
+    return entry;
   }
 
   @Post(':id/image')
@@ -205,7 +205,7 @@ export class AdventCalendarController {
     const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
 
     const updatedEntry = await this.adventCalendarService.update(entryId, { imageUrl });
-    return updatedEntry.toJSON();
+    return updatedEntry;
   }
 
   @Put('feature-status')

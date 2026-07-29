@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LegalDocumentsController } from './legal-documents.controller';
 import { LegalDocumentService } from './application/services/legal-document.service';
-import { LegalDocument, LegalDocumentType } from './domain/entities/legal-document.entity';
+import { LegalDocument, LegalDocumentType } from './interfaces/legal-document.interface';
 import { CreateLegalDocumentDto } from './application/dto/create-legal-document.dto';
 import { NotFoundException } from '@nestjs/common';
 import { RolesGuard } from '../core/guards/roles.guard';
@@ -17,11 +17,15 @@ describe('LegalDocumentsController', () => {
     getById: jest.fn(),
   };
 
-  const mockDocument: LegalDocument = LegalDocument.create({
+  const mockDocument: LegalDocument = {
+    id: 'legal-doc-1',
     type: LegalDocumentType.IMPRESSUM,
     content: '# Impressum\n\nTest content',
+    version: 1,
+    createdAt: new Date().toISOString(),
     createdBy: 'user123',
-  });
+    isActive: true,
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -97,11 +101,15 @@ describe('LegalDocumentsController', () => {
     it('should return all legal documents of a type', async () => {
       const documents = [
         mockDocument,
-        LegalDocument.create({
+        {
+          id: 'legal-doc-2',
           type: LegalDocumentType.IMPRESSUM,
           content: '# Impressum\n\nUpdated content',
+          version: 2,
+          createdAt: new Date().toISOString(),
           createdBy: 'user456',
-        }),
+          isActive: true,
+        },
       ];
 
       mockLegalDocumentService.getAllByType.mockResolvedValue(documents);

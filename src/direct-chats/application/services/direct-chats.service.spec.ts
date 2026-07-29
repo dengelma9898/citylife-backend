@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DirectChatsService } from './direct-chats.service';
-import { DirectChat } from '../../domain/entities/direct-chat.entity';
+import { DirectChat } from '../../interfaces/direct-chat.interface';
 import { UsersService } from '../../../users/users.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
@@ -49,7 +49,7 @@ describe('DirectChatsService', () => {
     directChatIds: [],
   };
 
-  const mockChat = DirectChat.fromProps({
+  const mockChat: DirectChat = {
     id: 'chat-1',
     creatorId: 'user-1',
     invitedUserId: 'user-2',
@@ -58,9 +58,9 @@ describe('DirectChatsService', () => {
     status: 'pending',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  });
+  };
 
-  const mockActiveChat = DirectChat.fromProps({
+  const mockActiveChat: DirectChat = {
     id: 'chat-2',
     creatorId: 'user-1',
     invitedUserId: 'user-2',
@@ -69,10 +69,10 @@ describe('DirectChatsService', () => {
     status: 'active',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  });
+  };
 
   const chatToFirestoreData = (chat: DirectChat): Record<string, unknown> => {
-    const { id, ...data } = chat.toJSON();
+    const { id, ...data } = chat;
     return data;
   };
 

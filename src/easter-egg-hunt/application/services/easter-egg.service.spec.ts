@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { EasterEggService } from './easter-egg.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { EasterEgg } from '../../domain/entities/easter-egg.entity';
+import { EasterEgg } from '../../interfaces/easter-egg.interface';
 
 describe('EasterEggService', () => {
   let service: EasterEggService;
@@ -39,7 +39,7 @@ describe('EasterEggService', () => {
     ...mockEggData,
   };
 
-  const mockEgg = EasterEgg.fromProps(mockEggProps);
+  const mockEgg: EasterEgg = mockEggProps;
 
   beforeEach(async () => {
     mockDoc = {

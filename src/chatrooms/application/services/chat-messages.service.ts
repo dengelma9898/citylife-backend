@@ -1,7 +1,8 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { removeUndefined } from '../../../firebase/firebase-mapper.util';
-import { ChatMessage, ChatMessageProps } from '../../domain/entities/chat-message.entity';
+import { ChatMessage } from '../../interfaces/chat-message.interface';
 import { DateTimeUtils } from '../../../utils/date-time.utils';
 import { UpdateChatMessageReactionDto } from '../dtos/update-message-reaction.dto';
 import { CreateMessageDto } from '../dtos/create-message.dto';
@@ -26,19 +27,19 @@ export class ChatMessagesService {
     private readonly firebaseService: FirebaseService,
   ) {}
 
-  private toPlainObject(entity: ChatMessage): Record<string, unknown> {
-    const { id, isEditable, ...data } = entity.toJSON();
+  private toPlainObject(message: ChatMessage): Record<string, unknown> {
+    const { id, isEditable, ...data } = message;
     return removeUndefined(data);
   }
 
-  private toEntityProps(data: Record<string, unknown>, id: string): ChatMessageProps {
+  private toChatMessage(data: Record<string, unknown>, id: string): ChatMessage {
     return {
       id,
       senderId: data.senderId as string,
       senderName: data.senderName as string,
       content: data.content as string,
       isEditable: data.isEditable !== undefined ? (data.isEditable as boolean) : false,
-      reactions: data.reactions as ChatMessageProps['reactions'],
+      reactions: data.reactions as ChatMessage['reactions'],
       createdAt: (data.createdAt as string) || new Date().toISOString(),
       updatedAt: (data.updatedAt as string) || new Date().toISOString(),
       editedAt: data.editedAt as string | undefined,
@@ -63,7 +64,7 @@ export class ChatMessagesService {
     const snapshot = await query.get();
     this.logger.debug(`Found ${snapshot.docs.length} messages for chatroom ${chatroomId}`);
     return snapshot.docs.map(doc =>
-      ChatMessage.fromProps(this.toEntityProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toChatMessage(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -81,12 +82,12 @@ export class ChatMessagesService {
       this.logger.debug(`Message ${id} not found in chatroom ${chatroomId}`);
       return null;
     }
-    return ChatMessage.fromProps(this.toEntityProps(doc.data() as Record<string, unknown>, doc.id));
+    return this.toChatMessage(doc.data() as Record<string, unknown>, doc.id);
   }
 
   private async createMessageInFirestore(
     chatroomId: string,
-    data: Omit<ChatMessage, 'id' | 'createdAt' | 'updatedAt'>,
+    data: Omit<ChatMessage, 'id' | 'createdAt' | 'updatedAt' | 'isEditable'>,
   ): Promise<ChatMessage> {
     this.logger.debug(`Attempting to create message in chatroom ${chatroomId}`);
     const db = this.firebaseService.getFirestore();
@@ -96,7 +97,14 @@ export class ChatMessagesService {
       this.logger.error(`Chatroom ${chatroomId} does not exist`);
       throw new Error(`Chatroom ${chatroomId} does not exist`);
     }
-    const message = ChatMessage.create(data);
+    const now = new Date().toISOString();
+    const message: ChatMessage = {
+      id: randomUUID(),
+      ...data,
+      isEditable: false,
+      createdAt: now,
+      updatedAt: now,
+    };
     const plainData = this.toPlainObject(message);
     await chatroomRef.collection(this.messagesCollection).doc(message.id).set(plainData);
     this.logger.debug(`Successfully created message ${message.id} in chatroom ${chatroomId}`);
@@ -121,7 +129,11 @@ export class ChatMessagesService {
       this.logger.debug(`Message ${id} not found in chatroom ${chatroomId}`);
       return null;
     }
-    const updated = existing.update(data);
+    const updated: ChatMessage = {
+      ...existing,
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
     const plainData = this.toPlainObject(updated);
     await chatroomRef.collection(this.messagesCollection).doc(id).update(plainData);
     this.logger.debug(`Successfully updated message ${id} in chatroom ${chatroomId}`);
@@ -243,13 +255,12 @@ export class ChatMessagesService {
         throw new NotFoundException('Benutzer nicht gefunden');
       }
       const senderName = userData.name;
-      const messageData = ChatMessage.create({
+      const message = await this.createMessageInFirestore(chatroomId, {
         content: data.content,
         senderId: userId,
         senderName: senderName,
         reactions: [],
       });
-      const message = await this.createMessageInFirestore(chatroomId, messageData);
       return await this.enrichWithIsEditable(message, userId);
     } catch (error) {
       this.handleError(error as Error & { code?: string; path?: string }, {
@@ -396,18 +407,12 @@ export class ChatMessagesService {
     currentUserId?: string,
   ): Promise<ChatMessage> {
     if (currentUserId === undefined) {
-      return ChatMessage.fromProps({
-        ...message.toJSON(),
-        isEditable: false,
-      });
+      return { ...message, isEditable: false };
     }
     const isOwner = message.senderId === currentUserId;
     const isSuperAdmin = await this.isSuperAdmin(currentUserId);
     const isEditable = isOwner || isSuperAdmin;
-    return ChatMessage.fromProps({
-      ...message.toJSON(),
-      isEditable,
-    });
+    return { ...message, isEditable };
   }
 
   private async isSuperAdmin(userId: string): Promise<boolean> {

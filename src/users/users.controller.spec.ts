@@ -8,9 +8,11 @@ import { CreateUserProfileDto } from './dto/create-user-profile.dto';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { BlockUserDto } from './dto/block-user.dto';
 import { UserType } from './enums/user-type.enum';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '../core/guards/auth.guard';
 import { RolesGuard } from '../core/guards/roles.guard';
+import { ROLES_KEY } from '../core/decorators/roles.decorator';
+import { Reflector } from '@nestjs/core';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -33,6 +35,12 @@ describe('UsersController', () => {
     getUserProfile: jest.fn(),
     getBusinessUser: jest.fn(),
     blockUser: jest.fn(),
+    getAllBusinessUsers: jest.fn(),
+    blockUserForChat: jest.fn(),
+    unblockUserForChat: jest.fn(),
+    getBlockedUsers: jest.fn(),
+    registerFcmToken: jest.fn(),
+    removeFcmToken: jest.fn(),
   };
 
   const mockFirebaseStorageService = {
@@ -62,6 +70,8 @@ describe('UsersController', () => {
     isDeleted: false,
     needsReview: false,
   };
+
+  const mockReq = (uid = 'user1') => ({ user: { uid } });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -155,7 +165,7 @@ describe('UsersController', () => {
         ...createDto,
       });
 
-      const result = await controller.createUserProfile('user1', createDto);
+      const result = await controller.createUserProfile(mockReq(), 'user1', createDto);
 
       expect(result).toBeDefined();
       expect(result.name).toBe(createDto.name);
@@ -174,7 +184,7 @@ describe('UsersController', () => {
 
       mockUsersService.createBusinessUser.mockResolvedValue(mockBusinessUser);
 
-      const result = await controller.createBusinessUser(createDto);
+      const result = await controller.createBusinessUser(mockReq('business1'), 'business1', createDto);
 
       expect(result).toEqual(mockBusinessUser);
       expect(usersService.createBusinessUser).toHaveBeenCalledWith(createDto);
@@ -192,7 +202,7 @@ describe('UsersController', () => {
         ...updateDto,
       });
 
-      const result = await controller.updateProfile('user1', updateDto);
+      const result = await controller.updateProfile(mockReq(), 'user1', updateDto);
 
       expect(result).toBeDefined();
       expect(result.name).toBe(updateDto.name);
@@ -202,7 +212,7 @@ describe('UsersController', () => {
 
   describe('deleteProfile', () => {
     it('should delete a user profile', async () => {
-      await controller.deleteProfile('user1');
+      await controller.deleteProfile(mockReq(), 'user1');
 
       expect(usersService.delete).toHaveBeenCalledWith('user1');
     });
@@ -244,7 +254,7 @@ describe('UsersController', () => {
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
       mockUsersService.toggleFavoriteEvent.mockResolvedValue(true);
 
-      const result = await controller.toggleFavoriteEvent('user1', 'event1');
+      const result = await controller.toggleFavoriteEvent(mockReq(), 'user1', 'event1');
 
       expect(result).toEqual({ added: true });
       expect(usersService.toggleFavoriteEvent).toHaveBeenCalledWith('user1', 'event1');
@@ -253,7 +263,7 @@ describe('UsersController', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getUserProfile.mockResolvedValue(null);
 
-      await expect(controller.toggleFavoriteEvent('nonexistent', 'event1')).rejects.toThrow(
+      await expect(controller.toggleFavoriteEvent(mockReq('nonexistent'), 'nonexistent', 'event1')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -264,7 +274,7 @@ describe('UsersController', () => {
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
       mockUsersService.toggleFavoriteBusiness.mockResolvedValue(true);
 
-      const result = await controller.toggleFavoriteBusiness('user1', 'business1');
+      const result = await controller.toggleFavoriteBusiness(mockReq(), 'user1', 'business1');
 
       expect(result).toEqual({ added: true });
       expect(usersService.toggleFavoriteBusiness).toHaveBeenCalledWith('user1', 'business1');
@@ -273,7 +283,9 @@ describe('UsersController', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getUserProfile.mockResolvedValue(null);
 
-      await expect(controller.toggleFavoriteBusiness('nonexistent', 'business1')).rejects.toThrow(
+      await expect(
+        controller.toggleFavoriteBusiness(mockReq('nonexistent'), 'nonexistent', 'business1'),
+      ).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -287,7 +299,7 @@ describe('UsersController', () => {
       };
       mockUsersService.getUserProfile.mockResolvedValue(mockProfile);
 
-      const result = await controller.getFavoriteEvents('user1');
+      const result = await controller.getFavoriteEvents(mockReq(), 'user1');
 
       expect(result).toEqual(['event1', 'event2']);
     });
@@ -295,7 +307,7 @@ describe('UsersController', () => {
     it('should return empty array if no favorites', async () => {
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
 
-      const result = await controller.getFavoriteEvents('user1');
+      const result = await controller.getFavoriteEvents(mockReq(), 'user1');
 
       expect(result).toEqual([]);
     });
@@ -303,7 +315,9 @@ describe('UsersController', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getUserProfile.mockResolvedValue(null);
 
-      await expect(controller.getFavoriteEvents('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(controller.getFavoriteEvents(mockReq('nonexistent'), 'nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -315,7 +329,7 @@ describe('UsersController', () => {
       };
       mockUsersService.getUserProfile.mockResolvedValue(mockProfile);
 
-      const result = await controller.getFavoriteBusinesses('user1');
+      const result = await controller.getFavoriteBusinesses(mockReq(), 'user1');
 
       expect(result).toEqual(['business1', 'business2']);
     });
@@ -323,7 +337,7 @@ describe('UsersController', () => {
     it('should return empty array if no favorites', async () => {
       mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
 
-      const result = await controller.getFavoriteBusinesses('user1');
+      const result = await controller.getFavoriteBusinesses(mockReq(), 'user1');
 
       expect(result).toEqual([]);
     });
@@ -331,7 +345,7 @@ describe('UsersController', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUsersService.getUserProfile.mockResolvedValue(null);
 
-      await expect(controller.getFavoriteBusinesses('nonexistent')).rejects.toThrow(
+      await expect(controller.getFavoriteBusinesses(mockReq('nonexistent'), 'nonexistent')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -464,6 +478,61 @@ describe('UsersController', () => {
 
       await expect(controller.blockUser(blockUserDto)).rejects.toThrow(NotFoundException);
       expect(usersService.blockUser).toHaveBeenCalledWith('NSP-nonexistent', true, undefined);
+    });
+  });
+
+  describe('getAllBusinessUsers', () => {
+    it('should return all business users when authorized via RolesGuard', async () => {
+      mockUsersService.getAllBusinessUsers.mockResolvedValue([mockBusinessUser]);
+      const result = await controller.getAllBusinessUsers('any-user-id');
+      expect(result).toEqual([mockBusinessUser]);
+      expect(usersService.getAllBusinessUsers).toHaveBeenCalled();
+      expect(usersService.getUserProfile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ownership verification', () => {
+    it('should allow updateProfile when authenticated user matches target id', async () => {
+      mockUsersService.update.mockResolvedValue(mockUserProfile);
+      await controller.updateProfile(mockReq('user1'), 'user1', { name: 'Updated' });
+      expect(usersService.update).toHaveBeenCalled();
+    });
+
+    it('should allow updateProfile for super_admin on another user', async () => {
+      mockUsersService.getUserProfile.mockResolvedValue({
+        ...mockUserProfile,
+        userType: UserType.SUPER_ADMIN,
+      });
+      mockUsersService.update.mockResolvedValue(mockUserProfile);
+      await controller.updateProfile(mockReq('admin1'), 'user1', { name: 'Updated' });
+      expect(usersService.update).toHaveBeenCalledWith('user1', { name: 'Updated' });
+    });
+
+    it('should reject updateProfile when user id does not match and caller is not super_admin', async () => {
+      mockUsersService.getUserProfile.mockResolvedValue(mockUserProfile);
+      await expect(
+        controller.updateProfile(mockReq('other-user'), 'user1', { name: 'Hacked' }),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(usersService.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('admin endpoint role metadata', () => {
+    const reflector = new Reflector();
+
+    it.each([
+      'getBusinessUsersNeedsReview',
+      'getPendingBusinessUserReviewsCount',
+      'updateNeedsReview',
+      'addBusinessToUser',
+      'getAllBusinessUsers',
+    ])('should require super_admin for %s', methodName => {
+      const handler = UsersController.prototype[methodName as keyof UsersController];
+      const roles = reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+        handler,
+        UsersController,
+      ]);
+      expect(roles).toContain('super_admin');
     });
   });
 });

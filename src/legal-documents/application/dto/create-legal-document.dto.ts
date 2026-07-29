@@ -1,6 +1,6 @@
 import { IsEnum, IsString, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { LegalDocumentType } from '../../domain/entities/legal-document.entity';
+import { LegalDocumentType } from '../../interfaces/legal-document.interface';
 
 export class CreateLegalDocumentDto {
   @ApiProperty({

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppVersionsController } from './app-versions.controller';
 import { AppVersionsService } from '../services/app-versions.service';
 import { BadRequestException } from '@nestjs/common';
-import { VersionChangelog } from '../../domain/entities/version-changelog.entity';
+import { VersionChangelog } from '../../interfaces/version-changelog.interface';
 
 describe('AppVersionsController', () => {
   let controller: AppVersionsController;
@@ -86,11 +86,14 @@ describe('AppVersionsController', () => {
 
     it('should include changelogContent when changelog exists', async () => {
       mockAppVersionsService.checkVersion.mockResolvedValue(false);
-      const mockChangelog = VersionChangelog.create({
+      const mockChangelog: VersionChangelog = {
+        id: 'changelog-1',
         version: '1.2.0',
         content: '# Version 1.2.0\n\n- New feature',
         createdBy: 'user123',
-      });
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
       mockAppVersionsService.getChangelogForVersion.mockResolvedValue(mockChangelog);
 
       const result = await controller.checkVersion('1.2.0');

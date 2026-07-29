@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PassScanService } from './pass-scan.service';
 import { FirebasePassScanRepository } from '../../infrastructure/persistence/firebase-pass-scan.repository';
 import { UsersService } from '../../../users/users.service';
-import { BusinessCustomer } from '../../../businesses/domain/entities/business.entity';
+import { BusinessCustomer } from '../../../businesses/interfaces/business.interface';
 
 describe('PassScanService', () => {
   let service: PassScanService;
@@ -13,7 +13,7 @@ describe('PassScanService', () => {
     getUserProfileByCustomerId: jest.fn(),
   };
 
-  const customer = BusinessCustomer.create({
+  const customer = ({
     customerId: 'NSP-user-1',
     scannedAt: '2026-05-10T12:00:00+02:00',
     price: 80,
@@ -63,8 +63,8 @@ describe('PassScanService', () => {
       businessId: 'biz-1',
       businessName: 'Café',
       scanData: { customerId: 'NSP-user-1', userId: '' },
-      customer: BusinessCustomer.create({
-        ...customer.toJSON(),
+      customer: ({
+        ...customer,
         price: null,
       }),
     });

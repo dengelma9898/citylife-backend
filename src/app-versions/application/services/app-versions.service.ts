@@ -1,11 +1,9 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import { AppVersion, AppVersionProps } from '../../domain/entities/app-version.entity';
-import {
-  VersionChangelog,
-  VersionChangelogProps,
-} from '../../domain/entities/version-changelog.entity';
+import { AppVersion } from '../../interfaces/app-version.interface';
+import { VersionChangelog } from '../../interfaces/version-changelog.interface';
 
 @Injectable()
 export class AppVersionsService {
@@ -16,7 +14,7 @@ export class AppVersionsService {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private toAppVersionProps(data: Record<string, unknown>, id: string): AppVersionProps {
+  private toAppVersion(data: Record<string, unknown>, id: string): AppVersion {
     return {
       id,
       minimumVersion: data.minimumVersion as string,
@@ -25,7 +23,7 @@ export class AppVersionsService {
     };
   }
 
-  private toChangelogProps(data: Record<string, unknown>, id: string): VersionChangelogProps {
+  private toChangelog(data: Record<string, unknown>, id: string): VersionChangelog {
     return {
       id,
       version: data.version as string,
@@ -42,7 +40,7 @@ export class AppVersionsService {
     if (!doc.exists) {
       return null;
     }
-    return AppVersion.fromProps(this.toAppVersionProps(doc.data() as Record<string, unknown>, this.currentVersionDocId));
+    return this.toAppVersion(doc.data() as Record<string, unknown>, this.currentVersionDocId);
   }
 
   private async saveAppVersion(appVersion: AppVersion): Promise<AppVersion> {
@@ -50,17 +48,14 @@ export class AppVersionsService {
     const docRef = db.collection(this.collection).doc(this.currentVersionDocId);
     const doc = await docRef.get();
     if (doc.exists) {
-      await docRef.update(toFirestoreData(appVersion));
+      await docRef.update(toFirestoreData(appVersion as unknown as Record<string, unknown>));
     } else {
       await docRef.set({
-        ...toFirestoreData(appVersion),
+        ...toFirestoreData(appVersion as unknown as Record<string, unknown>),
         id: this.currentVersionDocId,
       });
     }
-    return AppVersion.fromProps({
-      ...appVersion.toJSON(),
-      id: this.currentVersionDocId,
-    });
+    return { ...appVersion, id: this.currentVersionDocId };
   }
 
   private async findChangelogByVersionInternal(version: string): Promise<VersionChangelog | null> {
@@ -75,7 +70,7 @@ export class AppVersionsService {
       return null;
     }
     const doc = snapshot.docs[0];
-    return VersionChangelog.fromProps(this.toChangelogProps(doc.data() as Record<string, unknown>, doc.id));
+    return this.toChangelog(doc.data() as Record<string, unknown>, doc.id);
   }
 
   private async saveChangelogInternal(changelog: VersionChangelog): Promise<VersionChangelog> {
@@ -91,14 +86,11 @@ export class AppVersionsService {
       await db
         .collection(this.changelogsCollection)
         .doc(existingDoc.id)
-        .update(toFirestoreData(changelog));
-      return VersionChangelog.fromProps({
-        ...changelog.toJSON(),
-        id: existingDoc.id,
-      });
+        .update(toFirestoreData(changelog as unknown as Record<string, unknown>));
+      return { ...changelog, id: existingDoc.id };
     }
     const docRef = db.collection(this.changelogsCollection).doc(changelog.id);
-    await docRef.set(toFirestoreData(changelog));
+    await docRef.set(toFirestoreData(changelog as unknown as Record<string, unknown>));
     return changelog;
   }
 
@@ -107,7 +99,7 @@ export class AppVersionsService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.changelogsCollection).orderBy('version', 'desc').get();
     return snapshot.docs.map(doc =>
-      VersionChangelog.fromProps(this.toChangelogProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toChangelog(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -156,10 +148,20 @@ export class AppVersionsService {
     }
     const currentVersion = await this.findCurrent();
     if (currentVersion) {
-      const updatedVersion = currentVersion.update({ minimumVersion });
+      const updatedVersion: AppVersion = {
+        ...currentVersion,
+        minimumVersion,
+        updatedAt: new Date().toISOString(),
+      };
       return await this.saveAppVersion(updatedVersion);
     }
-    const newVersion = AppVersion.create({ minimumVersion });
+    const now = new Date().toISOString();
+    const newVersion: AppVersion = {
+      id: randomUUID(),
+      minimumVersion,
+      createdAt: now,
+      updatedAt: now,
+    };
     return await this.saveAppVersion(newVersion);
   }
 
@@ -246,11 +248,15 @@ export class AppVersionsService {
     if (existingChangelog) {
       throw new ConflictException(`Changelog for version ${version} already exists`);
     }
-    const changelog = VersionChangelog.create({
+    const now = new Date().toISOString();
+    const changelog: VersionChangelog = {
+      id: randomUUID(),
       version,
       content,
       createdBy,
-    });
+      createdAt: now,
+      updatedAt: now,
+    };
     return await this.saveChangelogInternal(changelog);
   }
 
@@ -266,7 +272,11 @@ export class AppVersionsService {
     if (!existingChangelog) {
       throw new NotFoundException(`Changelog for version ${version} not found`);
     }
-    const updatedChangelog = existingChangelog.update({ content });
+    const updatedChangelog: VersionChangelog = {
+      ...existingChangelog,
+      content,
+      updatedAt: new Date().toISOString(),
+    };
     return await this.saveChangelogInternal(updatedChangelog);
   }
 

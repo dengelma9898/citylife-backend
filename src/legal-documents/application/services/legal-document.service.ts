@@ -1,8 +1,9 @@
 import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import { LegalDocument, LegalDocumentProps, LegalDocumentType } from '../../domain/entities/legal-document.entity';
+import { LegalDocument, LegalDocumentType } from '../../interfaces/legal-document.interface';
 
 @Injectable()
 export class LegalDocumentService {
@@ -16,7 +17,7 @@ export class LegalDocumentService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  private toEntityProps(data: Record<string, unknown>, id: string): LegalDocumentProps {
+  private toLegalDocument(data: Record<string, unknown>, id: string): LegalDocument {
     return {
       id,
       type: data.type as LegalDocumentType,
@@ -31,7 +32,7 @@ export class LegalDocumentService {
   private async saveDocument(document: LegalDocument): Promise<LegalDocument> {
     this.logger.debug(`Saving legal document ${document.id} of type ${document.type}`);
     const db = this.firebaseService.getFirestore();
-    await db.collection(this.collection).doc(document.id).set(toFirestoreData(document));
+    await db.collection(this.collection).doc(document.id).set(toFirestoreData(document as unknown as Record<string, unknown>));
     return document;
   }
 
@@ -42,7 +43,7 @@ export class LegalDocumentService {
     if (!doc.exists) {
       return null;
     }
-    return LegalDocument.fromProps(this.toEntityProps(doc.data() as Record<string, unknown>, doc.id));
+    return this.toLegalDocument(doc.data() as Record<string, unknown>, doc.id);
   }
 
   private async findByTypeInternal(type: LegalDocumentType): Promise<LegalDocument[]> {
@@ -50,7 +51,7 @@ export class LegalDocumentService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).where('type', '==', type).get();
     return snapshot.docs.map(doc =>
-      LegalDocument.fromProps(this.toEntityProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toLegalDocument(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -66,8 +67,9 @@ export class LegalDocumentService {
     if (snapshot.empty) {
       return null;
     }
-    return LegalDocument.fromProps(
-      this.toEntityProps(snapshot.docs[0].data() as Record<string, unknown>, snapshot.docs[0].id),
+    return this.toLegalDocument(
+      snapshot.docs[0].data() as Record<string, unknown>,
+      snapshot.docs[0].id,
     );
   }
 
@@ -79,12 +81,15 @@ export class LegalDocumentService {
     this.logger.log(`Creating new legal document of type ${type}`);
     const latestDocument = await this.findLatestByTypeInternal(type);
     const nextVersion = latestDocument ? latestDocument.version + 1 : 1;
-    const newDocument = LegalDocument.createWithVersion({
+    const newDocument: LegalDocument = {
+      id: randomUUID(),
       type,
       content,
       createdBy,
       version: nextVersion,
-    });
+      createdAt: new Date().toISOString(),
+      isActive: true,
+    };
     const saved = await this.saveDocument(newDocument);
     await this.invalidateCache(type);
     return saved;

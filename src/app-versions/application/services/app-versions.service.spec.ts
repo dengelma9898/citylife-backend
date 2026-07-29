@@ -2,8 +2,27 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { AppVersionsService } from './app-versions.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { AppVersion } from '../../domain/entities/app-version.entity';
-import { VersionChangelog } from '../../domain/entities/version-changelog.entity';
+import { AppVersion } from '../../interfaces/app-version.interface';
+import { VersionChangelog } from '../../interfaces/version-changelog.interface';
+
+function createAppVersion(minimumVersion: string, id = 'current'): AppVersion {
+  const now = new Date().toISOString();
+  return { id, minimumVersion, createdAt: now, updatedAt: now };
+}
+
+function createVersionChangelog(
+  props: Pick<VersionChangelog, 'version' | 'content' | 'createdBy'> & Partial<VersionChangelog>,
+): VersionChangelog {
+  const now = new Date().toISOString();
+  return {
+    id: props.id ?? 'changelog-1',
+    version: props.version,
+    content: props.content,
+    createdBy: props.createdBy,
+    createdAt: props.createdAt ?? now,
+    updatedAt: props.updatedAt ?? now,
+  };
+}
 
 describe('AppVersionsService', () => {
   let service: AppVersionsService;
@@ -12,9 +31,7 @@ describe('AppVersionsService', () => {
   let currentVersionDoc: { exists: boolean; get: jest.Mock; update: jest.Mock; set: jest.Mock };
   let mockFirestore: { collection: jest.Mock };
 
-  const mockAppVersion = AppVersion.create({
-    minimumVersion: '1.2.0',
-  });
+  const mockAppVersion = createAppVersion('1.2.0');
 
   const createChangelogQuery = (versionFilter?: string) => ({
     where: jest.fn().mockReturnThis(),
@@ -59,16 +76,15 @@ describe('AppVersionsService', () => {
       })),
       update: jest.fn().mockImplementation(async (data: { minimumVersion: string }) => {
         if (currentAppVersion) {
-          currentAppVersion = currentAppVersion.update({ minimumVersion: data.minimumVersion });
+          currentAppVersion = {
+            ...currentAppVersion,
+            minimumVersion: data.minimumVersion,
+            updatedAt: new Date().toISOString(),
+          };
         }
       }),
       set: jest.fn().mockImplementation(async (data: { minimumVersion: string }) => {
-        currentAppVersion = AppVersion.fromProps({
-          id: 'current',
-          minimumVersion: data.minimumVersion,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
+        currentAppVersion = createAppVersion(data.minimumVersion);
         currentVersionDoc.exists = true;
       }),
     };
@@ -101,20 +117,22 @@ describe('AppVersionsService', () => {
             doc: jest.fn().mockImplementation((id: string) => ({
               set: jest.fn().mockImplementation(async (data: { version: string; content: string; createdBy: string }) => {
                 changelogs.push(
-                  VersionChangelog.fromProps({
+                  createVersionChangelog({
                     id,
                     version: data.version,
                     content: data.content,
                     createdBy: data.createdBy,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
                   }),
                 );
               }),
               update: jest.fn().mockImplementation(async (data: { content: string }) => {
                 const index = changelogs.findIndex(c => c.id === id);
                 if (index >= 0) {
-                  changelogs[index] = changelogs[index].update({ content: data.content });
+                  changelogs[index] = {
+                    ...changelogs[index],
+                    content: data.content,
+                    updatedAt: new Date().toISOString(),
+                  };
                 }
               }),
               delete: jest.fn().mockImplementation(async () => {
@@ -146,31 +164,31 @@ describe('AppVersionsService', () => {
     });
 
     it('should return false when client version is equal to minimum version', async () => {
-      currentAppVersion = AppVersion.create({ minimumVersion: '1.2.0' });
+      currentAppVersion = createAppVersion('1.2.0');
       const result = await service.checkVersion('1.2.0');
       expect(result).toBe(false);
     });
 
     it('should return false when client version is newer than minimum version', async () => {
-      currentAppVersion = AppVersion.create({ minimumVersion: '1.2.0' });
+      currentAppVersion = createAppVersion('1.2.0');
       const result = await service.checkVersion('1.3.0');
       expect(result).toBe(false);
     });
 
     it('should return true when client version is older than minimum version', async () => {
-      currentAppVersion = AppVersion.create({ minimumVersion: '1.2.0' });
+      currentAppVersion = createAppVersion('1.2.0');
       const result = await service.checkVersion('1.1.0');
       expect(result).toBe(true);
     });
 
     it('should ignore build number in version string', async () => {
-      currentAppVersion = AppVersion.create({ minimumVersion: '1.2.0' });
+      currentAppVersion = createAppVersion('1.2.0');
       const result = await service.checkVersion('1.1.0 (123)');
       expect(result).toBe(true);
     });
 
     it('should handle version comparison correctly for patch versions', async () => {
-      currentAppVersion = AppVersion.create({ minimumVersion: '1.2.5' });
+      currentAppVersion = createAppVersion('1.2.5');
       const resultOld = await service.checkVersion('1.2.4');
       const resultNew = await service.checkVersion('1.2.6');
       expect(resultOld).toBe(true);
@@ -178,7 +196,7 @@ describe('AppVersionsService', () => {
     });
 
     it('should handle version comparison correctly for minor versions', async () => {
-      currentAppVersion = AppVersion.create({ minimumVersion: '1.3.0' });
+      currentAppVersion = createAppVersion('1.3.0');
       const resultOld = await service.checkVersion('1.2.9');
       const resultNew = await service.checkVersion('1.3.1');
       expect(resultOld).toBe(true);
@@ -186,7 +204,7 @@ describe('AppVersionsService', () => {
     });
 
     it('should handle version comparison correctly for major versions', async () => {
-      currentAppVersion = AppVersion.create({ minimumVersion: '2.0.0' });
+      currentAppVersion = createAppVersion('2.0.0');
       const resultOld = await service.checkVersion('1.9.9');
       const resultNew = await service.checkVersion('2.0.1');
       expect(resultOld).toBe(true);
@@ -194,7 +212,7 @@ describe('AppVersionsService', () => {
     });
 
     it('should throw error for invalid version format', async () => {
-      currentAppVersion = AppVersion.create({ minimumVersion: '1.2.0' });
+      currentAppVersion = createAppVersion('1.2.0');
       await expect(service.checkVersion('invalid')).rejects.toThrow('Invalid version format');
     });
   });
@@ -208,7 +226,7 @@ describe('AppVersionsService', () => {
     });
 
     it('should update existing version', async () => {
-      currentAppVersion = AppVersion.create({ minimumVersion: '1.2.0' });
+      currentAppVersion = createAppVersion('1.2.0');
       const result = await service.setMinimumVersion('1.3.0');
       expect(result).toBeDefined();
       expect(result.minimumVersion).toBe('1.3.0');
@@ -244,7 +262,7 @@ describe('AppVersionsService', () => {
 
   describe('getChangelogForVersion', () => {
     it('should return changelog when it exists', async () => {
-      const changelog = VersionChangelog.create({
+      const changelog = createVersionChangelog({
         version: '1.2.3',
         content: '# Changelog\n\n- New feature',
         createdBy: 'user123',
@@ -262,7 +280,7 @@ describe('AppVersionsService', () => {
     });
 
     it('should extract version from string with build number', async () => {
-      const changelog = VersionChangelog.create({
+      const changelog = createVersionChangelog({
         version: '1.2.3',
         content: '# Changelog',
         createdBy: 'user123',
@@ -283,7 +301,7 @@ describe('AppVersionsService', () => {
 
     it('should throw ConflictException when changelog already exists', async () => {
       changelogs = [
-        VersionChangelog.create({
+        createVersionChangelog({
           version: '1.2.3',
           content: '# Existing',
           createdBy: 'user123',
@@ -304,7 +322,7 @@ describe('AppVersionsService', () => {
   describe('updateChangelog', () => {
     it('should update changelog successfully', async () => {
       changelogs = [
-        VersionChangelog.create({
+        createVersionChangelog({
           version: '1.2.3',
           content: '# Old content',
           createdBy: 'user123',
@@ -323,8 +341,8 @@ describe('AppVersionsService', () => {
   describe('getAllChangelogs', () => {
     it('should return all changelogs', async () => {
       changelogs = [
-        VersionChangelog.create({ version: '1.3.0', content: '# v1.3.0', createdBy: 'user1' }),
-        VersionChangelog.create({ version: '1.2.0', content: '# v1.2.0', createdBy: 'user2' }),
+        createVersionChangelog({ version: '1.3.0', content: '# v1.3.0', createdBy: 'user1' }),
+        createVersionChangelog({ version: '1.2.0', content: '# v1.2.0', createdBy: 'user2' }),
       ];
       const result = await service.getAllChangelogs();
       expect(result).toHaveLength(2);
@@ -338,7 +356,7 @@ describe('AppVersionsService', () => {
 
   describe('deleteChangelog', () => {
     it('should delete changelog successfully', async () => {
-      const changelog = VersionChangelog.create({
+      const changelog = createVersionChangelog({
         version: '1.2.3',
         content: '# Content',
         createdBy: 'user123',

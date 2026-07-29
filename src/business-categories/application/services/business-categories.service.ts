@@ -1,11 +1,9 @@
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import {
-  BusinessCategory,
-  BusinessCategoryProps,
-} from '../../domain/entities/business-category.entity';
+import { BusinessCategory } from '../../interfaces/business-category.interface';
 import { KeywordsService } from '../../../keywords/keywords.service';
 import { UpdateBusinessCategoryDto } from '../../dto/update-business-category.dto';
 import { CreateBusinessCategoryDto } from '../../dto/create-business-category.dto';
@@ -24,13 +22,14 @@ export class BusinessCategoriesService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  private toBusinessCategoryProps(data: Record<string, unknown>, id: string): BusinessCategoryProps {
+  private toBusinessCategory(data: Record<string, unknown>, id: string): BusinessCategory {
     return {
       id,
       name: data.name as string,
       iconName: data.iconName as string,
       description: data.description as string,
       keywordIds: (data.keywordIds as string[]) || [],
+      keywords: data.keywords as BusinessCategory['keywords'],
       createdAt: data.createdAt as string,
       updatedAt: data.updatedAt as string,
     };
@@ -41,9 +40,7 @@ export class BusinessCategoriesService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).get();
     return snapshot.docs.map(doc =>
-      BusinessCategory.fromProps(
-        this.toBusinessCategoryProps(doc.data() as Record<string, unknown>, doc.id),
-      ),
+      this.toBusinessCategory(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -54,9 +51,7 @@ export class BusinessCategoriesService {
     if (!doc.exists) {
       return null;
     }
-    return BusinessCategory.fromProps(
-      this.toBusinessCategoryProps(doc.data() as Record<string, unknown>, doc.id),
-    );
+    return this.toBusinessCategory(doc.data() as Record<string, unknown>, doc.id);
   }
 
   public async getAll(): Promise<BusinessCategory[]> {
@@ -84,18 +79,20 @@ export class BusinessCategoriesService {
 
   public async create(data: CreateBusinessCategoryDto): Promise<BusinessCategory> {
     this.logger.debug('Creating business category');
-    const category = BusinessCategory.create({
+    const now = new Date().toISOString();
+    const category: Omit<BusinessCategory, 'id'> = {
       name: data.name,
       iconName: data.iconName,
       description: data.description,
       keywordIds: data.keywordIds || [],
-    });
+      createdAt: now,
+      updatedAt: now,
+    };
     const db = this.firebaseService.getFirestore();
-    const docRef = await db.collection(this.collection).add(toFirestoreData(category));
-    const created = BusinessCategory.fromProps({
-      ...category.toJSON(),
-      id: docRef.id,
-    });
+    const docRef = await db
+      .collection(this.collection)
+      .add(toFirestoreData(category as unknown as Record<string, unknown>));
+    const created: BusinessCategory = { ...category, id: docRef.id };
     await this.invalidateCache();
     return created;
   }
@@ -106,20 +103,21 @@ export class BusinessCategoriesService {
     if (!existingCategory) {
       throw new Error('Business category not found');
     }
-    const updatedCategory = existingCategory.update({
+    const updatedCategory: BusinessCategory = {
+      ...existingCategory,
       name: data.name,
       iconName: data.iconName,
       description: data.description,
       keywordIds: data.keywordIds,
-    });
+      updatedAt: new Date().toISOString(),
+    };
     const db = this.firebaseService.getFirestore();
-    await db.collection(this.collection).doc(id).update(toFirestoreData(updatedCategory));
-    const result = BusinessCategory.fromProps({
-      ...updatedCategory.toJSON(),
-      id,
-    });
+    await db
+      .collection(this.collection)
+      .doc(id)
+      .update(toFirestoreData(updatedCategory as unknown as Record<string, unknown>));
     await this.invalidateCache();
-    return result;
+    return updatedCategory;
   }
 
   public async delete(id: string): Promise<void> {
@@ -141,9 +139,12 @@ export class BusinessCategoriesService {
           const keywords = await Promise.all(
             category.keywordIds.map(keywordId => this.keywordsService.getById(keywordId)),
           );
-          return category.update({ keywords: keywords.filter(keyword => keyword !== null) });
+          return {
+            ...category,
+            keywords: keywords.filter(keyword => keyword !== null),
+          };
         }
-        return category.update({ keywords: [] });
+        return { ...category, keywords: [] };
       }),
     );
   }

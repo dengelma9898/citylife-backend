@@ -20,7 +20,7 @@ import { CuratedSpotsService } from '../services/curated-spots.service';
 import { CuratedSpotsUserRatingsSettingsService } from '../services/curated-spots-user-ratings-settings.service';
 import { CuratedSpotUserRatingsService } from '../services/curated-spot-user-ratings.service';
 import { CuratedSpotsUserRatingsEnabledGuard } from '../guards/curated-spots-user-ratings-enabled.guard';
-import { CuratedSpot } from '../../domain/entities/curated-spot.entity';
+import { CuratedSpot } from '../../interfaces/curated-spot.interface';
 import { CuratedSpotUserRatingView } from '../services/curated-spot-user-ratings.service';
 import { CreateCuratedSpotDto } from '../../dto/create-curated-spot.dto';
 import { UpdateCuratedSpotDto } from '../../dto/update-curated-spot.dto';

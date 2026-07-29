@@ -1,8 +1,9 @@
 import { Injectable, Logger, Inject, forwardRef, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { CreateJobOfferDto } from '../../dto/create-job-offer.dto';
-import { JobOffer } from '../../domain/entities/job-offer.entity';
+import { JobOffer } from '../../interfaces/job-offer.interface';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { removeUndefined } from '../../../firebase/firebase-mapper.util';
+import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { UsersService } from '../../../users/users.service';
 
@@ -18,28 +19,54 @@ export class JobOffersService {
     private readonly usersService: UsersService,
   ) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private toJobOfferProps(data: any, id: string) {
+  private toJobOffer(data: Record<string, unknown>, id: string): JobOffer {
+    const createdAt = data.createdAt as { toDate?: () => Date } | Date | undefined;
+    const updatedAt = data.updatedAt as { toDate?: () => Date } | Date | undefined;
     return {
       id,
-      ...data,
-      createdAt: data.createdAt?.toDate?.() || data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+      title: data.title as string,
+      companyLogo: data.companyLogo as string,
+      generalDescription: data.generalDescription as string,
+      neededProfile: data.neededProfile as string,
+      tasks: (data.tasks as string[]) || [],
+      benefits: (data.benefits as string[]) || [],
+      images: (data.images as string[]) || [],
+      location: data.location as JobOffer['location'],
+      typeOfEmployment: data.typeOfEmployment as string,
+      additionalNotesForTypeOfEmployment: data.additionalNotesForTypeOfEmployment as string | undefined,
+      homeOffice: data.homeOffice as boolean,
+      additionalNotesHomeOffice: data.additionalNotesHomeOffice as string | undefined,
+      wage: data.wage as string | undefined,
+      startDate: data.startDate as string,
+      contactData: data.contactData as JobOffer['contactData'],
+      link: data.link as string,
+      socialMedia: data.socialMedia as JobOffer['socialMedia'],
+      isHighlight: data.isHighlight as boolean,
+      businessIds: data.businessIds as string[] | undefined,
+      jobOfferCategoryId: data.jobOfferCategoryId as string,
+      createdAt:
+        createdAt && typeof createdAt === 'object' && 'toDate' in createdAt && createdAt.toDate
+          ? createdAt.toDate()
+          : (createdAt as Date),
+      updatedAt:
+        updatedAt && typeof updatedAt === 'object' && 'toDate' in updatedAt && updatedAt.toDate
+          ? updatedAt.toDate()
+          : (updatedAt as Date),
     };
-  }
-
-  private toPlainObject(jobOffer: JobOffer) {
-    const { id, ...data } = jobOffer;
-    return removeUndefined({ ...data });
   }
 
   async create(createJobOfferDto: CreateJobOfferDto): Promise<JobOffer> {
     this.logger.debug('Creating new job offer');
-    const jobOffer = JobOffer.create(createJobOfferDto);
+    const now = new Date();
+    const jobOffer: JobOffer = {
+      id: randomUUID(),
+      ...createJobOfferDto,
+      createdAt: now,
+      updatedAt: now,
+    };
     const db = this.firebaseService.getFirestore();
-    const plainObject = this.toPlainObject(jobOffer);
-    const docRef = await db.collection(this.collectionName).add(plainObject);
-    const savedJobOffer = new JobOffer(this.toJobOfferProps(plainObject, docRef.id));
+    const docRef = await db.collection(this.collectionName).add(toFirestoreData(jobOffer as unknown as Record<string, unknown>));
+    const savedJobOffer = { ...jobOffer, id: docRef.id };
     await this.sendNewJobOfferNotification(savedJobOffer);
     return savedJobOffer;
   }
@@ -48,7 +75,7 @@ export class JobOffersService {
     this.logger.debug('Getting all job offers');
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collectionName).get();
-    return snapshot.docs.map(doc => new JobOffer(this.toJobOfferProps(doc.data(), doc.id)));
+    return snapshot.docs.map(doc => this.toJobOffer(doc.data() as Record<string, unknown>, doc.id));
   }
 
   async findOne(id: string): Promise<JobOffer> {
@@ -58,16 +85,19 @@ export class JobOffersService {
     if (!doc.exists) {
       throw new NotFoundException('Job offer not found');
     }
-    return new JobOffer(this.toJobOfferProps(doc.data(), doc.id));
+    return this.toJobOffer(doc.data() as Record<string, unknown>, doc.id);
   }
 
   async update(id: string, updateJobOfferDto: Partial<CreateJobOfferDto>): Promise<JobOffer> {
     this.logger.debug(`Updating job offer ${id}`);
     const existingJobOffer = await this.findOne(id);
-    const updatedJobOffer = existingJobOffer.update(updateJobOfferDto);
+    const updatedJobOffer: JobOffer = {
+      ...existingJobOffer,
+      ...updateJobOfferDto,
+      updatedAt: new Date(),
+    };
     const db = this.firebaseService.getFirestore();
-    const plainObject = this.toPlainObject(updatedJobOffer);
-    await db.collection(this.collectionName).doc(id).update(plainObject);
+    await db.collection(this.collectionName).doc(id).update(toFirestoreData(updatedJobOffer as unknown as Record<string, unknown>));
     return this.findOne(id);
   }
 

@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SpotKeywordsService } from '../services/spot-keywords.service';
-import { SpotKeyword } from '../../domain/entities/spot-keyword.entity';
+import { SpotKeyword } from '../../interfaces/spot-keyword.interface';
 import { CreateSpotKeywordDto } from '../../dto/create-spot-keyword.dto';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 import { Roles } from '../../../core/decorators/roles.decorator';

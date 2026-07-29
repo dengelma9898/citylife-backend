@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TaxiStandLocation } from '../domain/entities/taxi-stand.entity';
+import { TaxiStandLocation } from '../interfaces/taxi-stand.interface';
 
 export class TaxiStandResponseDto {
   @ApiProperty({ description: 'ID des Taxistandorts' })

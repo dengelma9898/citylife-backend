@@ -1,10 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import {
-  CuratedSpotsUserRatingsSettings,
-  CuratedSpotsUserRatingsSettingsProps,
-} from '../../domain/entities/curated-spots-user-ratings-settings.entity';
+import { CuratedSpotsUserRatingsSettings } from '../../interfaces/curated-spots-user-ratings-settings.interface';
 
 @Injectable()
 export class CuratedSpotsUserRatingsSettingsService {
@@ -32,20 +29,16 @@ export class CuratedSpotsUserRatingsSettingsService {
       `Updating curated spots user ratings settings: isEnabled=${isEnabled}, updatedBy=${updatedBy}`,
     );
     const current = await this.get();
-    const updated = current.update({ isEnabled }, updatedBy);
+    const updated: CuratedSpotsUserRatingsSettings = {
+      ...current,
+      isEnabled,
+      updatedBy: updatedBy || current.updatedBy,
+      updatedAt: new Date().toISOString(),
+    };
     return this.save(updated);
   }
 
-  private toPlainObject(
-    entity: CuratedSpotsUserRatingsSettings,
-  ): Omit<CuratedSpotsUserRatingsSettingsProps, 'id'> {
-    return toFirestoreData(entity);
-  }
-
-  private toEntityProps(
-    data: Record<string, unknown>,
-    id: string,
-  ): CuratedSpotsUserRatingsSettingsProps {
+  private toSettings(data: Record<string, unknown>, id: string): CuratedSpotsUserRatingsSettings {
     const updatedAtRaw = data.updatedAt;
     const updatedAt =
       updatedAtRaw &&
@@ -65,18 +58,24 @@ export class CuratedSpotsUserRatingsSettingsService {
     };
   }
 
+  private createDefaultSettings(): CuratedSpotsUserRatingsSettings {
+    return {
+      id: this.documentId,
+      isEnabled: false,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
   private async get(): Promise<CuratedSpotsUserRatingsSettings> {
     try {
       const db = this.firebaseService.getFirestore();
       const doc = await db.collection(this.collectionName).doc(this.documentId).get();
       if (!doc.exists) {
-        const defaultSettings = CuratedSpotsUserRatingsSettings.createDefault();
+        const defaultSettings = this.createDefaultSettings();
         await this.save(defaultSettings);
         return defaultSettings;
       }
-      return CuratedSpotsUserRatingsSettings.fromProps(
-        this.toEntityProps((doc.data() ?? {}) as Record<string, unknown>, doc.id),
-      );
+      return this.toSettings((doc.data() ?? {}) as Record<string, unknown>, doc.id);
     } catch (error) {
       this.logger.error(`Error getting curated spots user ratings settings: ${error.message}`);
       throw error;
@@ -89,7 +88,7 @@ export class CuratedSpotsUserRatingsSettingsService {
       await db
         .collection(this.collectionName)
         .doc(this.documentId)
-        .set(this.toPlainObject(settings));
+        .set(toFirestoreData(settings as unknown as Record<string, unknown>));
       return settings;
     } catch (error) {
       this.logger.error(`Error saving curated spots user ratings settings: ${error.message}`);

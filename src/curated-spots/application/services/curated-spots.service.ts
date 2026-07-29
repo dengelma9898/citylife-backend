@@ -1,7 +1,12 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import { CuratedSpot, CuratedSpotAddressProps, CuratedSpotProps } from '../../domain/entities/curated-spot.entity';
+import {
+  CuratedSpot,
+  normalizeCuratedSpotNameLower,
+  parseCuratedSpotAddress,
+} from '../../interfaces/curated-spot.interface';
 import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
 import { CreateCuratedSpotDto } from '../../dto/create-curated-spot.dto';
 import { UpdateCuratedSpotDto } from '../../dto/update-curated-spot.dto';
@@ -55,7 +60,7 @@ export class CuratedSpotsService {
       );
     }
     if (prefix.length > 0) {
-      const nameLowerPrefix = CuratedSpot.normalizeNameLower(prefix);
+      const nameLowerPrefix = normalizeCuratedSpotNameLower(prefix);
       results = results.filter(spot => spot.nameLower.startsWith(nameLowerPrefix));
     }
     return results;
@@ -93,19 +98,29 @@ export class CuratedSpotsService {
         ? await this.spotKeywordsService.resolveNewKeywordNamesToIds(dto.newKeywordNames)
         : [];
     const mergedKeywordIds = [...new Set([...baseIds, ...fromNames])];
-    const spot = CuratedSpot.create({
-      name: dto.name,
+    const now = new Date().toISOString();
+    const adminRating = dto.adminRating ?? null;
+    const spot: CuratedSpot = {
+      id: randomUUID(),
+      name: dto.name.trim(),
+      nameLower: normalizeCuratedSpotNameLower(dto.name),
       descriptionMarkdown: dto.descriptionMarkdown,
-      keywordIds: mergedKeywordIds,
       imageUrls: [],
-      address: dto.address,
+      keywordIds: mergedKeywordIds,
+      address: parseCuratedSpotAddress(dto.address),
       videoUrl: dto.videoUrl !== undefined ? normalizeHttpUrlSpaces(dto.videoUrl) : null,
       instagramUrl:
         dto.instagramUrl !== undefined ? normalizeHttpUrlSpaces(dto.instagramUrl) : null,
       status: dto.status ?? CuratedSpotStatus.PENDING,
+      isDeleted: false,
+      createdAt: now,
+      updatedAt: now,
       createdByUserId,
-      adminRating: dto.adminRating ?? null,
-    });
+      adminRating,
+      adminRatedAt: adminRating !== null ? now : null,
+      userRatingAverage: null,
+      userRatingCount: 0,
+    };
     return this.createSpot(spot);
   }
 
@@ -124,15 +139,16 @@ export class CuratedSpotsService {
       );
       mergedKeywordIds = [...new Set([...mergedKeywordIds, ...resolved])];
     }
-    const patch: Partial<Omit<CuratedSpotProps, 'id' | 'createdAt'>> = {};
+    const patch: Partial<CuratedSpot> = {};
     if (dto.name !== undefined) {
-      patch.name = dto.name;
+      patch.name = dto.name.trim();
+      patch.nameLower = normalizeCuratedSpotNameLower(dto.name);
     }
     if (dto.descriptionMarkdown !== undefined) {
       patch.descriptionMarkdown = dto.descriptionMarkdown;
     }
     if (dto.address !== undefined) {
-      patch.address = dto.address;
+      patch.address = parseCuratedSpotAddress(dto.address);
     }
     if (
       dto.keywordIds !== undefined ||
@@ -157,7 +173,11 @@ export class CuratedSpotsService {
       patch.adminRating = dto.adminRating;
       patch.adminRatedAt = dto.adminRating === null ? null : new Date().toISOString();
     }
-    const updated = existing.update(patch);
+    const updated: CuratedSpot = {
+      ...existing,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    };
     return this.updateSpot(id, updated);
   }
 
@@ -170,7 +190,11 @@ export class CuratedSpotsService {
       throw new NotFoundException('Curated spot not found');
     }
     const merged = [...(existing.imageUrls ?? []), ...urls];
-    const updated = existing.update({ imageUrls: merged });
+    const updated: CuratedSpot = {
+      ...existing,
+      imageUrls: merged,
+      updatedAt: new Date().toISOString(),
+    };
     return this.updateSpot(id, updated);
   }
 
@@ -179,29 +203,15 @@ export class CuratedSpotsService {
     if (!existing) {
       throw new NotFoundException('Curated spot not found');
     }
-    const updated = existing.update({ isDeleted: true });
+    const updated: CuratedSpot = {
+      ...existing,
+      isDeleted: true,
+      updatedAt: new Date().toISOString(),
+    };
     return this.updateSpot(id, updated);
   }
 
-  private toPlainObject(entity: CuratedSpot): Omit<ReturnType<CuratedSpot['toJSON']>, 'id'> {
-    return toFirestoreData(entity);
-  }
-
-  private toAddressProps(raw: unknown): CuratedSpotAddressProps {
-    const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-    const lat = o.latitude;
-    const lng = o.longitude;
-    return {
-      street: String(o.street ?? ''),
-      houseNumber: String(o.houseNumber ?? ''),
-      postalCode: String(o.postalCode ?? ''),
-      city: String(o.city ?? ''),
-      latitude: typeof lat === 'number' ? lat : Number(lat) || 0,
-      longitude: typeof lng === 'number' ? lng : Number(lng) || 0,
-    };
-  }
-
-  private toProps(data: Record<string, unknown>, id: string): ReturnType<CuratedSpot['toJSON']> {
+  private toCuratedSpot(data: Record<string, unknown>, id: string): CuratedSpot {
     const imageUrls = Array.isArray(data.imageUrls) ? data.imageUrls.map(String) : [];
     const keywordIds = Array.isArray(data.keywordIds) ? data.keywordIds.map(String) : [];
     const adminRating = this.readOptionalRating(data.adminRating);
@@ -220,7 +230,7 @@ export class CuratedSpotsService {
       descriptionMarkdown: String(data.descriptionMarkdown ?? ''),
       imageUrls,
       keywordIds,
-      address: this.toAddressProps(data.address),
+      address: parseCuratedSpotAddress(data.address),
       videoUrl:
         data.videoUrl === null || data.videoUrl === undefined ? null : String(data.videoUrl),
       instagramUrl:
@@ -262,7 +272,7 @@ export class CuratedSpotsService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).get();
     return snapshot.docs.map(doc =>
-      CuratedSpot.fromProps(this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id)),
+      this.toCuratedSpot((doc.data() ?? {}) as Record<string, unknown>, doc.id),
     );
   }
 
@@ -272,9 +282,7 @@ export class CuratedSpotsService {
     if (!doc.exists) {
       return null;
     }
-    return CuratedSpot.fromProps(
-      this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id),
-    );
+    return this.toCuratedSpot((doc.data() ?? {}) as Record<string, unknown>, doc.id);
   }
 
   private async findAllActiveNotDeleted(): Promise<CuratedSpot[]> {
@@ -285,7 +293,7 @@ export class CuratedSpotsService {
       .where('isDeleted', '==', false)
       .get();
     return snapshot.docs.map(doc =>
-      CuratedSpot.fromProps(this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id)),
+      this.toCuratedSpot((doc.data() ?? {}) as Record<string, unknown>, doc.id),
     );
   }
 
@@ -298,7 +306,7 @@ export class CuratedSpotsService {
       .where('keywordIds', 'array-contains', keywordId)
       .get();
     return snapshot.docs.map(doc =>
-      CuratedSpot.fromProps(this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id)),
+      this.toCuratedSpot((doc.data() ?? {}) as Record<string, unknown>, doc.id),
     );
   }
 
@@ -317,18 +325,17 @@ export class CuratedSpotsService {
       .where('nameLower', '<=', upper)
       .get();
     return snapshot.docs.map(doc =>
-      CuratedSpot.fromProps(this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id)),
+      this.toCuratedSpot((doc.data() ?? {}) as Record<string, unknown>, doc.id),
     );
   }
 
   private async createSpot(spot: CuratedSpot): Promise<CuratedSpot> {
     const db = this.firebaseService.getFirestore();
-    const docRef = await db.collection(this.collection).add(this.toPlainObject(spot));
+    const docRef = await db
+      .collection(this.collection)
+      .add(toFirestoreData(spot as unknown as Record<string, unknown>));
     this.logger.log(`Created curated spot with id: ${docRef.id}`);
-    return CuratedSpot.fromProps({
-      ...spot.toJSON(),
-      id: docRef.id,
-    });
+    return { ...spot, id: docRef.id };
   }
 
   private async updateSpot(id: string, spot: CuratedSpot): Promise<CuratedSpot> {
@@ -338,11 +345,8 @@ export class CuratedSpotsService {
     if (!doc.exists) {
       throw new NotFoundException('Curated spot not found');
     }
-    await docRef.update(this.toPlainObject(spot));
+    await docRef.update(toFirestoreData(spot as unknown as Record<string, unknown>));
     this.logger.log(`Updated curated spot with id: ${id}`);
-    return CuratedSpot.fromProps({
-      ...spot.toJSON(),
-      id,
-    });
+    return { ...spot, id };
   }
 }

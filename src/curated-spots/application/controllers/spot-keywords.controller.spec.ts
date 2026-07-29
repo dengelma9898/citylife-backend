@@ -2,14 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { SpotKeywordsController } from './spot-keywords.controller';
 import { SpotKeywordsService } from '../services/spot-keywords.service';
-import { SpotKeyword } from '../../domain/entities/spot-keyword.entity';
+import { SpotKeyword } from '../../interfaces/spot-keyword.interface';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 
 describe('SpotKeywordsController', () => {
   let controller: SpotKeywordsController;
   let mockSpotKeywordsService: Record<string, jest.Mock>;
 
-  const mockKeyword = SpotKeyword.fromProps({
+  const mockKeyword = ({
     id: 'kw-1',
     name: 'Biergarten',
     nameLower: 'biergarten',

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BusinessEventsSettingsService } from './business-events-settings.service';
-import { BusinessEventsSettings } from '../../domain/entities/business-events-settings.entity';
+import { BusinessEventsSettings } from '../../interfaces/business-events-settings.interface';
 import { FirebaseService } from '../../../firebase/firebase.service';
 
 describe('BusinessEventsSettingsService', () => {
@@ -22,13 +22,13 @@ describe('BusinessEventsSettingsService', () => {
     updatedAt: new Date().toISOString(),
   };
 
-  const mockSettings = BusinessEventsSettings.fromProps({
+  const mockSettings = ({
     id: 'business_events_settings',
     isEnabled: true,
     updatedAt: new Date().toISOString(),
   });
 
-  const mockDisabledSettings = BusinessEventsSettings.fromProps({
+  const mockDisabledSettings = ({
     id: 'business_events_settings',
     isEnabled: false,
     updatedAt: new Date().toISOString(),

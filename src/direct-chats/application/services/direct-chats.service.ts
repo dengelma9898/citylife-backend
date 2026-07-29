@@ -8,16 +8,17 @@ import {
   forwardRef,
   Scope,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import { DirectChat, DirectChatProps } from '../../domain/entities/direct-chat.entity';
+import { DirectChat } from '../../interfaces/direct-chat.interface';
 import { CreateDirectChatDto } from '../dtos/create-direct-chat.dto';
 import { UsersService } from '../../../users/users.service';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { UserProfile } from '../../../users/interfaces/user-profile.interface';
 import { DirectMessagesService } from './direct-messages.service';
 
-export interface DirectChatWithParticipantInfo extends DirectChatProps {
+export interface DirectChatWithParticipantInfo extends DirectChat {
   otherParticipantName?: string;
   otherParticipantProfilePictureUrl?: string;
 }
@@ -36,22 +37,36 @@ export class DirectChatsService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  private toPlainObject(entity: DirectChat): Omit<DirectChatProps, 'id'> {
-    return toFirestoreData(entity);
+  private isParticipant(chat: DirectChat, userId: string): boolean {
+    return chat.creatorId === userId || chat.invitedUserId === userId;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private toEntityProps(data: any, id: string): DirectChatProps {
+  private getOtherParticipantId(chat: DirectChat, userId: string): string | null {
+    if (chat.creatorId === userId) return chat.invitedUserId;
+    if (chat.invitedUserId === userId) return chat.creatorId;
+    return null;
+  }
+
+  private toDirectChat(data: Record<string, unknown>, id: string): DirectChat {
+    const createdAt = data.createdAt as { toDate?: () => Date } | string | undefined;
+    const updatedAt = data.updatedAt as { toDate?: () => Date } | string | undefined;
     return {
       id,
-      creatorId: data.creatorId,
-      invitedUserId: data.invitedUserId,
-      creatorConfirmed: data.creatorConfirmed,
-      invitedConfirmed: data.invitedConfirmed,
-      status: data.status,
-      lastMessage: data.lastMessage,
-      createdAt: data.createdAt?.toDate?.() || data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+      creatorId: data.creatorId as string,
+      invitedUserId: data.invitedUserId as string,
+      creatorConfirmed: data.creatorConfirmed as boolean,
+      invitedConfirmed: data.invitedConfirmed as boolean,
+      status: data.status as DirectChat['status'],
+      lastMessage: data.lastMessage as DirectChat['lastMessage'],
+      mutedBy: data.mutedBy as string[] | undefined,
+      createdAt:
+        typeof createdAt === 'object' && createdAt?.toDate
+          ? createdAt.toDate().toISOString()
+          : (createdAt as string),
+      updatedAt:
+        typeof updatedAt === 'object' && updatedAt?.toDate
+          ? updatedAt.toDate().toISOString()
+          : (updatedAt as string),
     };
   }
 
@@ -60,7 +75,7 @@ export class DirectChatsService {
       const db = this.firebaseService.getFirestore();
       const doc = await db.collection(this.collectionName).doc(id).get();
       if (!doc.exists) return null;
-      return DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id));
+      return this.toDirectChat(doc.data() as Record<string, unknown>, doc.id);
     } catch (error) {
       this.logger.error(`Error finding direct chat by id ${id}: ${error.message}`);
       throw error;
@@ -76,15 +91,11 @@ export class DirectChatsService {
       ]);
       const chats: DirectChat[] = [];
       creatorSnapshot.docs.forEach(doc => {
-        chats.push(
-          DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id)),
-        );
+        chats.push(this.toDirectChat(doc.data() as Record<string, unknown>, doc.id));
       });
       invitedSnapshot.docs.forEach(doc => {
         if (!chats.find(c => c.id === doc.id)) {
-          chats.push(
-            DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id)),
-          );
+          chats.push(this.toDirectChat(doc.data() as Record<string, unknown>, doc.id));
         }
       });
       return chats.sort(
@@ -105,7 +116,7 @@ export class DirectChatsService {
         .where('status', '==', 'pending')
         .get();
       return snapshot.docs.map(doc =>
-        DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id)),
+        this.toDirectChat(doc.data() as Record<string, unknown>, doc.id),
       );
     } catch (error) {
       this.logger.error(`Error finding pending direct chats for user ${userId}: ${error.message}`);
@@ -132,11 +143,11 @@ export class DirectChatsService {
       ]);
       if (!snapshot1.empty) {
         const doc = snapshot1.docs[0];
-        return DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id));
+        return this.toDirectChat(doc.data() as Record<string, unknown>, doc.id);
       }
       if (!snapshot2.empty) {
         const doc = snapshot2.docs[0];
-        return DirectChat.fromProps(this.toEntityProps(doc.data(), doc.id));
+        return this.toDirectChat(doc.data() as Record<string, unknown>, doc.id);
       }
       return null;
     } catch (error) {
@@ -150,7 +161,10 @@ export class DirectChatsService {
   private async save(chat: DirectChat): Promise<DirectChat> {
     try {
       const db = this.firebaseService.getFirestore();
-      await db.collection(this.collectionName).doc(chat.id).set(this.toPlainObject(chat));
+      await db
+        .collection(this.collectionName)
+        .doc(chat.id)
+        .set(toFirestoreData(chat as unknown as Record<string, unknown>));
       return chat;
     } catch (error) {
       this.logger.error(`Error saving direct chat: ${error.message}`);
@@ -161,7 +175,10 @@ export class DirectChatsService {
   private async update(chat: DirectChat): Promise<DirectChat> {
     try {
       const db = this.firebaseService.getFirestore();
-      await db.collection(this.collectionName).doc(chat.id).update(this.toPlainObject(chat));
+      await db
+        .collection(this.collectionName)
+        .doc(chat.id)
+        .update(toFirestoreData(chat as unknown as Record<string, unknown>));
       return chat;
     } catch (error) {
       this.logger.error(`Error updating direct chat: ${error.message}`);
@@ -205,10 +222,17 @@ export class DirectChatsService {
     if (existingChat) {
       throw new BadRequestException('A chat with this user already exists');
     }
-    const chat = DirectChat.create({
+    const now = new Date().toISOString();
+    const chat: DirectChat = {
+      id: randomUUID(),
       creatorId: userId,
       invitedUserId: dto.invitedUserId,
-    });
+      creatorConfirmed: true,
+      invitedConfirmed: false,
+      status: 'pending',
+      createdAt: now,
+      updatedAt: now,
+    };
     await this.save(chat);
     await this.updateUserDirectChatIds(userId, chat.id, 'add');
     await this.updateUserDirectChatIds(dto.invitedUserId, chat.id, 'add');
@@ -220,14 +244,14 @@ export class DirectChatsService {
     this.logger.debug(`Getting direct chats for user ${userId}`);
     const chats = await this.findByUserId(userId);
     const otherParticipantIds = chats
-      .map(chat => chat.getOtherParticipantId(userId))
+      .map(chat => this.getOtherParticipantId(chat, userId))
       .filter(Boolean) as string[];
     const userProfiles = await this.usersService.getUserProfilesByIds(otherParticipantIds);
     return chats.map(chat => {
-      const otherParticipantId = chat.getOtherParticipantId(userId);
+      const otherParticipantId = this.getOtherParticipantId(chat, userId);
       const otherParticipant = otherParticipantId ? userProfiles.get(otherParticipantId) : null;
       return {
-        ...chat.toJSON(),
+        ...chat,
         otherParticipantName: otherParticipant?.name,
         otherParticipantProfilePictureUrl: otherParticipant?.profilePictureUrl,
       };
@@ -242,7 +266,7 @@ export class DirectChatsService {
     return chats.map(chat => {
       const creator = userProfiles.get(chat.creatorId);
       return {
-        ...chat.toJSON(),
+        ...chat,
         otherParticipantName: creator?.name,
         otherParticipantProfilePictureUrl: creator?.profilePictureUrl,
       };
@@ -255,16 +279,16 @@ export class DirectChatsService {
     if (!chat) {
       throw new NotFoundException('Chat not found');
     }
-    if (!chat.isParticipant(userId)) {
+    if (!this.isParticipant(chat, userId)) {
       throw new ForbiddenException('You are not a participant of this chat');
     }
-    const otherParticipantId = chat.getOtherParticipantId(userId);
+    const otherParticipantId = this.getOtherParticipantId(chat, userId);
     let otherParticipant = null;
     if (otherParticipantId) {
       otherParticipant = await this.usersService.getUserProfile(otherParticipantId);
     }
     return {
-      ...chat.toJSON(),
+      ...chat,
       otherParticipantName: otherParticipant?.name,
       otherParticipantProfilePictureUrl: otherParticipant?.profilePictureUrl,
     };
@@ -282,7 +306,12 @@ export class DirectChatsService {
     if (chat.invitedConfirmed) {
       throw new BadRequestException('Chat is already confirmed');
     }
-    const confirmedChat = chat.confirm();
+    const confirmedChat: DirectChat = {
+      ...chat,
+      invitedConfirmed: true,
+      status: 'active',
+      updatedAt: new Date().toISOString(),
+    };
     await this.update(confirmedChat);
     return confirmedChat;
   }
@@ -293,7 +322,7 @@ export class DirectChatsService {
     if (!chat) {
       throw new NotFoundException('Chat not found');
     }
-    if (!chat.isParticipant(userId)) {
+    if (!this.isParticipant(chat, userId)) {
       throw new ForbiddenException('You are not a participant of this chat');
     }
     await this.directMessagesService.deleteAllMessagesByChatId(chatId);
@@ -305,13 +334,15 @@ export class DirectChatsService {
   async updateLastMessage(chatId: string, content: string, senderId: string): Promise<void> {
     const chat = await this.findById(chatId);
     if (!chat) return;
-    const updatedChat = chat.update({
+    const updatedChat: DirectChat = {
+      ...chat,
       lastMessage: {
         content,
         senderId,
         sentAt: new Date().toISOString(),
       },
-    });
+      updatedAt: new Date().toISOString(),
+    };
     await this.update(updatedChat);
   }
 
@@ -320,7 +351,7 @@ export class DirectChatsService {
     if (!chat) {
       throw new NotFoundException('Chat not found');
     }
-    if (!chat.isParticipant(userId)) {
+    if (!this.isParticipant(chat, userId)) {
       throw new ForbiddenException('You are not a participant of this chat');
     }
     return chat;

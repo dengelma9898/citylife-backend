@@ -1,10 +1,12 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
 import {
   AdventCalendarEntry,
-  AdventCalendarEntryProps,
-} from '../../domain/entities/advent-calendar-entry.entity';
+  addAdventCalendarParticipant,
+  addAdventCalendarWinner,
+} from '../../interfaces/advent-calendar-entry.interface';
 import { CreateAdventCalendarEntryDto } from '../../dto/create-advent-calendar-entry.dto';
 import { UpdateAdventCalendarEntryDto } from '../../dto/update-advent-calendar-entry.dto';
 
@@ -16,10 +18,7 @@ export class AdventCalendarService {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private toAdventCalendarEntryProps(
-    data: Record<string, unknown>,
-    id: string,
-  ): AdventCalendarEntryProps {
+  private toAdventCalendarEntry(data: Record<string, unknown>, id: string): AdventCalendarEntry {
     return {
       id,
       number: data.number as number,
@@ -41,9 +40,7 @@ export class AdventCalendarService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.entriesCollection).orderBy('number', 'asc').get();
     return snapshot.docs.map(doc =>
-      AdventCalendarEntry.fromProps(
-        this.toAdventCalendarEntryProps(doc.data() as Record<string, unknown>, doc.id),
-      ),
+      this.toAdventCalendarEntry(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -53,9 +50,7 @@ export class AdventCalendarService {
     if (!doc.exists) {
       return null;
     }
-    return AdventCalendarEntry.fromProps(
-      this.toAdventCalendarEntryProps(doc.data() as Record<string, unknown>, doc.id),
-    );
+    return this.toAdventCalendarEntry(doc.data() as Record<string, unknown>, doc.id);
   }
 
   private async findEntryByNumber(number: number): Promise<AdventCalendarEntry | null> {
@@ -68,9 +63,7 @@ export class AdventCalendarService {
       return null;
     }
     const doc = snapshot.docs[0];
-    return AdventCalendarEntry.fromProps(
-      this.toAdventCalendarEntryProps(doc.data() as Record<string, unknown>, doc.id),
-    );
+    return this.toAdventCalendarEntry(doc.data() as Record<string, unknown>, doc.id);
   }
 
   private async updateEntry(id: string, entry: AdventCalendarEntry): Promise<AdventCalendarEntry> {
@@ -80,12 +73,9 @@ export class AdventCalendarService {
     if (!doc.exists) {
       throw new NotFoundException('Advent calendar entry not found');
     }
-    await docRef.update(toFirestoreData(entry));
+    await docRef.update(toFirestoreData(entry as unknown as Record<string, unknown>));
     this.logger.log(`Updated advent calendar entry with id: ${id}`);
-    return AdventCalendarEntry.fromProps({
-      ...entry.toJSON(),
-      id,
-    });
+    return { ...entry, id };
   }
 
   public async getAll(): Promise<AdventCalendarEntry[]> {
@@ -104,14 +94,19 @@ export class AdventCalendarService {
 
   public async create(createDto: CreateAdventCalendarEntryDto): Promise<AdventCalendarEntry> {
     this.logger.log(`Creating advent calendar entry with number: ${createDto.number}`);
-    const entry = AdventCalendarEntry.create(createDto);
+    const now = new Date().toISOString();
+    const entry: AdventCalendarEntry = {
+      id: randomUUID(),
+      ...createDto,
+      participants: [],
+      winners: [],
+      createdAt: now,
+      updatedAt: now,
+    };
     const db = this.firebaseService.getFirestore();
-    const docRef = await db.collection(this.entriesCollection).add(toFirestoreData(entry));
+    const docRef = await db.collection(this.entriesCollection).add(toFirestoreData(entry as unknown as Record<string, unknown>));
     this.logger.log(`Created advent calendar entry with id: ${docRef.id}`);
-    return AdventCalendarEntry.fromProps({
-      ...entry.toJSON(),
-      id: docRef.id,
-    });
+    return { ...entry, id: docRef.id };
   }
 
   public async update(
@@ -129,7 +124,11 @@ export class AdventCalendarService {
         throw new BadRequestException(`Entry with number ${updateDto.number} already exists`);
       }
     }
-    const updatedEntry = existingEntry.update(updateDto);
+    const updatedEntry: AdventCalendarEntry = {
+      ...existingEntry,
+      ...updateDto,
+      updatedAt: new Date().toISOString(),
+    };
     return this.updateEntry(id, updatedEntry);
   }
 
@@ -166,7 +165,7 @@ export class AdventCalendarService {
         `Participation is only allowed on the entry date (${entry.date}), not on ${today}`,
       );
     }
-    const updatedEntry = entry.addParticipant(userId);
+    const updatedEntry = addAdventCalendarParticipant(entry, userId);
     return this.updateEntry(id, updatedEntry);
   }
 
@@ -182,7 +181,7 @@ export class AdventCalendarService {
     if (entry.winners.includes(userId)) {
       throw new BadRequestException('User is already a winner');
     }
-    const updatedEntry = entry.addWinner(userId);
+    const updatedEntry = addAdventCalendarWinner(entry, userId);
     return this.updateEntry(id, updatedEntry);
   }
 

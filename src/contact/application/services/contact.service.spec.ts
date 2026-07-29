@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ContactService } from './contact.service';
 import { UsersService } from '../../../users/users.service';
-import { ContactRequest, ContactRequestType } from '../../domain/entities/contact-request.entity';
-import { ContactMessage } from '../../domain/entities/contact-message.entity';
+import { ContactRequest, ContactRequestType } from '../../interfaces/contact-request.interface';
+import { ContactMessage } from '../../interfaces/contact-message.interface';
 import { UnauthorizedException } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { UserType } from '../../../users/enums/user-type.enum';
@@ -38,15 +38,41 @@ describe('ContactService', () => {
   };
 
   const contactRequestToFirestoreData = (request: ContactRequest): Record<string, unknown> => {
-    const { id, ...data } = request.toJSON();
+    const { id, ...data } = request;
     return data;
   };
 
-  const configureFindById = (request: ContactRequest | null): void => {
+  type ContactRequestMockInput = Omit<Partial<ContactRequest>, 'messages'> & {
+    messages?: Array<Partial<ContactMessage>>;
+  };
+
+  const createMockContactRequest = (overrides: ContactRequestMockInput = {}): ContactRequest => {
+    const { messages: overrideMessages, userId, ...rest } = overrides;
+    return {
+      id: 'fixed-id-123',
+      type: ContactRequestType.GENERAL,
+      userId: 'userId' in overrides ? userId : 'user123',
+      messages: (overrideMessages ?? []).map(message => ({
+        userId: 'user123',
+        message: 'Test message',
+        isAdminResponse: false,
+        createdAt: new Date().toISOString(),
+        ...message,
+      })),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      responded: false,
+      isProcessed: false,
+      ...rest,
+    };
+  };
+
+  const configureFindById = (request: ContactRequestMockInput | null): void => {
+    const fullRequest = request ? createMockContactRequest(request) : null;
     mockDoc.get.mockResolvedValue({
-      exists: request !== null,
-      id: request?.id ?? 'unknown',
-      data: () => (request ? contactRequestToFirestoreData(request) : undefined),
+      exists: fullRequest !== null,
+      id: fullRequest?.id ?? 'unknown',
+      data: () => (fullRequest ? contactRequestToFirestoreData(fullRequest) : undefined),
     });
   };
 
@@ -111,12 +137,12 @@ describe('ContactService', () => {
   describe('getById', () => {
     const mockUserId = 'user123';
     const mockRequestId = 'fixed-id-123';
-    const mockContactRequest = ContactRequest.fromProps({
+    const mockContactRequest = ({
       id: mockRequestId,
       type: ContactRequestType.GENERAL,
       userId: mockUserId,
       messages: [
-        ContactMessage.create({
+        ({
           message: 'Test message',
           userId: mockUserId,
           isAdminResponse: false,
@@ -165,11 +191,11 @@ describe('ContactService', () => {
     const mockUserId = 'user123';
     const mockRequestId = 'request123';
     const mockMessage = 'New message';
-    const mockContactRequest = ContactRequest.create({
+    const mockContactRequest = ({
       type: ContactRequestType.GENERAL,
       userId: mockUserId,
       messages: [
-        ContactMessage.create({
+        ({
           message: 'Old message',
           userId: mockUserId,
           isAdminResponse: false,
@@ -202,11 +228,11 @@ describe('ContactService', () => {
     const mockRequestId = 'request123';
     const mockAdminId = 'admin123';
     const mockUserId = 'user123';
-    const mockContactRequest = ContactRequest.create({
+    const mockContactRequest = ({
       type: ContactRequestType.GENERAL,
       userId: mockUserId,
       messages: [
-        ContactMessage.create({
+        ({
           message: 'User message',
           userId: mockUserId,
           isAdminResponse: false,
@@ -273,8 +299,8 @@ describe('ContactService', () => {
     });
 
     it('should not send notification if contact request was already responded', async () => {
-      const jsonData = mockContactRequest.toJSON();
-      const alreadyRespondedRequest = ContactRequest.fromProps({
+      const jsonData = mockContactRequest;
+      const alreadyRespondedRequest = ({
         ...jsonData,
         messages: mockContactRequest.messages,
         responded: true,
@@ -289,10 +315,11 @@ describe('ContactService', () => {
     });
 
     it('should not send notification if contact request has no userId', async () => {
-      const requestWithoutUserId = ContactRequest.create({
+      const requestWithoutUserId = ({
         type: ContactRequestType.GENERAL,
+        userId: undefined,
         messages: [
-          ContactMessage.create({
+          ({
             message: 'User message',
             userId: undefined,
             isAdminResponse: false,
@@ -325,11 +352,11 @@ describe('ContactService', () => {
     const mockRequestId = 'request123';
     const mockAdminId = 'admin123';
     const mockUserId = 'user123';
-    const mockContactRequest = ContactRequest.create({
+    const mockContactRequest = ({
       type: ContactRequestType.FEEDBACK,
       userId: mockUserId,
       messages: [
-        ContactMessage.create({
+        ({
           message: 'User message',
           userId: mockUserId,
           isAdminResponse: false,
@@ -393,12 +420,12 @@ describe('ContactService', () => {
     const mockBusinessUserId = 'business-user-123';
     const mockBusinessId = 'business123';
 
-    const mockBusinessClaimRequest = ContactRequest.create({
+    const mockBusinessClaimRequest = ({
       type: ContactRequestType.BUSINESS_CLAIM,
       userId: mockBusinessUserId,
       businessId: mockBusinessId,
       messages: [
-        ContactMessage.create({
+        ({
           message: 'Business claim request',
           userId: mockBusinessUserId,
           isAdminResponse: false,
@@ -406,12 +433,12 @@ describe('ContactService', () => {
       ],
     });
 
-    const mockBusinessRequest = ContactRequest.create({
+    const mockBusinessRequest = ({
       type: ContactRequestType.BUSINESS_REQUEST,
       userId: mockBusinessUserId,
       businessId: mockBusinessId,
       messages: [
-        ContactMessage.create({
+        ({
           message: 'Business request',
           userId: mockBusinessUserId,
           isAdminResponse: false,
@@ -479,11 +506,11 @@ describe('ContactService', () => {
     });
 
     it('should not send BUSINESS_CONTACT_REQUEST_RESPONSE notification for GENERAL/FEEDBACK requests', async () => {
-      const mockGeneralRequest = ContactRequest.create({
+      const mockGeneralRequest = ({
         type: ContactRequestType.GENERAL,
         userId: mockBusinessUserId,
         messages: [
-          ContactMessage.create({
+          ({
             message: 'General request',
             userId: mockBusinessUserId,
             isAdminResponse: false,
@@ -553,11 +580,11 @@ describe('ContactService', () => {
 
     it('should send CONTACT_REQUEST_RESPONSE to normal users for GENERAL/FEEDBACK requests', async () => {
       const mockNormalUserId = 'normal-user-123';
-      const mockGeneralRequest = ContactRequest.create({
+      const mockGeneralRequest = ({
         type: ContactRequestType.GENERAL,
         userId: mockNormalUserId,
         messages: [
-          ContactMessage.create({
+          ({
             message: 'General request',
             userId: mockNormalUserId,
             isAdminResponse: false,

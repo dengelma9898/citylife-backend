@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nürnbergspots Backend - Expert Audit & Security Analysis</title>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-primary: #38bdf8;
+      --accent-success: #22c55e;
+      --accent-warning: #f59e0b;
+      --accent-danger: #ef4444;
+      --accent-purple: #a855f7;
+      --border-color: #334155;
+      --code-bg: #090d16;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 30px 20px;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: var(--accent-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-critical { background: rgba(239, 68, 68, 0.2); color: var(--accent-danger); border: 1px solid var(--accent-danger); }
+    .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--accent-warning); border: 1px solid var(--accent-warning); }
+    .badge-success { background: rgba(34, 197, 94, 0.2); color: var(--accent-success); border: 1px solid var(--accent-success); }
+    .badge-info { background: rgba(56, 189, 248, 0.2); color: var(--accent-primary); border: 1px solid var(--accent-primary); }
+    .badge-purple { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); border: 1px solid var(--accent-purple); }
+    .badge-resolved { background: rgba(34, 197, 94, 0.15); color: #86efac; border: 1px solid #22c55e; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 35px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent-primary);
+    }
+
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-top: 5px;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 30px;
+      overflow-x: auto;
+      padding-bottom: 5px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 10px 18px;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: var(--bg-card-hover);
+    }
+
+    .tab-btn.active {
+      color: var(--accent-primary);
+      border-bottom: 3px solid var(--accent-primary);
+      background: var(--bg-card);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .finding-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 25px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .finding-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .finding-title {
+      font-size: 1.25rem;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    .finding-location {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: var(--accent-primary);
+      background: rgba(56, 189, 248, 0.1);
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-top: 5px;
+      display: inline-block;
+    }
+
+    .finding-desc {
+      color: var(--text-muted);
+      margin-bottom: 15px;
+    }
+
+    .code-box {
+      background: var(--code-bg);
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: "Fira Code", Monaco, Consolas, monospace;
+      font-size: 0.88rem;
+      overflow-x: auto;
+      margin-bottom: 15px;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+    }
+
+    .code-box .highlight-red { color: #f87171; font-weight: bold; }
+    .code-box .highlight-green { color: #4ade80; font-weight: bold; }
+
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: var(--bg-card);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .matrix-table th, .matrix-table td {
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .matrix-table th {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    .matrix-table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent-purple);
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>🛡️ Nürnbergspots Backend Audit & Analysis</h1>
+        <p style="color: var(--text-muted);">NestJS Expert Deep-Dive Architecture, Security, Edge-Features & ROI Review</p>
+      </div>
+      <div>
+        <span class="badge badge-info">NestJS v11</span>
+        <span class="badge badge-purple">Firebase Admin</span>
+        <span class="badge badge-success">Datum: Juli 2026</span>
+        <span class="badge badge-resolved">Update: 29.07.2026</span>
+      </div>
+    </header>
+
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Kritische Sicherheitslücken</div>
+        <div class="stat-number" style="color: var(--accent-success);">3 / 3 behoben</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Architektur / Best Practice</div>
+        <div class="stat-number" style="color: var(--accent-success);">3 / 4 behoben</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Gamechanger Features</div>
+        <div class="stat-number" style="color: var(--accent-purple);">5 Potenziale</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Gesamtsicherheits-Rating</div>
+        <div class="stat-number" style="color: var(--accent-success);">A- (Hardened)</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="openTab(event, 'security')">🔒 Sicherheit & Hardening</button>
+      <button class="tab-btn" onclick="openTab(event, 'architecture')">🏗️ NestJS Architektur & Best Practices</button>
+      <button class="tab-btn" onclick="openTab(event, 'gamechangers')">🚀 Gamechanger Features (Edge Thinking)</button>
+      <button class="tab-btn" onclick="openTab(event, 'roi')">📊 Aufwand, Komplexität & Gewinn (ROI)</button>
+    </div>
+
+    <!-- TAB 1: SECURITY -->
+    <div id="security" class="tab-content active">
+      <h2 style="margin-bottom: 20px;">Sicherheitsanalyse & Hardening-Anforderungen</h2>
+
+      <!-- Finding 1 -->
+      <div class="finding-card">
+        <div class="finding-header">
+          <div>
+            <div class="finding-title">1. Bypassing der Benutzer-Eigentümerschaft (ID-Spoofing / Broken Object Level Authorization)</div>
+            <div class="finding-location">src/users/users.controller.ts</div>
+          </div>
+          <span class="badge badge-resolved">GELÖST</span>
+        </div>
+        <div class="finding-desc">
+          <strong>Status (29.07.2026):</strong> Behoben via <code>verifyUserOwnershipOrSuperAdmin()</code> in
+          <code>src/users/users.controller.ts</code>. Alle mutierenden User-Endpunkte prüfen jetzt
+          <code>req.user.uid === :id</code> oder <code>super_admin</code>-Rolle.
+          <br><br>
+          Mehrere Endpunkte in <code>UsersController</code> (z.B. <code>PATCH /users/:id/profile</code>, <code>DELETE /users/:id/profile</code>, <code>POST /users/:id/profile/picture</code>, <code>POST /users/:id/blocked-users</code>) prüfen <strong>nicht</strong>, ob die ID in der URL mit der ID des authentifizierten Benutzers (<code>req.user.uid</code> aus dem Firebase-JWT) übereinstimmt!
+          Jeder authentifizierte Benutzer (auch ein anonymer App-Benutzer) kann die ID eines fremden Benutzers senden und dessen Profil, Profilbild oder Sperrliste ändern oder löschen.
+        </div>
+        <div class="code-box"><span class="highlight-red">// VULNERABLE (Aktuell):</span>
+@Patch(':id/profile')
+public async updateProfile(@Param('id') id: string, @Body() dto: Partial<UserProfileDto>) {
+  return this.usersService.update(id, dto); // Keine Prüfung ob req.user.uid === id!
+}
+
+<span class="highlight-green">// GEHÄRTET (Empfehlung):</span>
+@Patch(':id/profile')
+@UseGuards(AuthGuard)
+public async updateProfile(@Request() req: any, @Param('id') id: string, @Body() dto: Partial<UserProfileDto>) {
+  if (req.user.uid !== id && req.user.userType !== 'super_admin') {
+    throw new UnauthorizedException('Sie dürfen nur Ihr eigenes Profil bearbeiten');
+  }
+  return this.usersService.update(id, dto);
+}</div>
+      </div>
+
+      <!-- Finding 2 -->
+      <div class="finding-card">
+        <div class="finding-header">
+          <div>
+            <div class="finding-title">2. Vertrauen in URL-Pfad-Parameter für Rollenprüfungen</div>
+            <div class="finding-location">src/users/users.controller.ts (Zeile 300)</div>
+          </div>
+          <span class="badge badge-resolved">GELÖST</span>
+        </div>
+        <div class="finding-desc">
+          <strong>Status (29.07.2026):</strong> Behoben via <code>@UseGuards(RolesGuard)</code> und
+          <code>@Roles('super_admin')</code> auf <code>GET /users/:userId/business-users</code>.
+          Autorisierung basiert jetzt auf dem JWT, nicht auf URL-Parametern.
+          <br><br>
+          Der Endpunkt <code>getAllBusinessUsers(@Param('userId') userId: string)</code> prüft die Autorisierung, indem er das Profil des übergebenen <code>userId</code> aus der Datenbank lädt. Wenn ein Angreifer eine bekannte Super-Admin-ID in die URL einfügt, lädt das Backend das Super-Admin-Profil, sieht <code>userType === SUPER_ADMIN</code> und gewährt dem Angreifer Zugriff auf alle Business-User-Daten!
+        </div>
+        <div class="code-box"><span class="highlight-red">// VULNERABLE (Aktuell):</span>
+public async getAllBusinessUsers(@Param('userId') userId: string) {
+  const requestingUser = await this.usersService.getUserProfile(userId); // Liest ID aus URL!
+  if (!requestingUser || requestingUser.userType !== UserType.SUPER_ADMIN) {
+    throw new UnauthorizedException('...');
+  }
+  return this.usersService.getAllBusinessUsers();
+}
+
+<span class="highlight-green">// GEHÄRTET (Empfehlung):</span>
+@Get('business-users/all')
+@UseGuards(RolesGuard)
+@Roles('super_admin')
+public async getAllBusinessUsers() {
+  return this.usersService.getAllBusinessUsers(); // Nutzt req.user aus vertrauenswürdigem JWT Token!
+}</div>
+      </div>
+
+      <!-- Finding 3 -->
+      <div class="finding-card">
+        <div class="finding-header">
+          <div>
+            <div class="finding-title">3. Ungeschützte Schreib- und Löschoperationen in BusinessesController</div>
+            <div class="finding-location">src/businesses/application/controllers/businesses.controller.ts</div>
+          </div>
+          <span class="badge badge-resolved">GELÖST</span>
+        </div>
+        <div class="finding-desc">
+          <strong>Status (29.07.2026):</strong> Behoben via <code>@UseGuards(RolesGuard)</code>,
+          <code>@Roles('business_user', 'super_admin')</code> und <code>verifyBusinessAccessOrSuperAdmin()</code>
+          in <code>src/businesses/application/controllers/businesses.controller.ts</code>.
+          <br><br>
+          In <code>BusinessesController</code> fehlen bei Mutation-Endpunkten (<code>POST /businesses</code>, <code>PATCH /businesses/:id</code>, <code>POST /businesses/:id/logo</code>, <code>POST /businesses/:id/images</code>, <code>DELETE /businesses/:id/images</code>) die <code>@UseGuards(RolesGuard)</code> und <code>@Roles(...)</code>-Dekoratoren. Da der globale <code>AuthGuard</code> alle Anfragen durchlässt, die *irgendein* valides Firebase-Token besitzen, kann jeder App-User beliebig Partner-Profile, Logos und Bilder verändern oder löschen.
+        </div>
+      </div>
+
+      <!-- Finding 4 -->
+      <div class="finding-card">
+        <div class="finding-header">
+          <div>
+            <div class="finding-title">4. Mass Assignment Risiko durch fehlende ValidationPipe-Optionen</div>
+            <div class="finding-location">src/main.ts (Zeile 92)</div>
+          </div>
+          <span class="badge badge-resolved">GELÖST</span>
+        </div>
+        <div class="finding-desc">
+          <strong>Status (29.07.2026):</strong> Behoben in <code>src/main.ts</code> mit
+          <code>whitelist: true</code>, <code>forbidNonWhitelisted: true</code> und <code>transform: true</code>.
+          <br><br>
+          Der globale <code>ValidationPipe</code> wird in <code>main.ts</code> via <code>app.useGlobalPipes(new ValidationPipe())</code> ohne Konfigurationsoptionen registriert. Dadurch werden nicht in den DTOs definierte Eigenschaften im Request-Body <strong>nicht</strong> herausgefiltert und direkt an Services/Firestore weitergereicht (Mass Assignment Vulnerability).
+        </div>
+        <div class="code-box"><span class="highlight-green">// Empfohlene Härtung in src/main.ts:</span>
+app.useGlobalPipes(new ValidationPipe({
+  whitelist: true,            // Filtert nicht im DTO definierte Feldeigenschaften automatisch heraus
+  forbidNonWhitelisted: true, // Wirft Fehler bei unbekannten Feldern
+  transform: true,            // Konvertiert Payloads automatisch in DTO-Instanzen & Typen
+}));</div>
+      </div>
+
+      <!-- Finding 5 -->
+      <div class="finding-card">
+        <div class="finding-header">
+          <div>
+            <div class="finding-title">5. Pfad-Extraktionsfehler in FirebaseStorageService.deleteFile()</div>
+            <div class="finding-location">src/firebase/firebase-storage.service.ts (Zeile 66)</div>
+          </div>
+          <span class="badge badge-resolved">GELÖST</span>
+        </div>
+        <div class="finding-desc">
+          <strong>Status (29.07.2026):</strong> Behoben in <code>src/firebase/firebase-storage.service.ts</code>.
+          Pfad-Extraktion nutzt jetzt <code>urlParts.slice(domainIndex + 2)</code> statt <code>+ 1</code>,
+          sodass der Bucket-Name nicht mehr im Pfad enthalten ist. Tests in <code>firebase-storage.service.spec.ts</code>.
+          <br><br>
+          Beim Löschen von Dateien aus Google Storage URLs wird der Pfad mit <code>urlParts.slice(bucketIndex + 1)</code> extrahiert. Bei Standard-Storage-URLs bleibt dadurch der Bucket-Name im Pfad enthalten (z.B. <code>bucket-name/images/logo.png</code>), wodurch der Löschbefehl im Bucket nach einem Ordner mit dem Namen des Buckets sucht und fehlschlägt.
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: ARCHITECTURE -->
+    <div id="architecture" class="tab-content">
+      <h2 style="margin-bottom: 20px;">NestJS Architektur & Best Practice Optimierungen</h2>
+
+      <div class="finding-card">
+        <div class="finding-header">
+          <div>
+            <div class="finding-title">1. Unvollständige Exception Filter Abdeckung (@Catch Scope)</div>
+            <div class="finding-location">src/core/filters/http-exception.filter.ts</div>
+          </div>
+          <span class="badge badge-resolved">GELÖST</span>
+        </div>
+        <div class="finding-desc">
+          <strong>Status (29.07.2026):</strong> Behoben in <code>src/core/filters/http-exception.filter.ts</code>.
+          Filter nutzt jetzt <code>@Catch()</code> ohne Typ-Einschränkung und fängt alle Exceptions ab.
+          Unerwartete 500er-Fehler werden geloggt, Stack-Traces nicht an Clients geleakt.
+          Tests in <code>http-exception.filter.spec.ts</code>.
+          <br><br>
+          <code>HttpExceptionFilter</code> ist mit <code>@Catch(HttpException)</code> annotiert. Unerwartete Runtime-Fehler (z.B. <code>TypeError</code>, NullPointer, Datenbank-Verbindungsabbruch) erben nicht von <code>HttpException</code>. Sie fallen auf den Standard-Express-Error-Handler zurück, was zu uneinheitlichen HTML-Fehlerantworten, fehlendem strukturieren Logger-Output und potentiellem Stack-Trace-Leakage führen kann.
+        </div>
+        <div class="code-box"><span class="highlight-green">// Empfohlene Lösung: All-Exceptions Filter</span>
+@Catch() // Fängt ALLE Fehler ab
+export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const status = exception instanceof HttpException 
+      ? exception.getStatus() 
+      : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    if (status === 500) {
+      this.logger.error('Unhandled Internal Server Error', exception);
+    }
+
+    response.status(status).json({
+      statusCode: status,
+      timestamp: DateTimeUtils.getBerlinTime(),
+      message: status === 500 ? 'Internal server error' : (exception as any).message,
+    });
+  }
+}</div>
+      </div>
+
+      <div class="finding-card">
+        <div class="finding-header">
+          <div>
+            <div class="finding-title">2. In-Memory Cache Isolation & Multi-Replika Skalierung</div>
+            <div class="finding-location">src/core/cache/cache.config.ts & AppModule</div>
+          </div>
+          <span class="badge badge-info">INFO</span>
+        </div>
+        <div class="finding-desc">
+          Das Caching nutzt aktuell einen In-Memory LRU-Cache pro Node.js-Prozess/Docker-Container. Wenn das Backend auf dem VPS mit mehreren Repliken/Instanzen skaliert wird, entsteht ein Split-Brain-Cache (Änderungen in Container A sind in Container B nicht bekannt). Gemäß <code>docs/configuration-values.md</code> ist die Migration zu Redis als verteiltem Cache vorbereitet und sollte bei Mehrinstanzen-Betrieb aktiviert werden.
+        </div>
+      </div>
+
+      <div class="finding-card">
+        <div class="finding-header">
+          <div>
+            <div class="finding-title">3. Entkopplung veralteter Transformationslogik in Controllern</div>
+            <div class="finding-location">src/businesses/application/controllers/businesses.controller.ts</div>
+          </div>
+          <span class="badge badge-resolved">GELÖST</span>
+        </div>
+        <div class="finding-desc">
+          <strong>Status (29.07.2026):</strong> Behoben via <code>OpeningHoursMapper</code> in
+          <code>src/businesses/application/mappers/opening-hours.mapper.ts</code>.
+          Legacy-Transformation und Merge-Logik aus dem Controller ausgelagert.
+          Tests in <code>opening-hours.mapper.spec.ts</code>.
+          <br><br>
+          Deprecated Endpunkte wie <code>PATCH /businesses/:id/opening-hours</code> enthalten mehr als 50 Zeilen komplexe Mapping- und Transformationslogik direkt im Controller. Gemäß NestJS Single Responsibility Principle sollten Controller schlank bleiben und Transformationslogik in dedizierte Utility-Funktionen oder Custom Pipes ausgelagert werden.
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: GAMECHANGER FEATURES -->
+    <div id="gamechangers" class="tab-content">
+      <h2 style="margin-bottom: 20px;">Edge-Thinking: Potentielle Gamechanger Features</h2>
+
+      <div class="grid-2">
+        <div class="feature-card">
+          <span class="badge badge-purple" style="margin-bottom: 10px;">ECHTZEIT & UX</span>
+          <h3>1. WebSockets / Socket.io Gateway (@nestjs/websockets)</h3>
+          <p style="color: var(--text-muted); margin-top: 8px;">
+            Aktuell nutzen Direct Chats und Chatrooms HTTP-Polling oder reine Push-Notifications. Ein WebSocket Gateway ermöglicht instant Messaging, Tipp-Indikatoren ("schreibt gerade..."), Gelesen-Bestätigungen und Live-Anwesenheitsstatus.
+          </p>
+          <div style="margin-top: 12px; font-size: 0.85rem; color: var(--accent-primary);">
+            🚀 Gewinn: Massiver Rückgang von HTTP-Request-Load, echte Chat-App Experience.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <span class="badge badge-purple" style="margin-bottom: 10px;">ARCHITEKTUR</span>
+          <h3>2. Event-Driven Architecture (@nestjs/event-emitter)</h3>
+          <p style="color: var(--text-muted); margin-top: 8px;">
+            Entkopplung von Seiteneffekten: Wenn ein Event oder Business erstellt wird, löst <code>this.eventEmitter.emit('business.created', business)</code> aus. Entkoppelte Listener übernehmen Push-Notifications, Statistiken und Cache-Invalidierung.
+          </p>
+          <div style="margin-top: 12px; font-size: 0.85rem; color: var(--accent-primary);">
+            🚀 Gewinn: Maximale Wartbarkeit, einfache Erweiterbarkeit & sauberes Testing.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <span class="badge badge-purple" style="margin-bottom: 10px;">MOBILE PERFORMANCE</span>
+          <h3>3. Aggregierter App-Bootstrap Endpunkt (GET /bootstrap)</h3>
+          <p style="color: var(--text-muted); margin-top: 8px;">
+            Die Flutter-App führt beim Kaltstart 6–8 parallele Anfragen aus (Settings, Kategorien, Keywords, App-Version, Downtime, User-Profile). Ein einziger <code>GET /bootstrap</code> Endpunkt Bündelt diese Daten gecacht in einer Antwort.
+          </p>
+          <div style="margin-top: 12px; font-size: 0.85rem; color: var(--accent-primary);">
+            🚀 Gewinn: Bis zu 70% schnellerer Flutter Cold-Start & reduzierte Mobilfunk-Latenz.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <span class="badge badge-purple" style="margin-bottom: 10px;">COMPLIANCE & GOVERNANCE</span>
+          <h3>4. Admin Security Audit Trail Subsystem</h3>
+          <p style="color: var(--text-muted); margin-top: 8px;">
+            Ein unmanipulierbarer Audit-Log für kritische Admin-Aktionen (Benutzer sperren, Partner löschen, Feature-Flags schalten, App-Versionen freigeben) mit Erfassung von Admin-ID, IP, Zeitstempel und Vorher/Nachher-Differenz.
+          </p>
+          <div style="margin-top: 12px; font-size: 0.85rem; color: var(--accent-primary);">
+            🚀 Gewinn: Nachvollziehbarkeit, Datenschutz-Compliance & Sicherheit bei Team-Wachstum.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: ROI & EFFORT -->
+    <div id="roi" class="tab-content">
+      <h2 style="margin-bottom: 20px;">Aufwand, Komplexität & Nutzen Matrix (ROI Analysis)</h2>
+
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th>Maßnahme / Feature</th>
+            <th>Kategorie</th>
+            <th>Komplexität</th>
+            <th>Geschätzter Aufwand</th>
+            <th>Gewinn & Nutzen (ROI)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Sicherheits-Härtung (Eigentümerschafts-Prüfungen & RolesGuard)</strong> <span class="badge badge-resolved">GELÖST</span></td>
+            <td><span class="badge badge-critical">Sicherheit</span></td>
+            <td>Niedrig</td>
+            <td>~ 0.5 - 1 Tag</td>
+            <td><strong style="color: var(--accent-success);">Extrem Hoch</strong> – Schließt kritische Datenleck- & Manipulations-Sicherheitslücken.</td>
+          </tr>
+          <tr>
+            <td><strong>ValidationPipe Härtung (whitelist: true)</strong> <span class="badge badge-resolved">GELÖST</span></td>
+            <td><span class="badge badge-warning">Sicherheit</span></td>
+            <td>Sehr Niedrig</td>
+            <td>~ 1 Stunde</td>
+            <td><strong style="color: var(--accent-success);">Sehr Hoch</strong> – Schutz vor Mass Assignment & unexpected Injection Fields.</td>
+          </tr>
+          <tr>
+            <td><strong>Catch-All ExceptionFilter (AllExceptionsFilter)</strong> <span class="badge badge-resolved">GELÖST</span></td>
+            <td><span class="badge badge-info">Architektur</span></td>
+            <td>Niedrig</td>
+            <td>~ 2 Stunden</td>
+            <td><strong style="color: var(--accent-success);">Hoch</strong> – Sauberes Error-Logging & Verhindern von Stack-Trace Leaks bei 500er Fehlern.</td>
+          </tr>
+          <tr>
+            <td><strong>GET /bootstrap Endpunkt für Flutter App</strong></td>
+            <td><span class="badge badge-purple">Performance</span></td>
+            <td>Niedrig</td>
+            <td>~ 0.5 Tage</td>
+            <td><strong style="color: var(--accent-primary);">Hoch</strong> – Drastisch schnellerer App-Start & weniger Netzwerk-Roundtrips.</td>
+          </tr>
+          <tr>
+            <td><strong>Event-Driven Entkopplung (@nestjs/event-emitter)</strong></td>
+            <td><span class="badge badge-purple">Architektur</span></td>
+            <td>Mittel</td>
+            <td>~ 1 - 2 Tage</td>
+            <td><strong style="color: var(--accent-primary);">Hoch</strong> – Schlanke Services, keine zirkulären Abhängigkeiten bei Push-Notifications.</td>
+          </tr>
+          <tr>
+            <td><strong>WebSocket Gateway für Direct Chat & Chatrooms</strong></td>
+            <td><span class="badge badge-purple">Feature</span></td>
+            <td>Hoch</td>
+            <td>~ 3 - 5 Tage</td>
+            <td><strong style="color: var(--accent-primary);">Mittel - Hoch</strong> – Echtes Live-Chat-Erlebnis, Tipp-Indikatoren & weniger Polling.</td>
+          </tr>
+          <tr>
+            <td><strong>Redis Shared Caching & Rate-Limiting Storage</strong></td>
+            <td><span class="badge badge-info">Infrastruktur</span></td>
+            <td>Mittel</td>
+            <td>~ 1 Tag</td>
+            <td><strong style="color: var(--text-muted);">Mittel</strong> – Zukunftsfähigkeit bei Skalierung auf mehrere Backend-Repliken.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer>
+      <p>Erstellt durch NestJS Expert Subagent · Nürnbergspots Backend Codebase Audit 2026</p>
+      <p style="margin-top: 8px;">Letztes Update: 29.07.2026 – 6 von 7 technischen Findings behoben (1 dokumentierte Zukunftsoption: Redis Shared Cache)</p>
+    </footer>
+  </div>
+
+  <script>
+    function openTab(evt, tabName) {
+      const tabcontents = document.getElementsByClassName("tab-content");
+      for (let i = 0; i < tabcontents.length; i++) {
+        tabcontents[i].classList.remove("active");
+      }
+      const tablinks = document.getElementsByClassName("tab-btn");
+      for (let i = 0; i < tablinks.length; i++) {
+        tablinks[i].classList.remove("active");
+      }
+      document.getElementById(tabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+    }
+  </script>
+</body>
+</html>

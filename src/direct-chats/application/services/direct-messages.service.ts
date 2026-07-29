@@ -8,13 +8,11 @@ import {
   forwardRef,
   Scope,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import {
-  DirectMessage,
-  DirectMessageProps,
-  Reaction,
-} from '../../domain/entities/direct-message.entity';
+import { DirectMessage, Reaction } from '../../interfaces/direct-message.interface';
+import { DirectChat } from '../../interfaces/direct-chat.interface';
 import { DirectChatsService } from './direct-chats.service';
 import { CreateDirectMessageDto } from '../dtos/create-direct-message.dto';
 import { UpdateDirectMessageDto } from '../dtos/update-direct-message.dto';
@@ -36,25 +34,40 @@ export class DirectMessagesService {
     private readonly usersService: UsersService,
   ) {}
 
-  private toPlainObject(entity: DirectMessage): Omit<DirectMessageProps, 'id'> {
-    return toFirestoreData(entity);
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private toEntityProps(data: any, id: string): DirectMessageProps {
+  private toDirectMessage(data: Record<string, unknown>, id: string): DirectMessage {
+    const createdAt = data.createdAt as { toDate?: () => Date } | string | undefined;
+    const updatedAt = data.updatedAt as { toDate?: () => Date } | string | undefined;
+    const editedAt = data.editedAt as { toDate?: () => Date } | string | undefined;
     return {
       id,
-      chatId: data.chatId,
-      senderId: data.senderId,
-      senderName: data.senderName,
-      content: data.content,
-      imageUrl: data.imageUrl,
-      isEditable: data.isEditable || false,
-      reactions: data.reactions,
-      createdAt: data.createdAt?.toDate?.() || data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-      editedAt: data.editedAt?.toDate?.() || data.editedAt,
+      chatId: data.chatId as string,
+      senderId: data.senderId as string,
+      senderName: data.senderName as string,
+      content: data.content as string,
+      imageUrl: data.imageUrl as string | undefined,
+      isEditable: (data.isEditable as boolean) || false,
+      reactions: data.reactions as Reaction[] | undefined,
+      createdAt:
+        typeof createdAt === 'object' && createdAt?.toDate
+          ? createdAt.toDate().toISOString()
+          : (createdAt as string),
+      updatedAt:
+        typeof updatedAt === 'object' && updatedAt?.toDate
+          ? updatedAt.toDate().toISOString()
+          : (updatedAt as string),
+      editedAt:
+        editedAt === undefined
+          ? undefined
+          : typeof editedAt === 'object' && editedAt?.toDate
+            ? editedAt.toDate().toISOString()
+            : (editedAt as string),
     };
+  }
+
+  private getOtherParticipantId(chat: DirectChat, userId: string): string | null {
+    if (chat.creatorId === userId) return chat.invitedUserId;
+    if (chat.invitedUserId === userId) return chat.creatorId;
+    return null;
   }
 
   private getMessagesCollection(chatId: string) {
@@ -69,7 +82,7 @@ export class DirectMessagesService {
     try {
       const doc = await this.getMessagesCollection(chatId).doc(messageId).get();
       if (!doc.exists) return null;
-      return DirectMessage.fromProps(this.toEntityProps(doc.data(), doc.id));
+      return this.toDirectMessage(doc.data() as Record<string, unknown>, doc.id);
     } catch (error) {
       this.logger.error(`Error finding message ${messageId} in chat ${chatId}: ${error.message}`);
       throw error;
@@ -80,7 +93,7 @@ export class DirectMessagesService {
     try {
       const snapshot = await this.getMessagesCollection(chatId).orderBy('createdAt', 'asc').get();
       return snapshot.docs.map(doc =>
-        DirectMessage.fromProps(this.toEntityProps(doc.data(), doc.id)),
+        this.toDirectMessage(doc.data() as Record<string, unknown>, doc.id),
       );
     } catch (error) {
       this.logger.error(`Error finding messages for chat ${chatId}: ${error.message}`);
@@ -92,7 +105,7 @@ export class DirectMessagesService {
     try {
       await this.getMessagesCollection(message.chatId)
         .doc(message.id)
-        .set(this.toPlainObject(message));
+        .set(toFirestoreData(message as unknown as Record<string, unknown>));
       return message;
     } catch (error) {
       this.logger.error(`Error saving message: ${error.message}`);
@@ -104,7 +117,7 @@ export class DirectMessagesService {
     try {
       await this.getMessagesCollection(message.chatId)
         .doc(message.id)
-        .update(this.toPlainObject(message));
+        .update(toFirestoreData(message as unknown as Record<string, unknown>));
       return message;
     } catch (error) {
       this.logger.error(`Error updating message: ${error.message}`);
@@ -151,16 +164,21 @@ export class DirectMessagesService {
     if (chat.status !== 'active') {
       throw new BadRequestException('Cannot send messages in a pending chat');
     }
-    const message = DirectMessage.create({
+    const now = new Date().toISOString();
+    const message: DirectMessage = {
+      id: randomUUID(),
       chatId,
       senderId: userId,
       senderName: userName,
       content: dto.content,
       imageUrl: dto.imageUrl,
-    });
+      isEditable: false,
+      createdAt: now,
+      updatedAt: now,
+    };
     await this.save(message);
     await this.directChatsService.updateLastMessage(chatId, dto.content, userId);
-    const recipientId = chat.getOtherParticipantId(userId);
+    const recipientId = this.getOtherParticipantId(chat, userId);
     if (recipientId) {
       await this.sendMessageNotification(
         recipientId,
@@ -182,7 +200,7 @@ export class DirectMessagesService {
     chatId: string,
     messageId: string,
     senderId: string,
-    chat: any,
+    chat: DirectChat,
   ): Promise<void> {
     try {
       const recipientProfile = await this.usersService.getUserProfile(recipientId);
@@ -220,12 +238,12 @@ export class DirectMessagesService {
     }
   }
 
-  async getMessages(userId: string, chatId: string): Promise<DirectMessageProps[]> {
+  async getMessages(userId: string, chatId: string): Promise<DirectMessage[]> {
     this.logger.debug(`Getting messages for chat ${chatId}`);
     await this.directChatsService.validateChatAccess(userId, chatId);
     const messages = await this.findByChatId(chatId);
     return messages.map(message => ({
-      ...message.toJSON(),
+      ...message,
       isEditable: message.senderId === userId,
     }));
   }
@@ -242,13 +260,16 @@ export class DirectMessagesService {
     if (!message) {
       throw new NotFoundException('Message not found');
     }
-    if (!message.isOwnedBy(userId)) {
+    if (message.senderId !== userId) {
       throw new ForbiddenException('You can only edit your own messages');
     }
-    const updatedMessage = message.update({
+    const updatedMessage: DirectMessage = {
+      ...message,
       content: dto.content,
       imageUrl: dto.imageUrl,
-    });
+      editedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
     await this.update(updatedMessage);
     return updatedMessage;
   }
@@ -260,7 +281,7 @@ export class DirectMessagesService {
     if (!message) {
       throw new NotFoundException('Message not found');
     }
-    if (!message.isOwnedBy(userId)) {
+    if (message.senderId !== userId) {
       throw new ForbiddenException('You can only delete your own messages');
     }
     await this.delete(chatId, messageId);
@@ -295,7 +316,11 @@ export class DirectMessagesService {
         updatedReactions = [...reactions, { userId, type: dto.type }];
       }
     }
-    const updatedMessage = message.update({ reactions: updatedReactions });
+    const updatedMessage: DirectMessage = {
+      ...message,
+      reactions: updatedReactions,
+      updatedAt: new Date().toISOString(),
+    };
     await this.update(updatedMessage);
     return updatedMessage;
   }

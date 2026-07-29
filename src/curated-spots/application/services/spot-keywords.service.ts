@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import { SpotKeyword } from '../../domain/entities/spot-keyword.entity';
+import { SpotKeyword, normalizeSpotKeywordNameLower } from '../../interfaces/spot-keyword.interface';
 import { CreateSpotKeywordDto } from '../../dto/create-spot-keyword.dto';
 
 @Injectable()
@@ -25,19 +26,24 @@ export class SpotKeywordsService {
     if (!doc.exists) {
       return null;
     }
-    return SpotKeyword.fromProps(
-      this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id),
-    );
+    return this.toSpotKeyword((doc.data() ?? {}) as Record<string, unknown>, doc.id);
   }
 
   public async create(dto: CreateSpotKeywordDto): Promise<SpotKeyword> {
-    const nameLower = SpotKeyword.normalizeNameLower(dto.name);
+    const nameLower = normalizeSpotKeywordNameLower(dto.name);
     const existing = await this.findByNameLower(nameLower);
     if (existing) {
       this.logger.debug(`Spot keyword already exists: ${existing.id}`);
       return existing;
     }
-    const keyword = SpotKeyword.create({ name: dto.name });
+    const now = new Date().toISOString();
+    const keyword: SpotKeyword = {
+      id: randomUUID(),
+      name: dto.name.trim(),
+      nameLower,
+      createdAt: now,
+      updatedAt: now,
+    };
     return this.createKeyword(keyword);
   }
 
@@ -51,10 +57,17 @@ export class SpotKeywordsService {
       if (trimmed.length === 0) {
         continue;
       }
-      const nameLower = SpotKeyword.normalizeNameLower(trimmed);
+      const nameLower = normalizeSpotKeywordNameLower(trimmed);
       let keyword = await this.findByNameLower(nameLower);
       if (!keyword) {
-        keyword = await this.createKeyword(SpotKeyword.create({ name: trimmed }));
+        const now = new Date().toISOString();
+        keyword = await this.createKeyword({
+          id: randomUUID(),
+          name: trimmed,
+          nameLower,
+          createdAt: now,
+          updatedAt: now,
+        });
       }
       if (!ids.includes(keyword.id)) {
         ids.push(keyword.id);
@@ -63,11 +76,7 @@ export class SpotKeywordsService {
     return ids;
   }
 
-  private toPlainObject(entity: SpotKeyword): Omit<ReturnType<SpotKeyword['toJSON']>, 'id'> {
-    return toFirestoreData(entity);
-  }
-
-  private toProps(data: Record<string, unknown>, id: string): ReturnType<SpotKeyword['toJSON']> {
+  private toSpotKeyword(data: Record<string, unknown>, id: string): SpotKeyword {
     return {
       id,
       name: String(data.name ?? ''),
@@ -88,9 +97,7 @@ export class SpotKeywordsService {
       return null;
     }
     const doc = snapshot.docs[0];
-    return SpotKeyword.fromProps(
-      this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id),
-    );
+    return this.toSpotKeyword((doc.data() ?? {}) as Record<string, unknown>, doc.id);
   }
 
   private async suggestByNameLowerPrefix(prefix: string, limit: number): Promise<SpotKeyword[]> {
@@ -107,17 +114,16 @@ export class SpotKeywordsService {
       .limit(limit)
       .get();
     return snapshot.docs.map(doc =>
-      SpotKeyword.fromProps(this.toProps((doc.data() ?? {}) as Record<string, unknown>, doc.id)),
+      this.toSpotKeyword((doc.data() ?? {}) as Record<string, unknown>, doc.id),
     );
   }
 
   private async createKeyword(keyword: SpotKeyword): Promise<SpotKeyword> {
     const db = this.firebaseService.getFirestore();
-    const docRef = await db.collection(this.collection).add(this.toPlainObject(keyword));
+    const docRef = await db
+      .collection(this.collection)
+      .add(toFirestoreData(keyword as unknown as Record<string, unknown>));
     this.logger.log(`Created spot keyword with id: ${docRef.id}`);
-    return SpotKeyword.fromProps({
-      ...keyword.toJSON(),
-      id: docRef.id,
-    });
+    return { ...keyword, id: docRef.id };
   }
 }

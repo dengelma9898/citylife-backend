@@ -3,7 +3,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { CuratedSpotsService } from './curated-spots.service';
 import { SpotKeywordsService } from './spot-keywords.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { CuratedSpot } from '../../domain/entities/curated-spot.entity';
+import { CuratedSpot } from '../../interfaces/curated-spot.interface';
 import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
 import { UpdateCuratedSpotDto } from '../../dto/update-curated-spot.dto';
 
@@ -25,7 +25,7 @@ describe('CuratedSpotsService', () => {
     longitude: 11.08,
   };
 
-  const activeSpotA = CuratedSpot.fromProps({
+  const activeSpotA = ({
     id: 's1',
     name: 'Alpha Cafe',
     nameLower: 'alpha cafe',
@@ -42,7 +42,7 @@ describe('CuratedSpotsService', () => {
     createdByUserId: null,
   });
 
-  const activeSpotB = CuratedSpot.fromProps({
+  const activeSpotB = ({
     id: 's2',
     name: 'Alpha Bar',
     nameLower: 'alpha bar',
@@ -100,7 +100,7 @@ describe('CuratedSpotsService', () => {
         'user-1',
       );
       const created = createSpotSpy.mock.calls[0][0] as CuratedSpot;
-      expect(created.address.toJSON()).toEqual(sampleAddress);
+      expect(created.address).toEqual(sampleAddress);
     });
   });
 
@@ -124,7 +124,11 @@ describe('CuratedSpotsService', () => {
     });
 
     it('should update adminRating and refresh adminRatedAt when value changes', async () => {
-      const rated = activeSpotA.update({ adminRating: 4, adminRatedAt: '2026-01-02T00:00:00.000Z' });
+      const rated: CuratedSpot = {
+        ...activeSpotA,
+        adminRating: 4,
+        adminRatedAt: '2026-01-02T00:00:00.000Z',
+      };
       findByIdSpy.mockResolvedValue(rated);
       updateSpotSpy.mockImplementation((_id: string, s: CuratedSpot) => Promise.resolve(s));
       await service.update('s1', { adminRating: 5 });
@@ -135,7 +139,11 @@ describe('CuratedSpotsService', () => {
     });
 
     it('should clear adminRating and adminRatedAt when PATCH sends null', async () => {
-      const rated = activeSpotA.update({ adminRating: 4, adminRatedAt: '2026-01-02T00:00:00.000Z' });
+      const rated: CuratedSpot = {
+        ...activeSpotA,
+        adminRating: 4,
+        adminRatedAt: '2026-01-02T00:00:00.000Z',
+      };
       findByIdSpy.mockResolvedValue(rated);
       updateSpotSpy.mockImplementation((_id: string, s: CuratedSpot) => Promise.resolve(s));
       await service.update('s1', { adminRating: null });
@@ -145,7 +153,11 @@ describe('CuratedSpotsService', () => {
     });
 
     it('should not touch admin fields when adminRating equals existing (idempotent)', async () => {
-      const rated = activeSpotA.update({ adminRating: 4, adminRatedAt: '2026-01-02T00:00:00.000Z' });
+      const rated: CuratedSpot = {
+        ...activeSpotA,
+        adminRating: 4,
+        adminRatedAt: '2026-01-02T00:00:00.000Z',
+      };
       findByIdSpy.mockResolvedValue(rated);
       updateSpotSpy.mockImplementation((_id: string, s: CuratedSpot) => Promise.resolve(s));
       await service.update('s1', { name: 'Renamed', adminRating: 4 });
@@ -194,7 +206,7 @@ describe('CuratedSpotsService', () => {
 
   describe('getByIdForApp', () => {
     it('should throw when pending', async () => {
-      const pending = activeSpotA.update({ status: CuratedSpotStatus.PENDING });
+      const pending: CuratedSpot = { ...activeSpotA, status: CuratedSpotStatus.PENDING };
       findByIdSpy.mockResolvedValue(pending);
       await expect(service.getByIdForApp('s1')).rejects.toThrow(NotFoundException);
     });

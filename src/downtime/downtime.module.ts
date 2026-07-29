@@ -8,5 +8,6 @@ import { UsersModule } from '../users/users.module';
   imports: [FirebaseModule, UsersModule],
   controllers: [DowntimeController],
   providers: [DowntimeService],
+  exports: [DowntimeService],
 })
 export class DowntimeModule {}

@@ -46,6 +46,20 @@ export class UsersController {
     private readonly firebaseStorageService: FirebaseStorageService,
   ) {}
 
+  private async verifyUserOwnershipOrSuperAdmin(
+    reqUserUid: string,
+    targetUserId: string,
+  ): Promise<void> {
+    if (reqUserUid === targetUserId) {
+      return;
+    }
+    const requestingUser = await this.usersService.getUserProfile(reqUserUid);
+    if (requestingUser?.userType === UserType.SUPER_ADMIN) {
+      return;
+    }
+    throw new UnauthorizedException('User ID does not match authenticated user');
+  }
+
   @Get()
   @UseGuards(RolesGuard)
   @Roles('super_admin')
@@ -65,12 +79,22 @@ export class UsersController {
   }
 
   @Get('business-users/needs-review')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Gibt Business-User zurück, die Review benötigen (nur SUPER_ADMIN)' })
+  @ApiResponse({ status: 401, description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen' })
   public async getBusinessUsersNeedsReview(): Promise<BusinessUser[]> {
     this.logger.log('GET /users/business-users/needs-review');
     return this.usersService.getBusinessUsersNeedsReview();
   }
 
   @Get('business-users/needs-review/count')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Anzahl Business-User mit Review-Bedarf (nur SUPER_ADMIN)' })
+  @ApiResponse({ status: 401, description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen' })
   public async getPendingBusinessUserReviewsCount(): Promise<{ count: number }> {
     this.logger.log('GET /users/business-users/needs-review/count');
 
@@ -91,56 +115,88 @@ export class UsersController {
   }
 
   @Post(':id/profile')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   public async createUserProfile(
+    @Request() req: { user: { uid: string } },
     @Param('id') id: string,
     @Body() userProfileDto: CreateUserProfileDto,
   ): Promise<UserProfile> {
     this.logger.log(`POST /users/${id}/profile`);
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, id);
     return this.usersService.createUserProfile(id, userProfileDto);
   }
 
   @Patch(':id/profile')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   public async updateProfile(
+    @Request() req: { user: { uid: string } },
     @Param('id') id: string,
     @Body() userProfileDto: Partial<UserProfileDto>,
   ): Promise<UserProfile> {
     this.logger.log(`PATCH /users/${id}/profile`);
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, id);
     return this.usersService.update(id, userProfileDto);
   }
 
   @Delete(':id/profile')
-  public async deleteProfile(@Param('id') id: string): Promise<void> {
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  public async deleteProfile(
+    @Request() req: { user: { uid: string } },
+    @Param('id') id: string,
+  ): Promise<void> {
     this.logger.log(`DELETE /users/${id}/profile`);
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, id);
     return this.usersService.delete(id);
   }
 
   @Post(':id/business-profile')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   public async createBusinessUser(
+    @Request() req: { user: { uid: string } },
+    @Param('id') id: string,
     @Body() createUserDto: CreateBusinessUserDto,
   ): Promise<BusinessUser> {
-    this.logger.log(`POST /users/:id/business-profile`);
+    this.logger.log(`POST /users/${id}/business-profile`);
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, id);
     return this.usersService.createBusinessUser(createUserDto);
   }
 
   @Put(':id/business-profile')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   public async updateBusinessUser(
+    @Request() req: { user: { uid: string } },
     @Param('id') id: string,
     @Body() updateUserDto: Partial<BusinessUser>,
   ): Promise<BusinessUser> {
     this.logger.log(`PUT /users/${id}/business-profile`);
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, id);
     return this.usersService.updateBusinessUser(id, updateUserDto);
   }
 
   @Patch(':id/business-profile')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   public async patchBusinessUser(
+    @Request() req: { user: { uid: string } },
     @Param('id') id: string,
     @Body() updateUserDto: UpdateBusinessUserDto,
   ): Promise<BusinessUser> {
     this.logger.log(`PATCH /users/${id}/business-profile`);
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, id);
     return this.usersService.updateBusinessUser(id, updateUserDto);
   }
 
   @Patch(':id/business-profile/needs-review')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Setzt needsReview für einen Business-User (nur SUPER_ADMIN)' })
+  @ApiResponse({ status: 401, description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen' })
   public async updateNeedsReview(
     @Param('id') id: string,
     @Body('needsReview') needsReview: boolean,
@@ -160,64 +216,82 @@ export class UsersController {
   }
 
   @Delete(':id/business-profile')
-  public async deleteBusinessUser(@Param('id') id: string): Promise<void> {
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  public async deleteBusinessUser(
+    @Request() req: { user: { uid: string } },
+    @Param('id') id: string,
+  ): Promise<void> {
     this.logger.log(`DELETE /users/${id}/business-profile`);
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, id);
     return this.usersService.deleteBusinessUser(id);
   }
 
   @Patch(':id/favorites/events/:eventId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   public async toggleFavoriteEvent(
+    @Request() req: { user: { uid: string } },
     @Param('id') userId: string,
     @Param('eventId') eventId: string,
   ): Promise<{ added: boolean }> {
     this.logger.log(`PATCH /users/${userId}/favorites/events/${eventId}`);
-
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, userId);
     const userProfile = await this.usersService.getUserProfile(userId);
     if (!userProfile) {
       throw new NotFoundException('User profile not found');
     }
-
     const added = await this.usersService.toggleFavoriteEvent(userId, eventId);
     return { added };
   }
 
   @Patch(':id/favorites/businesses/:businessId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   public async toggleFavoriteBusiness(
+    @Request() req: { user: { uid: string } },
     @Param('id') userId: string,
     @Param('businessId') businessId: string,
   ): Promise<{ added: boolean }> {
     this.logger.log(`PATCH /users/${userId}/favorites/businesses/${businessId}`);
-
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, userId);
     const userProfile = await this.usersService.getUserProfile(userId);
     if (!userProfile) {
       throw new NotFoundException('User profile not found');
     }
-
     const added = await this.usersService.toggleFavoriteBusiness(userId, businessId);
     return { added };
   }
 
   @Get(':id/favorites/events')
-  public async getFavoriteEvents(@Param('id') userId: string): Promise<string[]> {
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  public async getFavoriteEvents(
+    @Request() req: { user: { uid: string } },
+    @Param('id') userId: string,
+  ): Promise<string[]> {
     this.logger.log(`GET /users/${userId}/favorites/events`);
-
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, userId);
     const userProfile = await this.usersService.getUserProfile(userId);
     if (!userProfile) {
       throw new NotFoundException('User profile not found');
     }
-
     return userProfile.favoriteEventIds || [];
   }
 
   @Get(':id/favorites/businesses')
-  public async getFavoriteBusinesses(@Param('id') userId: string): Promise<string[]> {
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  public async getFavoriteBusinesses(
+    @Request() req: { user: { uid: string } },
+    @Param('id') userId: string,
+  ): Promise<string[]> {
     this.logger.log(`GET /users/${userId}/favorites/businesses`);
-
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, userId);
     const userProfile = await this.usersService.getUserProfile(userId);
     if (!userProfile) {
       throw new NotFoundException('User profile not found');
     }
-
     return userProfile.favoriteBusinessIds || [];
   }
 
@@ -262,27 +336,30 @@ export class UsersController {
   }
 
   @Post(':id/profile/picture')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @UseInterceptors(FileInterceptor('file'))
   public async uploadProfilePicture(
+    @Request() req: { user: { uid: string } },
     @Param('id') userId: string,
     @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File,
   ): Promise<UserProfile> {
     this.logger.log(`POST /users/${userId}/profile/picture`);
-
-    // Get current profile to check for existing picture
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, userId);
     const currentProfile = await this.usersService.getUserProfile(userId);
     if (currentProfile?.profilePictureUrl) {
       this.logger.debug('Deleting old profile picture');
       await this.firebaseStorageService.deleteFile(currentProfile.profilePictureUrl);
     }
-
     const path = `profile-pictures/${userId}/${Date.now()}-${file.originalname}`;
     const imageUrl = await this.firebaseStorageService.uploadFile(file, path);
-
     return this.usersService.update(userId, { profilePictureUrl: imageUrl });
   }
 
   @Get(':userId/business-users')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Gibt alle Business-User zurück (nur für SUPER_ADMIN)' })
   @ApiResponse({
     status: 200,
@@ -295,21 +372,17 @@ export class UsersController {
   })
   @ApiParam({
     name: 'userId',
-    description: 'ID des anfragenden Benutzers (muss SUPER_ADMIN sein)',
+    description: 'Legacy route parameter (authorization uses JWT, not this value)',
   })
   public async getAllBusinessUsers(@Param('userId') userId: string): Promise<BusinessUser[]> {
     this.logger.log(`GET /users/${userId}/business-users`);
-
-    // Überprüfe, ob der Benutzer ein SUPER_ADMIN ist
-    const requestingUser = await this.usersService.getUserProfile(userId);
-    if (!requestingUser || requestingUser.userType !== UserType.SUPER_ADMIN) {
-      throw new UnauthorizedException('Nur SUPER_ADMINs können diese Resource aufrufen');
-    }
-
     return this.usersService.getAllBusinessUsers();
   }
 
   @Post(':userId/business-user/businesses/:businessId')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Fügt ein Business zu einem Business-User hinzu' })
   @ApiResponse({
     status: 200,
@@ -371,6 +444,8 @@ export class UsersController {
   }
 
   @Post(':id/blocked-users')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Blockiert einen User für Direct Chats' })
   @ApiResponse({
     status: 201,
@@ -393,14 +468,18 @@ export class UsersController {
     description: 'ID des zu blockierenden Users',
   })
   public async blockUserForChat(
+    @Request() req: { user: { uid: string } },
     @Param('id') userId: string,
     @Body() dto: BlockChatUserDto,
   ): Promise<UserProfile> {
     this.logger.log(`POST /users/${userId}/blocked-users - Blocking user ${dto.userIdToBlock}`);
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, userId);
     return this.usersService.blockUserForChat(userId, dto.userIdToBlock);
   }
 
   @Delete(':id/blocked-users/:blockedUserId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Entblockiert einen User für Direct Chats' })
   @ApiResponse({
     status: 200,
@@ -423,14 +502,18 @@ export class UsersController {
     description: 'ID des zu entblockierenden Users',
   })
   public async unblockUserForChat(
+    @Request() req: { user: { uid: string } },
     @Param('id') userId: string,
     @Param('blockedUserId') blockedUserId: string,
   ): Promise<UserProfile> {
     this.logger.log(`DELETE /users/${userId}/blocked-users/${blockedUserId}`);
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, userId);
     return this.usersService.unblockUserForChat(userId, blockedUserId);
   }
 
   @Get(':id/blocked-users')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Gibt alle blockierten Users zurück' })
   @ApiResponse({
     status: 200,
@@ -445,8 +528,12 @@ export class UsersController {
     name: 'id',
     description: 'ID des Users',
   })
-  public async getBlockedUsers(@Param('id') userId: string): Promise<string[]> {
+  public async getBlockedUsers(
+    @Request() req: { user: { uid: string } },
+    @Param('id') userId: string,
+  ): Promise<string[]> {
     this.logger.log(`GET /users/${userId}/blocked-users`);
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, userId);
     return this.usersService.getBlockedUsers(userId);
   }
 
@@ -480,10 +567,7 @@ export class UsersController {
     @Body() dto: RegisterFcmTokenDto,
   ): Promise<void> {
     this.logger.log(`POST /users/${userId}/fcm-token`);
-    const authenticatedUserId = req.user.uid;
-    if (authenticatedUserId !== userId) {
-      throw new UnauthorizedException('User ID does not match authenticated user');
-    }
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, userId);
     return this.usersService.registerFcmToken(userId, dto);
   }
 
@@ -518,10 +602,7 @@ export class UsersController {
     @Param('deviceId') deviceId: string,
   ): Promise<void> {
     this.logger.log(`DELETE /users/${userId}/fcm-token/${deviceId}`);
-    const authenticatedUserId = req.user.uid;
-    if (authenticatedUserId !== userId) {
-      throw new UnauthorizedException('User ID does not match authenticated user');
-    }
+    await this.verifyUserOwnershipOrSuperAdmin(req.user.uid, userId);
     return this.usersService.removeFcmToken(userId, deviceId);
   }
 }

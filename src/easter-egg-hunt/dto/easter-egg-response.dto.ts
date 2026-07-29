@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { EasterEggLocation } from '../domain/entities/easter-egg.entity';
+import { EasterEggLocation } from '../interfaces/easter-egg.interface';
 
 export class EasterEggResponseDto {
   @ApiProperty({ description: 'ID des Ostereis' })

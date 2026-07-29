@@ -14,18 +14,21 @@ import {
   BadRequestException,
   UseGuards,
   Request,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { BusinessesService } from '../services/businesses.service';
-import { Business } from '../../domain/entities/business.entity';
+import { Business } from '../../interfaces/business.interface';
 import { CreateBusinessDto } from '../../dto/create-business.dto';
 import { BusinessCustomerDto } from '../../dto/business-customer.dto';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../../../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../../../firebase/firebase-storage.service';
 import { UsersService } from '../../../users/users.service';
+import { UserType } from '../../../users/enums/user-type.enum';
 import { NuernbergspotsReviewDto } from '../../dto/nuernbergspots-review.dto';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
 import { UpdateOpeningHoursDto } from '../../dto/update-opening-hours.dto';
+import { OpeningHoursMapper } from '../mappers/opening-hours.mapper';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 import { Roles } from '../../../core/decorators/roles.decorator';
@@ -45,6 +48,21 @@ export class BusinessesController {
     private readonly businessEventsSettingsService: BusinessEventsSettingsService,
   ) {}
 
+  private async verifyBusinessAccessOrSuperAdmin(
+    reqUserUid: string,
+    businessId: string,
+  ): Promise<void> {
+    const businessUser = await this.usersService.getBusinessUser(reqUserUid);
+    if (businessUser?.businessIds?.includes(businessId)) {
+      return;
+    }
+    const userProfile = await this.usersService.getUserProfile(reqUserUid);
+    if (userProfile?.userType === UserType.SUPER_ADMIN) {
+      return;
+    }
+    throw new UnauthorizedException('You do not have permission to modify this business');
+  }
+
   @Get()
   public async getAll(): Promise<Business[]> {
     this.logger.log('GET /businesses');
@@ -62,37 +80,51 @@ export class BusinessesController {
   }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('business_user', 'super_admin')
   public async create(@Body() createBusinessDto: CreateBusinessDto): Promise<Business> {
     this.logger.log('POST /businesses');
     return this.businessesService.create(createBusinessDto);
   }
 
   @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles('business_user', 'super_admin')
   public async patchBusiness(
+    @Request() req: { user: { uid: string } },
     @Param('id') id: string,
     @Body() patchData: Partial<Business>,
   ): Promise<Business> {
     this.logger.log(`PATCH /businesses/${id}`);
+    await this.verifyBusinessAccessOrSuperAdmin(req.user.uid, id);
     this.logger.debug(`PATCH data: ${JSON.stringify(patchData)}`);
     return this.businessesService.update(id, patchData);
   }
 
   @Patch(':id/scan')
+  @UseGuards(RolesGuard)
+  @Roles('business_user', 'super_admin')
   public async scanCustomer(
+    @Request() req: { user: { uid: string } },
     @Param('id') businessId: string,
     @Body() scanData: BusinessCustomerDto,
   ): Promise<Business> {
     this.logger.log(`PATCH /businesses/${businessId}/scan`);
+    await this.verifyBusinessAccessOrSuperAdmin(req.user.uid, businessId);
     return this.businessesService.addCustomerScan(businessId, scanData);
   }
 
   @Post(':id/logo')
+  @UseGuards(RolesGuard)
+  @Roles('business_user', 'super_admin')
   @UseInterceptors(FileInterceptor('file'))
   public async uploadLogo(
+    @Request() req: { user: { uid: string } },
     @Param('id') businessId: string,
     @UploadedFile(new FileValidationPipe({ optional: false })) file: Express.Multer.File,
   ): Promise<Business> {
     this.logger.log(`POST /businesses/${businessId}/logo`);
+    await this.verifyBusinessAccessOrSuperAdmin(req.user.uid, businessId);
 
     const business = await this.businessesService.getById(businessId);
     if (!business) {
@@ -114,12 +146,16 @@ export class BusinessesController {
   }
 
   @Post(':id/images')
+  @UseGuards(RolesGuard)
+  @Roles('business_user', 'super_admin')
   @UseInterceptors(FilesInterceptor('images', 10))
   public async uploadImages(
+    @Request() req: { user: { uid: string } },
     @Param('id') businessId: string,
     @UploadedFiles(new FileValidationPipe({ optional: true })) files?: Express.Multer.File[],
   ): Promise<Business> {
     this.logger.log(`POST /businesses/${businessId}/images`);
+    await this.verifyBusinessAccessOrSuperAdmin(req.user.uid, businessId);
 
     if (!files || files.length === 0) {
       throw new BadRequestException('No files uploaded');
@@ -142,11 +178,15 @@ export class BusinessesController {
   }
 
   @Delete(':id/images')
+  @UseGuards(RolesGuard)
+  @Roles('business_user', 'super_admin')
   public async removeImage(
+    @Request() req: { user: { uid: string } },
     @Param('id') businessId: string,
     @Body('imageUrl') imageUrl: string,
   ): Promise<Business> {
     this.logger.log(`DELETE /businesses/${businessId}/images`);
+    await this.verifyBusinessAccessOrSuperAdmin(req.user.uid, businessId);
 
     if (!imageUrl) {
       throw new BadRequestException('Image URL is required');
@@ -173,6 +213,8 @@ export class BusinessesController {
   }
 
   @Patch(':id/nuernbergspots-review')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
   public async updateNuernbergspotsReview(
     @Param('id') businessId: string,
     @Body() reviewData: NuernbergspotsReviewDto,
@@ -194,6 +236,8 @@ export class BusinessesController {
   }
 
   @Post(':id/nuernbergspots-review/images')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
   @UseInterceptors(FilesInterceptor('images', 10))
   public async uploadReviewImages(
     @Param('id') businessId: string,
@@ -234,6 +278,8 @@ export class BusinessesController {
   }
 
   @Delete(':id/nuernbergspots-review/images')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
   public async removeReviewImage(
     @Param('id') businessId: string,
     @Body('imageUrl') imageUrl: string,
@@ -276,6 +322,8 @@ export class BusinessesController {
   }
 
   @Patch(':id/has-account')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
   public async updateHasAccount(
     @Param('id') businessId: string,
     @Body('hasAccount') hasAccount: boolean,
@@ -294,11 +342,15 @@ export class BusinessesController {
    * This endpoint exists only for backwards compatibility with older clients.
    */
   @Patch(':id/benefit')
+  @UseGuards(RolesGuard)
+  @Roles('business_user', 'super_admin')
   public async updateBenefit(
+    @Request() req: { user: { uid: string } },
     @Param('id') businessId: string,
     @Body('benefit') benefit: string,
   ): Promise<Business> {
     this.logger.log(`PATCH /businesses/${businessId}/benefit`);
+    await this.verifyBusinessAccessOrSuperAdmin(req.user.uid, businessId);
     this.logger.warn('DEPRECATED: Use PATCH /businesses/:id with benefit field instead');
 
     if (!benefit) {
@@ -321,78 +373,32 @@ export class BusinessesController {
    * This endpoint exists only for backwards compatibility with older clients.
    */
   @Patch(':id/opening-hours')
+  @UseGuards(RolesGuard)
+  @Roles('business_user', 'super_admin')
   public async updateOpeningHours(
+    @Request() req: { user: { uid: string } },
     @Param('id') businessId: string,
     @Body() openingHoursData: UpdateOpeningHoursDto,
   ): Promise<Business> {
     this.logger.log(`PATCH /businesses/${businessId}/opening-hours`);
+    await this.verifyBusinessAccessOrSuperAdmin(req.user.uid, businessId);
     this.logger.warn(
       'DEPRECATED: Use PATCH /businesses/:id with openingHours/detailedOpeningHours fields instead',
     );
-
-    // Transform incoming data if it's in the wrong format
-    // Client might send: { "Montag": { "09:00": "18:00" } } directly
-    // We need: { "detailedOpeningHours": { "Montag": [{ "from": "09:00", "to": "18:00" }] } }
-    let transformedDetailedOpeningHours = openingHoursData.detailedOpeningHours;
-    if (!transformedDetailedOpeningHours && openingHoursData) {
-      const rawData = openingHoursData as any;
-      // Check if data is in the format { "Montag": { "09:00": "18:00" } }
-      const dayNames = [
-        'Montag',
-        'Dienstag',
-        'Mittwoch',
-        'Donnerstag',
-        'Freitag',
-        'Samstag',
-        'Sonntag',
-      ];
-      const hasDayKeys = dayNames.some(day => rawData[day] !== undefined);
-
-      if (hasDayKeys) {
-        transformedDetailedOpeningHours = {};
-        for (const [day, timeSlots] of Object.entries(rawData)) {
-          if (dayNames.includes(day) && typeof timeSlots === 'object' && timeSlots !== null) {
-            const intervals: { from: string; to: string }[] = [];
-            for (const [from, to] of Object.entries(timeSlots as Record<string, string>)) {
-              intervals.push({ from, to });
-            }
-            transformedDetailedOpeningHours[day] = intervals;
-          }
-        }
-      }
-    }
-
     const business = await this.businessesService.getById(businessId);
     if (!business) {
       throw new NotFoundException('Business not found');
     }
-
-    let mergedDetailedOpeningHours: Record<string, { from: string; to: string }[]> | undefined;
-    if (transformedDetailedOpeningHours !== undefined) {
-      const existing = business.detailedOpeningHours || {};
-      mergedDetailedOpeningHours = { ...existing };
-      for (const [day, intervals] of Object.entries(transformedDetailedOpeningHours)) {
-        if (mergedDetailedOpeningHours[day]) {
-          mergedDetailedOpeningHours[day] = [...mergedDetailedOpeningHours[day], ...intervals];
-        } else {
-          mergedDetailedOpeningHours[day] = intervals;
-        }
-      }
-    }
-
-    const updateData: Partial<Business> = {
-      ...(openingHoursData.openingHours !== undefined && {
-        openingHours: openingHoursData.openingHours,
-      }),
-      ...(mergedDetailedOpeningHours !== undefined && {
-        detailedOpeningHours: mergedDetailedOpeningHours,
-      }),
-    };
-
+    const updateData = OpeningHoursMapper.buildUpdatePayload(
+      openingHoursData,
+      business.detailedOpeningHours,
+    );
     return this.businessesService.update(businessId, updateData);
   }
 
   @Post('users/:id')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
   public async createBusinessForUser(
     @Param('id') userId: string,
     @Body() createBusinessDto: CreateBusinessDto,
@@ -411,6 +417,10 @@ export class BusinessesController {
   }
 
   @Get('pending-approvals/count')
+  @UseGuards(RolesGuard)
+  @Roles('super_admin')
+  @ApiOperation({ summary: 'Anzahl ausstehender Business-Freigaben (nur SUPER_ADMIN)' })
+  @ApiResponse({ status: 401, description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen' })
   public async getPendingApprovalsCount(): Promise<{ count: number }> {
     this.logger.log('GET /businesses/pending-approvals/count');
 

@@ -3,7 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { CuratedSpotsController } from './curated-spots.controller';
 import { CuratedSpotsService } from '../services/curated-spots.service';
 import { FirebaseStorageService } from '../../../firebase/firebase-storage.service';
-import { CuratedSpot } from '../../domain/entities/curated-spot.entity';
+import { CuratedSpot } from '../../interfaces/curated-spot.interface';
 import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 import { CuratedSpotsUserRatingsSettingsService } from '../services/curated-spots-user-ratings-settings.service';
@@ -24,7 +24,7 @@ describe('CuratedSpotsController', () => {
     longitude: 11.08,
   };
 
-  const mockSpot = CuratedSpot.fromProps({
+  const mockSpot = ({
     id: 'spot-1',
     name: 'Test Spot',
     nameLower: 'test spot',

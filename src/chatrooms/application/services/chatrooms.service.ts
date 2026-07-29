@@ -1,7 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import { Chatroom, ChatroomProps } from '../../domain/entities/chatroom.entity';
+import { Chatroom } from '../../interfaces/chatroom.interface';
 import { CreateChatroomDto } from '../dtos/create-chatroom.dto';
 import { UpdateChatroomDto } from '../dtos/update-chatroom.dto';
 
@@ -12,7 +13,7 @@ export class ChatroomsService {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private toEntityProps(data: Record<string, unknown>, id: string): ChatroomProps {
+  private toChatroom(data: Record<string, unknown>, id: string): Chatroom {
     const participants = (data.participants as string[]) || [];
     const participantCount =
       data.participantCount !== undefined ? (data.participantCount as number) : participants.length;
@@ -24,7 +25,7 @@ export class ChatroomsService {
       createdBy: data.createdBy as string,
       participants,
       participantCount,
-      lastMessage: data.lastMessage as ChatroomProps['lastMessage'],
+      lastMessage: data.lastMessage as Chatroom['lastMessage'],
       createdAt: (data.createdAt as string) || new Date().toISOString(),
       updatedAt: (data.updatedAt as string) || new Date().toISOString(),
     };
@@ -34,7 +35,7 @@ export class ChatroomsService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).get();
     return snapshot.docs.map(doc =>
-      Chatroom.fromProps(this.toEntityProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toChatroom(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -44,15 +45,22 @@ export class ChatroomsService {
     if (!doc.exists) {
       return null;
     }
-    return Chatroom.fromProps(this.toEntityProps(doc.data() as Record<string, unknown>, doc.id));
+    return this.toChatroom(doc.data() as Record<string, unknown>, doc.id);
   }
 
   private async createChatroomInFirestore(
     data: Omit<Chatroom, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<Chatroom> {
     const db = this.firebaseService.getFirestore();
-    const chatroom = Chatroom.create(data);
-    const plainData = toFirestoreData(chatroom);
+    const now = new Date().toISOString();
+    const chatroom: Chatroom = {
+      id: randomUUID(),
+      ...data,
+      participantCount: data.participants?.length || 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const plainData = toFirestoreData(chatroom as unknown as Record<string, unknown>);
     await db.collection(this.collection).doc(chatroom.id).set(plainData);
     return chatroom;
   }
@@ -65,8 +73,12 @@ export class ChatroomsService {
     if (!existing) {
       return null;
     }
-    const updated = existing.update(data);
-    const plainData = toFirestoreData(updated);
+    const updated: Chatroom = {
+      ...existing,
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+    const plainData = toFirestoreData(updated as unknown as Record<string, unknown>);
     const db = this.firebaseService.getFirestore();
     await db.collection(this.collection).doc(id).update(plainData);
     return updated;
@@ -84,7 +96,7 @@ export class ChatroomsService {
       .where('participants', 'array-contains', userId)
       .get();
     return snapshot.docs.map(doc =>
-      Chatroom.fromProps(this.toEntityProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toChatroom(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -105,22 +117,19 @@ export class ChatroomsService {
 
   private enrichWithParticipantCount(chatroom: Chatroom): Chatroom {
     const participantCount = chatroom.participants?.length || 0;
-    return Chatroom.fromProps({
-      ...chatroom.toJSON(),
-      participantCount,
-    });
+    return { ...chatroom, participantCount };
   }
 
   async create(data: CreateChatroomDto, userId: string): Promise<Chatroom> {
     this.logger.log('Creating new chatroom');
-    const chatroomData = Chatroom.create({
+    const chatroom = await this.createChatroomInFirestore({
       title: data.title,
       description: data.description || '',
       imageUrl: data.image || '',
       createdBy: userId,
       participants: [userId],
+      participantCount: 1,
     });
-    const chatroom = await this.createChatroomInFirestore(chatroomData);
     return this.enrichWithParticipantCount(chatroom);
   }
 

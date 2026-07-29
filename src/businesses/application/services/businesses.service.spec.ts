@@ -8,7 +8,7 @@ import {
   BusinessAddress,
   BusinessContact,
   BusinessCustomer,
-} from '../../domain/entities/business.entity';
+} from '../../interfaces/business.interface';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
 import { KeywordsService } from '../../../keywords/keywords.service';
 import { EventsService } from '../../../events/events.service';
@@ -61,25 +61,43 @@ describe('BusinessesService', () => {
     recordScanFromBusinessScan: jest.fn().mockResolvedValue(undefined),
   };
 
-  const mockBusinessAddress = BusinessAddress.create({
+  const mockBusinessAddress: BusinessAddress = {
     street: 'Main Street',
     houseNumber: '123',
     postalCode: '90402',
     city: 'Nürnberg',
     latitude: 49.4521,
     longitude: 11.0767,
-  });
+  };
 
-  const mockBusinessContact = BusinessContact.create({
+  const mockBusinessContact: BusinessContact = {
     email: 'contact@business.com',
     phoneNumber: '+49123456789',
     website: 'https://business.com',
+  };
+
+  const createMockBusiness = (overrides: Partial<Business> = {}): Business => ({
+    id: 'business1',
+    name: 'Restaurant A',
+    description: 'A great restaurant',
+    contact: mockBusinessContact,
+    address: mockBusinessAddress,
+    categoryIds: ['category1'],
+    keywordIds: ['keyword1'],
+    benefit: '10% discount',
+    hasAccount: true,
+    status: BusinessStatus.ACTIVE,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    isDeleted: false,
+    customers: [],
+    ...overrides,
   });
 
-  const toFirestoreDoc = (business: Business, id?: string) => {
-    const json = business.toJSON();
-    const docId = id || json.id;
-    const { id: _id, ...data } = json;
+  const toFirestoreDoc = (business: Partial<Business>, id?: string) => {
+    const fullBusiness = createMockBusiness(business);
+    const docId = id || fullBusiness.id;
+    const { id: _id, ...data } = fullBusiness;
     return {
       id: docId,
       data: () => data,
@@ -129,33 +147,18 @@ describe('BusinessesService', () => {
 
   describe('getAll', () => {
     const mockBusinesses = [
-      Business.create({
+      createMockBusiness({
         name: 'Restaurant A',
-        description: 'A great restaurant',
-        contact: mockBusinessContact,
-        address: mockBusinessAddress,
-        categoryIds: ['category1'],
-        keywordIds: ['keyword1'],
-        openingHours: {
-          monday: '09:00-22:00',
-        },
-        benefit: '10% discount',
-        hasAccount: true,
-        status: BusinessStatus.ACTIVE,
+        openingHours: { monday: '09:00-22:00' },
       }),
-      Business.create({
+      createMockBusiness({
+        id: 'business2',
         name: 'Shop B',
         description: 'A nice shop',
-        contact: mockBusinessContact,
-        address: mockBusinessAddress,
         categoryIds: ['category2'],
         keywordIds: ['keyword2'],
-        openingHours: {
-          monday: '10:00-20:00',
-        },
+        openingHours: { monday: '10:00-20:00' },
         benefit: 'Free shipping',
-        hasAccount: true,
-        status: BusinessStatus.ACTIVE,
       }),
     ];
 
@@ -176,19 +179,8 @@ describe('BusinessesService', () => {
   });
 
   describe('getById', () => {
-    const mockBusiness = Business.create({
-      name: 'Restaurant A',
-      description: 'A great restaurant',
-      contact: mockBusinessContact,
-      address: mockBusinessAddress,
-      categoryIds: ['category1'],
-      keywordIds: ['keyword1'],
-      openingHours: {
-        monday: '09:00-22:00',
-      },
-      benefit: '10% discount',
-      hasAccount: true,
-      status: BusinessStatus.ACTIVE,
+    const mockBusiness = createMockBusiness({
+      openingHours: { monday: '09:00-22:00' },
     });
 
     it('should return a business by id', async () => {
@@ -277,7 +269,7 @@ describe('BusinessesService', () => {
       },
     };
 
-    const mockUpdatedBusiness = Business.create({
+    const mockUpdatedBusiness = ({
       name: updateData.name,
       description: updateData.description,
       contact: mockBusinessContact,
@@ -322,7 +314,7 @@ describe('BusinessesService', () => {
 
   describe('getBusinessesByStatus', () => {
     const mockBusinesses = [
-      Business.create({
+      ({
         name: 'Restaurant A',
         description: 'A great restaurant',
         contact: mockBusinessContact,
@@ -355,7 +347,7 @@ describe('BusinessesService', () => {
   });
 
   describe('updateStatus', () => {
-    const mockBusiness = Business.create({
+    const mockBusiness = ({
       name: 'Test Business',
       description: 'A test business',
       contact: mockBusinessContact,
@@ -370,14 +362,14 @@ describe('BusinessesService', () => {
       status: BusinessStatus.PENDING,
     });
 
-    const mockUpdatedBusiness = Business.create({
+    const mockUpdatedBusiness = ({
       ...mockBusiness,
       status: BusinessStatus.ACTIVE,
     });
 
     it('should update business status', async () => {
-      const businessWithId = Business.fromProps({
-        ...mockBusiness.toJSON(),
+      const businessWithId = ({
+        ...mockBusiness,
         id: 'business1',
       });
       mockDoc.get.mockResolvedValue({
@@ -395,8 +387,8 @@ describe('BusinessesService', () => {
     });
 
     it('should send business activated notification when status changes from PENDING to ACTIVE', async () => {
-      const mockBusinessWithId = Business.fromProps({
-        ...mockBusiness.toJSON(),
+      const mockBusinessWithId = ({
+        ...mockBusiness,
         id: 'business1',
       });
       mockDoc.get.mockResolvedValue({
@@ -435,8 +427,8 @@ describe('BusinessesService', () => {
     });
 
     it('should not send business activated notification when preference is disabled', async () => {
-      const businessWithId = Business.fromProps({
-        ...mockBusiness.toJSON(),
+      const businessWithId = ({
+        ...mockBusiness,
         id: 'business1',
       });
       mockDoc.get.mockResolvedValue({
@@ -464,8 +456,8 @@ describe('BusinessesService', () => {
     });
 
     it('should not send business activated notification when preference is undefined (default false)', async () => {
-      const businessWithId = Business.fromProps({
-        ...mockBusiness.toJSON(),
+      const businessWithId = ({
+        ...mockBusiness,
         id: 'business1',
       });
       mockDoc.get.mockResolvedValue({
@@ -490,8 +482,8 @@ describe('BusinessesService', () => {
     });
 
     it('should only send notification to business users with matching businessId', async () => {
-      const mockBusinessWithId = Business.fromProps({
-        ...mockBusiness.toJSON(),
+      const mockBusinessWithId = ({
+        ...mockBusiness,
         id: 'business1',
       });
       mockDoc.get.mockResolvedValue({
@@ -536,16 +528,16 @@ describe('BusinessesService', () => {
     });
 
     it('should not send notification for other status changes', async () => {
-      const mockActiveBusiness = Business.create({
+      const mockActiveBusiness = ({
         ...mockBusiness,
         status: BusinessStatus.ACTIVE,
       });
-      const mockInactiveBusiness = Business.create({
+      const mockInactiveBusiness = ({
         ...mockActiveBusiness,
         status: BusinessStatus.INACTIVE,
       });
-      const activeWithId = Business.fromProps({
-        ...mockActiveBusiness.toJSON(),
+      const activeWithId = ({
+        ...mockActiveBusiness,
         id: 'business1',
       });
       mockDoc.get.mockResolvedValue({
@@ -563,7 +555,7 @@ describe('BusinessesService', () => {
 
   describe('addCustomerScan', () => {
     it('should persist business scan and record pass scan for user', async () => {
-      const existingBusiness = Business.create({
+      const existingBusiness = ({
         name: 'Scan Business',
         contact: mockBusinessContact,
         address: mockBusinessAddress,
@@ -574,8 +566,8 @@ describe('BusinessesService', () => {
         benefit: '10% Rabatt',
         hasAccount: true,
       });
-      const businessWithId = Business.fromProps({
-        ...existingBusiness.toJSON(),
+      const businessWithId = ({
+        ...existingBusiness,
         id: 'business-scan-1',
       });
       mockDoc.get.mockResolvedValue({
@@ -599,7 +591,7 @@ describe('BusinessesService', () => {
     });
 
     it('should still return business when pass scan recording fails', async () => {
-      const existingBusiness = Business.create({
+      const existingBusiness = ({
         name: 'Scan Business',
         contact: mockBusinessContact,
         address: mockBusinessAddress,
@@ -610,8 +602,8 @@ describe('BusinessesService', () => {
         benefit: '10% Rabatt',
         hasAccount: true,
       });
-      const businessWithId = Business.fromProps({
-        ...existingBusiness.toJSON(),
+      const businessWithId = ({
+        ...existingBusiness,
         id: 'business-scan-2',
       });
       mockDoc.get.mockResolvedValue({

@@ -1,11 +1,11 @@
 import { Injectable, Inject, Logger, NotFoundException, forwardRef } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import {
   Business,
   BusinessAddress,
   BusinessContact,
   BusinessCustomer,
-  BusinessProps,
-} from '../../domain/entities/business.entity';
+} from '../../interfaces/business.interface';
 import { CreateBusinessDto } from '../../dto/create-business.dto';
 import { BusinessCustomerDto } from '../../dto/business-customer.dto';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
@@ -36,42 +36,39 @@ export class BusinessesService {
     private readonly passScanService: PassScanService,
   ) {}
 
-  private toPlainObject(entity: Business): Omit<BusinessProps, 'id'> {
-    const { id, ...data } = entity.toJSON();
-    const plainObject = removeUndefined(data);
+  private toPlainObject(business: Business): Omit<Business, 'id'> {
+    const plainObject = removeUndefined({ ...business });
+    delete (plainObject as { id?: string }).id;
     if (plainObject.logoUrl === null || plainObject.logoUrl === undefined) {
       plainObject.logoUrl = '';
     }
     return plainObject;
   }
 
-  private toBusinessProps(data: Record<string, unknown>, id: string): BusinessProps {
+  private toBusiness(data: Record<string, unknown>, id: string): Business {
     return {
       id,
       name: data.name as string,
-      contact: BusinessContact.create(data.contact as Parameters<typeof BusinessContact.create>[0]),
-      address: BusinessAddress.create(data.address as Parameters<typeof BusinessAddress.create>[0]),
+      contact: data.contact as BusinessContact,
+      address: data.address as BusinessAddress,
       categoryIds: (data.categoryIds as string[]) || [],
       keywordIds: (data.keywordIds as string[]) || [],
       eventIds: data.eventIds as string[] | undefined,
       description: data.description as string,
       logoUrl: data.logoUrl === null || data.logoUrl === undefined ? '' : (data.logoUrl as string),
       imageUrls: data.imageUrls as string[] | undefined,
-      openingHours: data.openingHours as BusinessProps['openingHours'],
-      detailedOpeningHours: data.detailedOpeningHours as BusinessProps['detailedOpeningHours'],
+      openingHours: data.openingHours as Business['openingHours'],
+      detailedOpeningHours: data.detailedOpeningHours as Business['detailedOpeningHours'],
       createdAt: data.createdAt as string,
       updatedAt: data.updatedAt as string,
-      isDeleted: data.isDeleted as boolean | undefined,
+      isDeleted: (data.isDeleted as boolean) ?? false,
       status: data.status as BusinessStatus,
       benefit: data.benefit as string,
       previousBenefits: data.previousBenefits as string[] | undefined,
-      customers: ((data.customers as Record<string, unknown>[]) || []).map(customer =>
-        BusinessCustomer.create(
-          customer as unknown as Parameters<typeof BusinessCustomer.create>[0],
-        ),
-      ),
+      customers: ((data.customers as BusinessCustomer[]) || []),
       hasAccount: data.hasAccount as boolean,
       isPromoted: data.isPromoted as boolean | undefined,
+      nuernbergspotsReview: data.nuernbergspotsReview as Business['nuernbergspotsReview'],
     };
   }
 
@@ -79,7 +76,7 @@ export class BusinessesService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).get();
     return snapshot.docs.map(doc =>
-      Business.fromProps(this.toBusinessProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toBusiness(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -89,16 +86,13 @@ export class BusinessesService {
     if (!doc.exists) {
       return null;
     }
-    return Business.fromProps(this.toBusinessProps(doc.data() as Record<string, unknown>, doc.id));
+    return this.toBusiness(doc.data() as Record<string, unknown>, doc.id);
   }
 
   private async createInFirestore(business: Business): Promise<Business> {
     const db = this.firebaseService.getFirestore();
     const docRef = await db.collection(this.collection).add(this.toPlainObject(business));
-    return Business.fromProps({
-      ...business.toJSON(),
-      id: docRef.id,
-    });
+    return { ...business, id: docRef.id };
   }
 
   private async updateInFirestore(id: string, business: Business): Promise<Business> {
@@ -109,10 +103,7 @@ export class BusinessesService {
       throw new NotFoundException('Business not found');
     }
     await docRef.update(this.toPlainObject(business));
-    return Business.fromProps({
-      ...business.toJSON(),
-      id,
-    });
+    return { ...business, id };
   }
 
   private async deleteFromFirestore(id: string): Promise<void> {
@@ -136,7 +127,7 @@ export class BusinessesService {
       .where('hasAccount', '==', hasAccount)
       .get();
     return snapshot.docs.map(doc =>
-      Business.fromProps(this.toBusinessProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toBusiness(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -154,10 +145,12 @@ export class BusinessesService {
     this.logger.debug('Creating new business');
     const initialStatus = data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING;
     this.logger.debug(`Initial status will be: ${initialStatus} (isAdmin: ${data.isAdmin})`);
-    const business = Business.create({
+    const now = new Date().toISOString();
+    const business: Business = {
+      id: randomUUID(),
       name: data.name,
-      contact: BusinessContact.create(data.contact),
-      address: BusinessAddress.create(data.address),
+      contact: data.contact,
+      address: data.address,
       categoryIds: data.categoryIds,
       keywordIds: data.keywordIds || [],
       description: data.description,
@@ -168,7 +161,12 @@ export class BusinessesService {
       isPromoted: data.isPromoted || false,
       status: initialStatus,
       logoUrl: '',
-    });
+      createdAt: now,
+      updatedAt: now,
+      isDeleted: false,
+      customers: [],
+      previousBenefits: [],
+    };
     const createdBusiness = await this.createInFirestore(business);
     this.logger.debug(
       `Created business ${createdBusiness.id} with status ${createdBusiness.status}`,
@@ -212,10 +210,12 @@ export class BusinessesService {
         existingBusiness.benefit,
       ];
       const limitedPreviousBenefits = updatedPreviousBenefits.slice(-5);
-      const updatedBusiness = existingBusiness.update({
+      const updatedBusiness: Business = {
+        ...existingBusiness,
         ...data,
         previousBenefits: limitedPreviousBenefits,
-      });
+        updatedAt: new Date().toISOString(),
+      };
       const savedBusiness = await this.updateInFirestore(id, updatedBusiness);
       if (isStatusChangeToActive) {
         this.logger.log(`Sending notification for business ${id} after status change`);
@@ -223,7 +223,11 @@ export class BusinessesService {
       }
       return savedBusiness;
     }
-    const updatedBusiness = existingBusiness.update(data);
+    const updatedBusiness: Business = {
+      ...existingBusiness,
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
     const savedBusiness = await this.updateInFirestore(id, updatedBusiness);
     if (isStatusChangeToActive) {
       this.logger.log(`Sending notification for business ${id} after status change`);
@@ -246,7 +250,11 @@ export class BusinessesService {
     }
     const previousStatus = existingBusiness.status;
     this.logger.debug(`Previous status: ${previousStatus}, new status: ${status}`);
-    const updatedBusiness = existingBusiness.updateStatus(status);
+    const updatedBusiness: Business = {
+      ...existingBusiness,
+      status,
+      updatedAt: new Date().toISOString(),
+    };
     const savedBusiness = await this.updateInFirestore(id, updatedBusiness);
     if (previousStatus === BusinessStatus.PENDING && status === BusinessStatus.ACTIVE) {
       this.logger.log(
@@ -271,15 +279,19 @@ export class BusinessesService {
     if (!existingBusiness) {
       throw new NotFoundException('Business not found');
     }
-    const customer: BusinessCustomer = BusinessCustomer.create({
+    const customer: BusinessCustomer = {
       customerId: scanData.customerId,
       scannedAt: DateTimeUtils.getBerlinTime(),
       price: scanData.price,
       numberOfPeople: scanData.numberOfPeople,
       additionalInfo: scanData.additionalInfo,
       benefit: existingBusiness.benefit,
-    });
-    const updatedBusiness = existingBusiness.addCustomer(customer);
+    };
+    const updatedBusiness: Business = {
+      ...existingBusiness,
+      customers: [...existingBusiness.customers, customer],
+      updatedAt: new Date().toISOString(),
+    };
     const savedBusiness = await this.updateInFirestore(businessId, updatedBusiness);
     try {
       await this.passScanService.recordScanFromBusinessScan({
@@ -302,7 +314,14 @@ export class BusinessesService {
     if (!existingBusiness) {
       throw new NotFoundException('Business not found');
     }
-    const updatedBusiness = existingBusiness.updateBenefit(benefit);
+    const updatedPreviousBenefits = [...(existingBusiness.previousBenefits || []), existingBusiness.benefit];
+    const limitedPreviousBenefits = updatedPreviousBenefits.slice(-5);
+    const updatedBusiness: Business = {
+      ...existingBusiness,
+      benefit,
+      previousBenefits: limitedPreviousBenefits,
+      updatedAt: new Date().toISOString(),
+    };
     return this.updateInFirestore(id, updatedBusiness);
   }
 
@@ -322,7 +341,11 @@ export class BusinessesService {
     if (!existingBusiness) {
       throw new NotFoundException('Business not found');
     }
-    const updatedBusiness = existingBusiness.update({ hasAccount });
+    const updatedBusiness: Business = {
+      ...existingBusiness,
+      hasAccount,
+      updatedAt: new Date().toISOString(),
+    };
     return this.updateInFirestore(id, updatedBusiness);
   }
 

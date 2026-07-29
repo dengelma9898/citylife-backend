@@ -1,7 +1,17 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import { FeatureRequest, FeatureRequestProps } from '../../domain/entities/feature-request.entity';
+import {
+  FeatureRequest,
+  addFeatureRequestVote,
+  removeFeatureRequestVote,
+  completeFeatureRequest,
+  rejectFeatureRequest,
+  setFeatureRequestInProgress,
+  getFeatureRequestVoteCount,
+  hasUserVotedForFeatureRequest,
+} from '../../interfaces/feature-request.interface';
 import { FeatureRequestStatus } from '../../domain/enums/feature-request-status.enum';
 import { CreateFeatureRequestDto } from '../../dto/create-feature-request.dto';
 import { FeatureRequestDto } from '../../dto/feature-request.dto';
@@ -13,7 +23,7 @@ export class FeatureRequestsService {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private toFeatureRequestProps(data: Record<string, unknown>, id: string): FeatureRequestProps {
+  private toFeatureRequest(data: Record<string, unknown>, id: string): FeatureRequest {
     return {
       id,
       title: data.title as string,
@@ -21,8 +31,8 @@ export class FeatureRequestsService {
       imageUrls: (data.imageUrls as string[]) || [],
       authorId: data.authorId as string,
       status: data.status as FeatureRequestStatus,
-      votes: (data.votes as FeatureRequestProps['votes']) || [],
-      completion: (data.completion as FeatureRequestProps['completion']) || null,
+      votes: (data.votes as FeatureRequest['votes']) || [],
+      completion: (data.completion as FeatureRequest['completion']) || null,
       createdAt: data.createdAt as string,
       updatedAt: data.updatedAt as string,
     };
@@ -32,7 +42,7 @@ export class FeatureRequestsService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).orderBy('createdAt', 'desc').get();
     return snapshot.docs.map(doc =>
-      FeatureRequest.fromProps(this.toFeatureRequestProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toFeatureRequest(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -42,7 +52,7 @@ export class FeatureRequestsService {
     if (!doc.exists) {
       return null;
     }
-    return FeatureRequest.fromProps(this.toFeatureRequestProps(doc.data() as Record<string, unknown>, doc.id));
+    return this.toFeatureRequest(doc.data() as Record<string, unknown>, doc.id);
   }
 
   private async findByStatus(status: FeatureRequestStatus): Promise<FeatureRequest[]> {
@@ -53,7 +63,7 @@ export class FeatureRequestsService {
       .orderBy('createdAt', 'desc')
       .get();
     return snapshot.docs.map(doc =>
-      FeatureRequest.fromProps(this.toFeatureRequestProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toFeatureRequest(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -65,18 +75,15 @@ export class FeatureRequestsService {
       .orderBy('createdAt', 'desc')
       .get();
     return snapshot.docs.map(doc =>
-      FeatureRequest.fromProps(this.toFeatureRequestProps(doc.data() as Record<string, unknown>, doc.id)),
+      this.toFeatureRequest(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
   private async createEntity(featureRequest: FeatureRequest): Promise<FeatureRequest> {
     const db = this.firebaseService.getFirestore();
     const docRef = db.collection(this.collection).doc(featureRequest.id);
-    await docRef.set(toFirestoreData(featureRequest));
-    return FeatureRequest.fromProps({
-      ...featureRequest.toJSON(),
-      id: docRef.id,
-    });
+    await docRef.set(toFirestoreData(featureRequest as unknown as Record<string, unknown>));
+    return { ...featureRequest, id: docRef.id };
   }
 
   private async updateEntity(id: string, featureRequest: FeatureRequest): Promise<FeatureRequest> {
@@ -86,11 +93,8 @@ export class FeatureRequestsService {
     if (!doc.exists) {
       throw new NotFoundException('Feature request not found');
     }
-    await docRef.update(toFirestoreData(featureRequest));
-    return FeatureRequest.fromProps({
-      ...featureRequest.toJSON(),
-      id,
-    });
+    await docRef.update(toFirestoreData(featureRequest as unknown as Record<string, unknown>));
+    return { ...featureRequest, id };
   }
 
   private async deleteEntity(id: string): Promise<void> {
@@ -130,12 +134,19 @@ export class FeatureRequestsService {
   }
 
   async create(dto: CreateFeatureRequestDto, authorId: string): Promise<FeatureRequestDto> {
-    const featureRequest = FeatureRequest.create({
+    const now = new Date().toISOString();
+    const featureRequest: FeatureRequest = {
+      id: randomUUID(),
       title: dto.title,
       description: dto.description,
       imageUrls: [],
       authorId,
-    });
+      status: FeatureRequestStatus.OPEN,
+      votes: [],
+      completion: null,
+      createdAt: now,
+      updatedAt: now,
+    };
     const created = await this.createEntity(featureRequest);
     this.logger.log(`Feature request created: ${created.id} by user ${authorId}`);
     return this.toDto(created, authorId);
@@ -157,9 +168,11 @@ export class FeatureRequestsService {
     if (totalImages > 3) {
       throw new BadRequestException('Maximum 3 images allowed per feature request');
     }
-    const updated = featureRequest.update({
+    const updated: FeatureRequest = {
+      ...featureRequest,
       imageUrls: [...featureRequest.imageUrls, ...imageUrls],
-    });
+      updatedAt: new Date().toISOString(),
+    };
     const saved = await this.updateEntity(id, updated);
     return this.toDto(saved, currentUserId);
   }
@@ -179,9 +192,11 @@ export class FeatureRequestsService {
     if (!featureRequest.imageUrls.includes(imageUrl)) {
       throw new BadRequestException('Image not found in feature request');
     }
-    const updated = featureRequest.update({
+    const updated: FeatureRequest = {
+      ...featureRequest,
       imageUrls: featureRequest.imageUrls.filter(url => url !== imageUrl),
-    });
+      updatedAt: new Date().toISOString(),
+    };
     const saved = await this.updateEntity(id, updated);
     return this.toDto(saved, currentUserId);
   }
@@ -191,10 +206,10 @@ export class FeatureRequestsService {
     if (!featureRequest) {
       throw new NotFoundException('Feature request not found');
     }
-    if (featureRequest.hasUserVoted(userId)) {
+    if (hasUserVotedForFeatureRequest(featureRequest, userId)) {
       throw new BadRequestException('User has already voted for this feature request');
     }
-    const updated = featureRequest.addVote(userId);
+    const updated = addFeatureRequestVote(featureRequest, userId);
     const saved = await this.updateEntity(id, updated);
     this.logger.log(`User ${userId} voted for feature request ${id}`);
     return this.toDto(saved, userId);
@@ -205,10 +220,10 @@ export class FeatureRequestsService {
     if (!featureRequest) {
       throw new NotFoundException('Feature request not found');
     }
-    if (!featureRequest.hasUserVoted(userId)) {
+    if (!hasUserVotedForFeatureRequest(featureRequest, userId)) {
       throw new BadRequestException('User has not voted for this feature request');
     }
-    const updated = featureRequest.removeVote(userId);
+    const updated = removeFeatureRequestVote(featureRequest, userId);
     const saved = await this.updateEntity(id, updated);
     this.logger.log(`User ${userId} removed vote from feature request ${id}`);
     return this.toDto(saved, userId);
@@ -222,7 +237,7 @@ export class FeatureRequestsService {
     if (featureRequest.status !== FeatureRequestStatus.OPEN) {
       throw new BadRequestException('Only open feature requests can be set to in progress');
     }
-    const updated = featureRequest.setInProgress();
+    const updated = setFeatureRequestInProgress(featureRequest);
     const saved = await this.updateEntity(id, updated);
     this.logger.log(`Feature request ${id} set to in progress by admin ${adminId}`);
     return this.toDto(saved, adminId);
@@ -239,7 +254,7 @@ export class FeatureRequestsService {
     if (featureRequest.status === FeatureRequestStatus.REJECTED) {
       throw new BadRequestException('Feature request is already rejected');
     }
-    const updated = featureRequest.complete(adminId, comment);
+    const updated = completeFeatureRequest(featureRequest, adminId, comment);
     const saved = await this.updateEntity(id, updated);
     this.logger.log(`Feature request ${id} completed by admin ${adminId}`);
     return this.toDto(saved, adminId);
@@ -256,7 +271,7 @@ export class FeatureRequestsService {
     if (featureRequest.status === FeatureRequestStatus.REJECTED) {
       throw new BadRequestException('Feature request is already rejected');
     }
-    const updated = featureRequest.reject(adminId, comment);
+    const updated = rejectFeatureRequest(featureRequest, adminId, comment);
     const saved = await this.updateEntity(id, updated);
     this.logger.log(`Feature request ${id} rejected by admin ${adminId}`);
     return this.toDto(saved, adminId);
@@ -275,8 +290,8 @@ export class FeatureRequestsService {
       imageUrls: featureRequest.imageUrls,
       authorId: featureRequest.authorId,
       status: featureRequest.status,
-      voteCount: featureRequest.voteCount,
-      hasUserVoted: featureRequest.hasUserVoted(currentUserId),
+      voteCount: getFeatureRequestVoteCount(featureRequest),
+      hasUserVoted: hasUserVotedForFeatureRequest(featureRequest, currentUserId),
       completion: featureRequest.completion,
       createdAt: featureRequest.createdAt,
       updatedAt: featureRequest.updatedAt,

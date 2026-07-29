@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DirectMessagesService } from './direct-messages.service';
-import { DirectMessage } from '../../domain/entities/direct-message.entity';
-import { DirectChat } from '../../domain/entities/direct-chat.entity';
+import { DirectMessage } from '../../interfaces/direct-message.interface';
+import { DirectChat } from '../../interfaces/direct-chat.interface';
 import { DirectChatsService } from './direct-chats.service';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
@@ -52,7 +52,7 @@ describe('DirectMessagesService', () => {
     getUserProfile: jest.fn(),
   };
 
-  const mockActiveChat = DirectChat.fromProps({
+  const mockActiveChat = ({
     id: 'chat-1',
     creatorId: 'user-1',
     invitedUserId: 'user-2',
@@ -63,7 +63,7 @@ describe('DirectMessagesService', () => {
     updatedAt: new Date().toISOString(),
   });
 
-  const mockPendingChat = DirectChat.fromProps({
+  const mockPendingChat = ({
     id: 'chat-2',
     creatorId: 'user-1',
     invitedUserId: 'user-2',
@@ -74,7 +74,7 @@ describe('DirectMessagesService', () => {
     updatedAt: new Date().toISOString(),
   });
 
-  const mockMessage = DirectMessage.fromProps({
+  const mockMessage = ({
     id: 'message-1',
     chatId: 'chat-1',
     senderId: 'user-1',
@@ -86,7 +86,7 @@ describe('DirectMessagesService', () => {
   });
 
   const messageToFirestoreData = (message: DirectMessage): Record<string, unknown> => {
-    const { id, ...data } = message.toJSON();
+    const { id, ...data } = message;
     return data;
   };
 
@@ -273,8 +273,8 @@ describe('DirectMessagesService', () => {
     });
 
     it('should remove existing reaction when same reaction is sent', async () => {
-      const messageWithReaction = DirectMessage.fromProps({
-        ...mockMessage.toJSON(),
+      const messageWithReaction = ({
+        ...mockMessage,
         reactions: [{ userId: 'user-2', type: '👍' }],
       });
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);
@@ -288,8 +288,8 @@ describe('DirectMessagesService', () => {
     });
 
     it('should replace existing reaction with new one', async () => {
-      const messageWithReaction = DirectMessage.fromProps({
-        ...mockMessage.toJSON(),
+      const messageWithReaction = ({
+        ...mockMessage,
         reactions: [{ userId: 'user-2', type: '👍' }],
       });
       mockDirectChatsService.validateChatAccess.mockResolvedValue(mockActiveChat);

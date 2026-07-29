@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { JobOffersService } from './job-offers.service';
-import { JobOffer } from '../../domain/entities/job-offer.entity';
+import { JobOffer } from '../../interfaces/job-offer.interface';
 import { CreateJobOfferDto } from '../../dto/create-job-offer.dto';
 import { NotificationService } from '../../../notifications/application/services/notification.service';
 import { UsersService } from '../../../users/users.service';
@@ -58,10 +58,10 @@ describe('JobOffersService', () => {
     updatedAt: new Date('2024-01-01'),
   };
 
-  const mockJobOffer: JobOffer = new JobOffer({
+  const mockJobOffer: JobOffer = {
     id: 'job1',
     ...mockJobOfferData,
-  });
+  };
 
   beforeEach(async () => {
     mockDoc = {
@@ -170,7 +170,12 @@ describe('JobOffersService', () => {
         companyLogo: '',
       };
 
-      const savedJobOffer = JobOffer.create(createDto);
+      const savedJobOffer: JobOffer = {
+        id: 'job-new',
+        ...createDto,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
       mockCollection.add.mockResolvedValue({ id: savedJobOffer.id });
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([
         {

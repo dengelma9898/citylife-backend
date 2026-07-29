@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { TaxiStandsFeatureService } from './taxi-stands-feature.service';
 import { TaxiStandService } from './taxi-stand.service';
-import { TaxiStand } from '../../domain/entities/taxi-stand.entity';
+import { TaxiStand } from '../../interfaces/taxi-stand.interface';
 import { FirebaseService } from '../../../firebase/firebase.service';
 
 describe('TaxiStandsFeatureService', () => {
@@ -22,7 +22,7 @@ describe('TaxiStandsFeatureService', () => {
     updatedAt: '2026-01-01T00:00:00.000Z',
   };
 
-  const mockTaxiStand = TaxiStand.fromProps(mockTaxiStandProps);
+  const mockTaxiStand: TaxiStand = mockTaxiStandProps;
 
   const mockFirestoreDoc = {
     exists: true,

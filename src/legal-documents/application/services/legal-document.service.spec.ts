@@ -3,7 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { LegalDocumentService } from './legal-document.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { LegalDocument, LegalDocumentType } from '../../domain/entities/legal-document.entity';
+import { LegalDocument, LegalDocumentType } from '../../interfaces/legal-document.interface';
 
 describe('LegalDocumentService', () => {
   let service: LegalDocumentService;
@@ -26,11 +26,15 @@ describe('LegalDocumentService', () => {
   };
   let mockFirestore: { collection: jest.Mock };
 
-  const mockDocument: LegalDocument = LegalDocument.create({
+  const mockDocument: LegalDocument = {
+    id: 'legal-doc-1',
     type: LegalDocumentType.IMPRESSUM,
     content: '# Impressum\n\nTest content',
+    version: 1,
+    createdAt: new Date().toISOString(),
     createdBy: 'user123',
-  });
+    isActive: true,
+  };
 
   const mockCacheManager = {
     get: jest.fn(),
@@ -107,11 +111,15 @@ describe('LegalDocumentService', () => {
       const type = LegalDocumentType.IMPRESSUM;
       const content = '# Impressum\n\nUpdated content';
       const createdBy = 'user456';
-      const existingDocument = LegalDocument.create({
+      const existingDocument: LegalDocument = {
+        id: 'legal-doc-existing',
         type,
         content: '# Impressum\n\nOld content',
+        version: 1,
+        createdAt: new Date().toISOString(),
         createdBy: 'user123',
-      });
+        isActive: true,
+      };
       mockQuery.get.mockResolvedValueOnce({
         empty: false,
         docs: [
@@ -164,11 +172,15 @@ describe('LegalDocumentService', () => {
     it('should return all legal documents of a type', async () => {
       const documents = [
         mockDocument,
-        LegalDocument.create({
+        {
+          id: 'legal-doc-2',
           type: LegalDocumentType.IMPRESSUM,
           content: '# Impressum\n\nUpdated content',
+          version: 2,
+          createdAt: new Date().toISOString(),
           createdBy: 'user456',
-        }),
+          isActive: true,
+        },
       ];
       mockQuery.get.mockResolvedValueOnce({
         docs: documents.map(doc => ({

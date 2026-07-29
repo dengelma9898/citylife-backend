@@ -18,7 +18,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { FileValidationPipe } from '../core/pipes/file-validation.pipe';
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
-import { JobCategory } from './domain/entities/job-category.entity';
+import { JobCategory } from './interfaces/job-category.interface';
 
 @ApiTags('Job Offer Categories')
 @Controller('job-offer-categories')

@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BusinessesController } from './businesses.controller';
 import { BusinessesService } from '../services/businesses.service';
 import { BusinessEventsSettingsService } from '../services/business-events-settings.service';
-import { Business, BusinessAddress, BusinessContact } from '../../domain/entities/business.entity';
-import { BusinessEventsSettings } from '../../domain/entities/business-events-settings.entity';
+import { Business, BusinessAddress, BusinessContact } from '../../interfaces/business.interface';
+import { BusinessEventsSettings } from '../../interfaces/business-events-settings.interface';
 import { BusinessStatus } from '../../domain/enums/business-status.enum';
 import { ConfigService } from '@nestjs/config';
 import { FirebaseService } from '../../../firebase/firebase.service';
@@ -11,6 +11,10 @@ import { FirebaseStorageService } from '../../../firebase/firebase-storage.servi
 import { UsersService } from '../../../users/users.service';
 import { AuthGuard } from '../../../core/guards/auth.guard';
 import { RolesGuard } from '../../../core/guards/roles.guard';
+import { ROLES_KEY } from '../../../core/decorators/roles.decorator';
+import { Reflector } from '@nestjs/core';
+import { UnauthorizedException } from '@nestjs/common';
+import { UserType } from '../../../users/enums/user-type.enum';
 
 jest.mock('../../../firebase/firebase.service', () => ({
   FirebaseService: jest.fn().mockImplementation(() => ({
@@ -48,8 +52,11 @@ describe('BusinessesController', () => {
 
   const mockUsersService = {
     getBusinessUser: jest.fn(),
+    getUserProfile: jest.fn(),
     addBusinessToUser: jest.fn(),
   };
+
+  const mockReq = (uid = 'business-user-1') => ({ user: { uid } });
 
   const mockBusinessEventsSettingsService = {
     getSettings: jest.fn(),
@@ -57,19 +64,39 @@ describe('BusinessesController', () => {
     updateSettings: jest.fn(),
   };
 
-  const mockBusinessAddress = BusinessAddress.create({
+  const mockBusinessContact: BusinessContact = {
+    email: 'contact@business.com',
+    phoneNumber: '+49123456789',
+    website: 'https://business.com',
+  };
+
+  const mockBusinessAddress: BusinessAddress = {
     street: 'Main Street',
     houseNumber: '123',
     postalCode: '90402',
     city: 'Nürnberg',
     latitude: 49.4521,
     longitude: 11.0767,
-  });
+  };
 
-  const mockBusinessContact = BusinessContact.create({
-    email: 'contact@business.com',
-    phoneNumber: '+49123456789',
-    website: 'https://business.com',
+  const createMockBusiness = (overrides: Partial<Business> = {}): Business => ({
+    id: 'business1',
+    name: 'Restaurant A',
+    description: 'A great restaurant',
+    contact: mockBusinessContact,
+    address: mockBusinessAddress,
+    categoryIds: ['category1'],
+    keywordIds: ['keyword1'],
+    openingHours: { monday: '09:00-22:00' },
+    benefit: '10% discount',
+    hasAccount: true,
+    status: BusinessStatus.ACTIVE,
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    isDeleted: false,
+    customers: [],
+    previousBenefits: [],
+    ...overrides,
   });
 
   beforeEach(async () => {
@@ -116,35 +143,25 @@ describe('BusinessesController', () => {
     jest.clearAllMocks();
   });
 
+  beforeEach(() => {
+    mockUsersService.getBusinessUser.mockResolvedValue({
+      id: 'business-user-1',
+      businessIds: ['business1'],
+    });
+    mockUsersService.getUserProfile.mockResolvedValue(null);
+  });
+
   describe('getAll', () => {
     const mockBusinesses = [
-      Business.create({
-        name: 'Restaurant A',
-        description: 'A great restaurant',
-        contact: mockBusinessContact,
-        address: mockBusinessAddress,
-        categoryIds: ['category1'],
-        keywordIds: ['keyword1'],
-        openingHours: {
-          monday: '09:00-22:00',
-        },
-        benefit: '10% discount',
-        hasAccount: true,
-        status: BusinessStatus.ACTIVE,
-      }),
-      Business.create({
+      createMockBusiness({ id: 'business1', name: 'Restaurant A' }),
+      createMockBusiness({
+        id: 'business2',
         name: 'Shop B',
         description: 'A nice shop',
-        contact: mockBusinessContact,
-        address: mockBusinessAddress,
         categoryIds: ['category2'],
         keywordIds: ['keyword2'],
-        openingHours: {
-          monday: '10:00-20:00',
-        },
+        openingHours: { monday: '10:00-20:00' },
         benefit: 'Free shipping',
-        hasAccount: true,
-        status: BusinessStatus.ACTIVE,
       }),
     ];
 
@@ -162,20 +179,7 @@ describe('BusinessesController', () => {
   });
 
   describe('getById', () => {
-    const mockBusiness = Business.create({
-      name: 'Restaurant A',
-      description: 'A great restaurant',
-      contact: mockBusinessContact,
-      address: mockBusinessAddress,
-      categoryIds: ['category1'],
-      keywordIds: ['keyword1'],
-      openingHours: {
-        monday: '09:00-22:00',
-      },
-      benefit: '10% discount',
-      hasAccount: true,
-      status: BusinessStatus.ACTIVE,
-    });
+    const mockBusiness = createMockBusiness();
 
     it('should return a business by id', async () => {
       mockBusinessesService.getById.mockResolvedValue(mockBusiness);
@@ -221,11 +225,12 @@ describe('BusinessesController', () => {
       hasAccount: true,
     };
 
-    const mockCreatedBusiness = Business.create({
+    const mockCreatedBusiness = createMockBusiness({
+      id: 'new-business1',
       name: createDto.name,
       description: createDto.description,
-      contact: BusinessContact.create(createDto.contact),
-      address: BusinessAddress.create(createDto.address),
+      contact: createDto.contact,
+      address: createDto.address,
       categoryIds: createDto.categoryIds,
       keywordIds: createDto.keywordIds,
       openingHours: createDto.openingHours,
@@ -261,23 +266,16 @@ describe('BusinessesController', () => {
       },
     };
 
-    const mockUpdatedBusiness = Business.create({
+    const mockUpdatedBusiness = createMockBusiness({
       name: updateDto.name,
       description: updateDto.description,
-      contact: mockBusinessContact,
-      address: mockBusinessAddress,
-      categoryIds: ['category1'],
-      keywordIds: ['keyword1'],
       openingHours: updateDto.openingHours,
-      benefit: '10% discount',
-      hasAccount: true,
-      status: BusinessStatus.ACTIVE,
     });
 
     it('should update an existing business', async () => {
       mockBusinessesService.update.mockResolvedValue(mockUpdatedBusiness);
 
-      const result = await controller.patchBusiness('business1', updateDto);
+      const result = await controller.patchBusiness(mockReq(), 'business1', updateDto);
 
       expect(result).toBeDefined();
       expect(result.id).toBeDefined();
@@ -288,26 +286,73 @@ describe('BusinessesController', () => {
     });
   });
 
+  describe('updateOpeningHours', () => {
+    const mockBusiness = createMockBusiness({
+      detailedOpeningHours: {
+        Montag: [{ from: '08:00', to: '12:00' }],
+      },
+    });
+
+    it('should update opening hours using structured DTO', async () => {
+      const openingHoursData = {
+        openingHours: { Montag: '09:00-18:00' },
+        detailedOpeningHours: {
+          Dienstag: [{ from: '10:00', to: '20:00' }],
+        },
+      };
+      const expectedUpdate = {
+        openingHours: { Montag: '09:00-18:00' },
+        detailedOpeningHours: {
+          Montag: [{ from: '08:00', to: '12:00' }],
+          Dienstag: [{ from: '10:00', to: '20:00' }],
+        },
+      };
+      mockBusinessesService.getById.mockResolvedValue(mockBusiness);
+      mockBusinessesService.update.mockResolvedValue({
+        ...mockBusiness,
+        ...expectedUpdate,
+      });
+      const result = await controller.updateOpeningHours(
+        mockReq(),
+        'business1',
+        openingHoursData,
+      );
+      expect(result).toBeDefined();
+      expect(mockBusinessesService.update).toHaveBeenCalledWith('business1', expectedUpdate);
+    });
+
+    it('should transform legacy format and update business', async () => {
+      const legacyData = {
+        Montag: { '14:00': '18:00' },
+      } as unknown as Parameters<typeof controller.updateOpeningHours>[2];
+      mockBusinessesService.getById.mockResolvedValue(mockBusiness);
+      mockBusinessesService.update.mockResolvedValue(mockBusiness);
+      await controller.updateOpeningHours(mockReq(), 'business1', legacyData);
+      expect(mockBusinessesService.update).toHaveBeenCalledWith('business1', {
+        detailedOpeningHours: {
+          Montag: [
+            { from: '08:00', to: '12:00' },
+            { from: '14:00', to: '18:00' },
+          ],
+        },
+      });
+    });
+
+    it('should throw NotFoundException when business does not exist', async () => {
+      mockBusinessesService.getById.mockResolvedValue(null);
+      await expect(
+        controller.updateOpeningHours(mockReq(), 'business1', {}),
+      ).rejects.toThrow('Business not found');
+    });
+  });
+
   describe('uploadLogo', () => {
     const mockFile = {
       originalname: 'logo.png',
       buffer: Buffer.from('test'),
     } as Express.Multer.File;
 
-    const mockBusiness = Business.create({
-      name: 'Restaurant A',
-      description: 'A great restaurant',
-      contact: mockBusinessContact,
-      address: mockBusinessAddress,
-      categoryIds: ['category1'],
-      keywordIds: ['keyword1'],
-      openingHours: {
-        monday: '09:00-22:00',
-      },
-      benefit: '10% discount',
-      hasAccount: true,
-      status: BusinessStatus.ACTIVE,
-    });
+    const mockBusiness = createMockBusiness();
 
     it('should upload a logo for a business', async () => {
       mockBusinessesService.getById.mockResolvedValue(mockBusiness);
@@ -319,7 +364,7 @@ describe('BusinessesController', () => {
         logoUrl: 'https://storage.googleapis.com/logo.png',
       });
 
-      const result = await controller.uploadLogo('business1', mockFile);
+      const result = await controller.uploadLogo(mockReq(), 'business1', mockFile);
 
       expect(result).toBeDefined();
       expect(result.logoUrl).toBe('https://storage.googleapis.com/logo.png');
@@ -343,7 +388,7 @@ describe('BusinessesController', () => {
         logoUrl: 'https://storage.googleapis.com/new-logo.png',
       });
 
-      const result = await controller.uploadLogo('business1', mockFile);
+      const result = await controller.uploadLogo(mockReq(), 'business1', mockFile);
 
       expect(result).toBeDefined();
       expect(result.logoUrl).toBe('https://storage.googleapis.com/new-logo.png');
@@ -358,19 +403,7 @@ describe('BusinessesController', () => {
   });
 
   describe('removeImage', () => {
-    const mockBusiness = Business.create({
-      name: 'Restaurant A',
-      description: 'A great restaurant',
-      contact: mockBusinessContact,
-      address: mockBusinessAddress,
-      categoryIds: ['category1'],
-      keywordIds: ['keyword1'],
-      openingHours: {
-        monday: '09:00-22:00',
-      },
-      benefit: '10% discount',
-      hasAccount: true,
-      status: BusinessStatus.ACTIVE,
+    const mockBusiness = createMockBusiness({
       imageUrls: [
         'https://storage.googleapis.com/image1.png',
         'https://storage.googleapis.com/image2.png',
@@ -385,6 +418,7 @@ describe('BusinessesController', () => {
       });
 
       const result = await controller.removeImage(
+        mockReq(),
         'business1',
         'https://storage.googleapis.com/image1.png',
       );
@@ -401,7 +435,7 @@ describe('BusinessesController', () => {
     });
 
     it('should throw BadRequestException if image URL is not provided', async () => {
-      await expect(controller.removeImage('business1', '')).rejects.toThrow(
+      await expect(controller.removeImage(mockReq(), 'business1', '')).rejects.toThrow(
         'Image URL is required',
       );
     });
@@ -410,14 +444,18 @@ describe('BusinessesController', () => {
       mockBusinessesService.getById.mockResolvedValue(mockBusiness);
 
       await expect(
-        controller.removeImage('business1', 'https://storage.googleapis.com/nonexistent.png'),
+        controller.removeImage(
+          mockReq(),
+          'business1',
+          'https://storage.googleapis.com/nonexistent.png',
+        ),
       ).rejects.toThrow('Image URL not found in business');
     });
   });
 
   describe('getPendingApprovalsCount', () => {
     const mockPendingBusinesses = [
-      Business.create({
+      ({
         name: 'Restaurant A',
         description: 'A great restaurant',
         contact: mockBusinessContact,
@@ -448,7 +486,7 @@ describe('BusinessesController', () => {
   });
 
   describe('getBusinessEventsSettings', () => {
-    const mockSettings = BusinessEventsSettings.fromProps({
+    const mockSettings = ({
       id: 'business_events_settings',
       isEnabled: true,
       updatedAt: new Date().toISOString(),
@@ -466,13 +504,13 @@ describe('BusinessesController', () => {
   });
 
   describe('updateBusinessEventsSettings', () => {
-    const mockSettings = BusinessEventsSettings.fromProps({
+    const mockSettings = ({
       id: 'business_events_settings',
       isEnabled: true,
       updatedAt: new Date().toISOString(),
     });
 
-    const updatedSettings = BusinessEventsSettings.fromProps({
+    const updatedSettings = ({
       id: 'business_events_settings',
       isEnabled: false,
       updatedAt: new Date().toISOString(),
@@ -500,7 +538,7 @@ describe('BusinessesController', () => {
     });
 
     it('should update settings to enabled', async () => {
-      const enabledSettings = BusinessEventsSettings.fromProps({
+      const enabledSettings = ({
         id: 'business_events_settings',
         isEnabled: true,
         updatedAt: new Date().toISOString(),
@@ -519,6 +557,47 @@ describe('BusinessesController', () => {
         true,
         'user-1',
       );
+    });
+  });
+
+  describe('business access verification', () => {
+    it('should reject patchBusiness when user has no access to business', async () => {
+      mockUsersService.getBusinessUser.mockResolvedValue({
+        id: 'other-user',
+        businessIds: ['other-business'],
+      });
+      mockUsersService.getUserProfile.mockResolvedValue({
+        userType: UserType.USER,
+      });
+      await expect(
+        controller.patchBusiness(mockReq('other-user'), 'business1', { name: 'Hacked' }),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(mockBusinessesService.update).not.toHaveBeenCalled();
+    });
+
+    it('should allow patchBusiness for super_admin without business assignment', async () => {
+      mockUsersService.getBusinessUser.mockResolvedValue(null);
+      mockUsersService.getUserProfile.mockResolvedValue({
+        userType: UserType.SUPER_ADMIN,
+      });
+      mockBusinessesService.update.mockResolvedValue(createMockBusiness({ name: 'Admin Updated' }));
+      const result = await controller.patchBusiness(mockReq('admin1'), 'business1', {
+        name: 'Admin Updated',
+      });
+      expect(result.name).toBe('Admin Updated');
+      expect(mockBusinessesService.update).toHaveBeenCalled();
+    });
+  });
+
+  describe('admin endpoint role metadata', () => {
+    const reflector = new Reflector();
+
+    it('should require super_admin for getPendingApprovalsCount', () => {
+      const roles = reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+        BusinessesController.prototype.getPendingApprovalsCount,
+        BusinessesController,
+      ]);
+      expect(roles).toContain('super_admin');
     });
   });
 });

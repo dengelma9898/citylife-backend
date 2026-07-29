@@ -9,5 +9,6 @@ import { UsersModule } from '../users/users.module';
   imports: [FirebaseModule, UsersModule],
   controllers: [AppVersionsController, AppVersionsAdminController],
   providers: [AppVersionsService],
+  exports: [AppVersionsService],
 })
 export class AppVersionsModule {}

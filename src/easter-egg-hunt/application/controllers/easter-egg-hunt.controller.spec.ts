@@ -3,7 +3,7 @@ import { EasterEggHuntController } from './easter-egg-hunt.controller';
 import { EasterEggHuntService } from '../services/easter-egg-hunt.service';
 import { EasterEggService } from '../services/easter-egg.service';
 import { FirebaseStorageService } from '../../../firebase/firebase-storage.service';
-import { EasterEgg } from '../../domain/entities/easter-egg.entity';
+import { EasterEgg } from '../../interfaces/easter-egg.interface';
 import { UsersService } from '../../../users/users.service';
 
 describe('EasterEggHuntController', () => {
@@ -28,7 +28,7 @@ describe('EasterEggHuntController', () => {
     updatedAt: '2026-01-01T00:00:00.000Z',
   };
 
-  const mockEgg = EasterEgg.fromProps(mockEggProps);
+  const mockEgg: EasterEgg = mockEggProps;
 
   beforeEach(async () => {
     mockEasterEggHuntService = {
@@ -129,7 +129,7 @@ describe('EasterEggHuntController', () => {
 
   describe('update', () => {
     it('should update an egg', async () => {
-      const updatedEgg = EasterEgg.fromProps({ ...mockEggProps, title: 'Aktualisiert' });
+      const updatedEgg: EasterEgg = { ...mockEggProps, title: 'Aktualisiert' };
       mockEasterEggService.update.mockResolvedValue(updatedEgg);
       const result = await controller.update('egg-1', { title: 'Aktualisiert' });
       expect(result.title).toBe('Aktualisiert');
@@ -148,7 +148,7 @@ describe('EasterEggHuntController', () => {
     it('should upload image and update egg', async () => {
       mockEasterEggService.getById.mockResolvedValue(mockEgg);
       mockFirebaseStorageService.uploadFile.mockResolvedValue('https://example.com/new.jpg');
-      const updatedEgg = EasterEgg.fromProps({ ...mockEggProps, imageUrl: 'https://example.com/new.jpg' });
+      const updatedEgg: EasterEgg = { ...mockEggProps, imageUrl: 'https://example.com/new.jpg' };
       mockEasterEggService.updateImageUrl.mockResolvedValue(updatedEgg);
       const file = { originalname: 'test.jpg', buffer: Buffer.from('test') } as Express.Multer.File;
       const result = await controller.uploadImage('egg-1', file);
@@ -159,7 +159,7 @@ describe('EasterEggHuntController', () => {
       mockEasterEggService.getById.mockResolvedValue(mockEgg);
       mockFirebaseStorageService.deleteFile.mockResolvedValue(undefined);
       mockFirebaseStorageService.uploadFile.mockResolvedValue('https://example.com/new.jpg');
-      const updatedEgg = EasterEgg.fromProps({ ...mockEggProps, imageUrl: 'https://example.com/new.jpg' });
+      const updatedEgg: EasterEgg = { ...mockEggProps, imageUrl: 'https://example.com/new.jpg' };
       mockEasterEggService.updateImageUrl.mockResolvedValue(updatedEgg);
       const file = { originalname: 'test.jpg', buffer: Buffer.from('test') } as Express.Multer.File;
       await controller.uploadImage('egg-1', file);
@@ -169,7 +169,7 @@ describe('EasterEggHuntController', () => {
 
   describe('participate', () => {
     it('should participate in an egg', async () => {
-      const updatedEgg = EasterEgg.fromProps({ ...mockEggProps, participants: ['user-1', 'new-user'] });
+      const updatedEgg: EasterEgg = { ...mockEggProps, participants: ['user-1', 'new-user'] };
       mockEasterEggHuntService.participate.mockResolvedValue(updatedEgg);
       const result = await controller.participate('egg-1', 'new-user');
       expect(result.participantCount).toBe(2);
@@ -178,7 +178,7 @@ describe('EasterEggHuntController', () => {
 
   describe('drawWinners', () => {
     it('should draw winners', async () => {
-      const eggWithWinner = EasterEgg.fromProps({ ...mockEggProps, winners: ['user-1'] });
+      const eggWithWinner: EasterEgg = { ...mockEggProps, winners: ['user-1'] };
       mockEasterEggHuntService.drawWinners.mockResolvedValue(eggWithWinner);
       const result = await controller.drawWinners('egg-1');
       expect(result.winnerCount).toBe(1);
@@ -187,7 +187,7 @@ describe('EasterEggHuntController', () => {
 
   describe('addWinner', () => {
     it('should add a winner', async () => {
-      const eggWithWinner = EasterEgg.fromProps({ ...mockEggProps, winners: ['user-1'] });
+      const eggWithWinner: EasterEgg = { ...mockEggProps, winners: ['user-1'] };
       mockEasterEggHuntService.addWinner.mockResolvedValue(eggWithWinner);
       const result = await controller.addWinner('egg-1', { userId: 'user-1' });
       expect(result.winnerCount).toBe(1);

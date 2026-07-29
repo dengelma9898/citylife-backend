@@ -54,23 +54,21 @@ export class FirebaseStorageService {
       // - https://firebasestorage.googleapis.com/v0/b/bucket-name/o/path%2Fto%2Ffile?alt=media&token=...
       let path: string;
 
-      if (url.includes('storage.googleapis.com')) {
-        // Format: https://storage.googleapis.com/bucket-name/path/to/file
-        const urlParts = url.split('/');
-        const bucketIndex = urlParts.findIndex(part => part.includes('.googleapis.com'));
-
-        if (bucketIndex === -1) {
-          throw new Error('Invalid storage URL format');
-        }
-
-        path = urlParts.slice(bucketIndex + 1).join('/');
-      } else if (url.includes('firebasestorage.googleapis.com')) {
+      if (url.includes('firebasestorage.googleapis.com')) {
         // Format: https://firebasestorage.googleapis.com/v0/b/bucket-name/o/path%2Fto%2Ffile?alt=media&token=...
         const match = url.match(/\/o\/([^?]+)/);
         if (!match) {
           throw new Error('Invalid Firebase Storage URL format');
         }
         path = decodeURIComponent(match[1]);
+      } else if (url.includes('storage.googleapis.com')) {
+        // Format: https://storage.googleapis.com/bucket-name/path/to/file
+        const urlParts = url.split('/');
+        const domainIndex = urlParts.findIndex(part => part.includes('.googleapis.com'));
+        if (domainIndex === -1 || urlParts.length <= domainIndex + 2) {
+          throw new Error('Invalid storage URL format');
+        }
+        path = urlParts.slice(domainIndex + 2).join('/');
       } else {
         // Assume it's already a path
         path = url;

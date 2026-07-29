@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BusinessCategoriesService } from './business-categories.service';
-import { BusinessCategory } from '../../domain/entities/business-category.entity';
+import { BusinessCategory } from '../../interfaces/business-category.interface';
 import { KeywordsService } from '../../../keywords/keywords.service';
 import { FirebaseService } from '../../../firebase/firebase.service';
 
@@ -81,7 +81,7 @@ describe('BusinessCategoriesService', () => {
 
   describe('getAll', () => {
     const mockCategories = [
-      BusinessCategory.fromProps({
+      ({
         id: 'category1',
         name: 'Restaurant',
         iconName: 'restaurant',
@@ -90,7 +90,7 @@ describe('BusinessCategoriesService', () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }),
-      BusinessCategory.fromProps({
+      ({
         id: 'category2',
         name: 'Retail',
         iconName: 'shopping',
@@ -106,7 +106,7 @@ describe('BusinessCategoriesService', () => {
         docs: mockCategories.map(category => ({
           id: category.id,
           data: () => {
-            const { id, ...data } = category.toJSON();
+            const { id, ...data } = category;
             return data;
           },
         })),
@@ -129,7 +129,7 @@ describe('BusinessCategoriesService', () => {
   });
 
   describe('getById', () => {
-    const mockCategory = BusinessCategory.fromProps({
+    const mockCategory = ({
       id: 'category1',
       ...mockCategoryData,
     });
@@ -139,7 +139,7 @@ describe('BusinessCategoriesService', () => {
         exists: true,
         id: 'category1',
         data: () => {
-          const { id, ...data } = mockCategory.toJSON();
+          const { id, ...data } = mockCategory;
           return data;
         },
       });
@@ -185,7 +185,7 @@ describe('BusinessCategoriesService', () => {
       keywordIds: ['keyword3'],
     };
 
-    const existingCategory = BusinessCategory.fromProps({
+    const existingCategory = ({
       id: 'category1',
       name: 'Restaurant',
       iconName: 'restaurant',
@@ -200,7 +200,7 @@ describe('BusinessCategoriesService', () => {
         exists: true,
         id: 'category1',
         data: () => {
-          const { id, ...data } = existingCategory.toJSON();
+          const { id, ...data } = existingCategory;
           return data;
         },
       });
@@ -238,7 +238,7 @@ describe('BusinessCategoriesService', () => {
 
   describe('getAllWithKeywords', () => {
     const mockCategories = [
-      BusinessCategory.fromProps({
+      ({
         id: 'category1',
         name: 'Restaurant',
         iconName: 'restaurant',
@@ -259,7 +259,7 @@ describe('BusinessCategoriesService', () => {
         docs: mockCategories.map(category => ({
           id: category.id,
           data: () => {
-            const { id, ...data } = category.toJSON();
+            const { id, ...data } = category;
             return data;
           },
         })),
@@ -277,7 +277,7 @@ describe('BusinessCategoriesService', () => {
     });
 
     it('should handle categories without keywords', async () => {
-      const categoryWithoutKeywords = BusinessCategory.fromProps({
+      const categoryWithoutKeywords = ({
         id: 'category2',
         name: 'Retail',
         iconName: 'shopping',
@@ -291,7 +291,7 @@ describe('BusinessCategoriesService', () => {
           {
             id: categoryWithoutKeywords.id,
             data: () => {
-              const { id, ...data } = categoryWithoutKeywords.toJSON();
+              const { id, ...data } = categoryWithoutKeywords;
               return data;
             },
           },

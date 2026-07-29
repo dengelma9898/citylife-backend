@@ -1,8 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  BusinessEventsSettings,
-  BusinessEventsSettingsProps,
-} from '../../domain/entities/business-events-settings.entity';
+import { BusinessEventsSettings } from '../../interfaces/business-events-settings.interface';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
 
@@ -14,11 +11,7 @@ export class BusinessEventsSettingsService {
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
-  private toPlainObject(entity: BusinessEventsSettings): Omit<BusinessEventsSettingsProps, 'id'> {
-    return toFirestoreData(entity);
-  }
-
-  private toEntityProps(data: Record<string, unknown>, id: string): BusinessEventsSettingsProps {
+  private toSettings(data: Record<string, unknown>, id: string): BusinessEventsSettings {
     const updatedAt = data.updatedAt as { toDate?: () => Date } | string | undefined;
     const resolvedUpdatedAt =
       typeof updatedAt === 'object' && updatedAt?.toDate
@@ -32,18 +25,24 @@ export class BusinessEventsSettingsService {
     };
   }
 
+  private createDefaultSettings(): BusinessEventsSettings {
+    return {
+      id: this.documentId,
+      isEnabled: true,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
   private async getFromFirestore(): Promise<BusinessEventsSettings> {
     try {
       const db = this.firebaseService.getFirestore();
       const doc = await db.collection(this.collectionName).doc(this.documentId).get();
       if (!doc.exists) {
-        const defaultSettings = BusinessEventsSettings.createDefault();
+        const defaultSettings = this.createDefaultSettings();
         await this.saveToFirestore(defaultSettings);
         return defaultSettings;
       }
-      return BusinessEventsSettings.fromProps(
-        this.toEntityProps(doc.data() as Record<string, unknown>, doc.id),
-      );
+      return this.toSettings(doc.data() as Record<string, unknown>, doc.id);
     } catch (error) {
       this.logger.error(`Error getting business events settings: ${error.message}`);
       throw error;
@@ -56,7 +55,7 @@ export class BusinessEventsSettingsService {
       await db
         .collection(this.collectionName)
         .doc(this.documentId)
-        .set(this.toPlainObject(settings));
+        .set(toFirestoreData(settings as unknown as Record<string, unknown>));
       return settings;
     } catch (error) {
       this.logger.error(`Error saving business events settings: ${error.message}`);
@@ -79,7 +78,12 @@ export class BusinessEventsSettingsService {
       `Updating business events settings: isEnabled=${isEnabled}, updatedBy=${updatedBy}`,
     );
     const currentSettings = await this.getFromFirestore();
-    const updatedSettings = currentSettings.update({ isEnabled }, updatedBy);
+    const updatedSettings: BusinessEventsSettings = {
+      ...currentSettings,
+      isEnabled,
+      updatedBy: updatedBy || currentSettings.updatedBy,
+      updatedAt: new Date().toISOString(),
+    };
     return this.saveToFirestore(updatedSettings);
   }
 }

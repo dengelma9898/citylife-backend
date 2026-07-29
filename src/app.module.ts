@@ -32,6 +32,7 @@ import { EasterEggHuntModule } from './easter-egg-hunt/easter-egg-hunt.module';
 import { TaxiStandsModule } from './taxi-stands/taxi-stands.module';
 import { CuratedSpotsModule } from './curated-spots/curated-spots.module';
 import { PassStatsModule } from './pass-stats/pass-stats.module';
+import { BootstrapModule } from './bootstrap/bootstrap.module';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { PassStatsModule } from './pass-stats/pass-stats.module';
     TaxiStandsModule,
     CuratedSpotsModule,
     PassStatsModule,
+    BootstrapModule,
   ],
 })
 export class AppModule {}

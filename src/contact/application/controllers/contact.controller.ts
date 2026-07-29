@@ -9,7 +9,7 @@ import {
   Patch,
 } from '@nestjs/common';
 import { ContactService } from '../services/contact.service';
-import { ContactRequest } from '../../domain/entities/contact-request.entity';
+import { ContactRequest } from '../../interfaces/contact-request.interface';
 import { GeneralContactRequestDto } from '../dto/general-contact-request.dto';
 import { FeedbackRequestDto } from '../dto/feedback-request.dto';
 import { BusinessClaimRequestDto } from '../dto/business-claim-request.dto';

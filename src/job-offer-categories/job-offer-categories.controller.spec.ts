@@ -4,7 +4,7 @@ import { JobOfferCategoriesService } from './services/job-offer-categories.servi
 import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { CreateJobCategoryDto } from './dto/create-job-category.dto';
 import { NotFoundException } from '@nestjs/common';
-import { JobCategory } from './domain/entities/job-category.entity';
+import { JobCategory } from './interfaces/job-category.interface';
 import { Readable } from 'stream';
 
 describe('JobOfferCategoriesController', () => {
@@ -27,13 +27,16 @@ describe('JobOfferCategoriesController', () => {
     deleteFile: jest.fn(),
   };
 
-  const mockJobCategory: JobCategory = JobCategory.create({
+  const mockJobCategory: JobCategory = {
+    id: 'cat-1',
     name: 'Test Category',
     description: 'Test Description',
     colorCode: '#FF0000',
     iconName: 'test-icon',
     fallbackImages: [],
-  });
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({

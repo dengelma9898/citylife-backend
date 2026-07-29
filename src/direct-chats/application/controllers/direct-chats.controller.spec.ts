@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DirectChatsController } from './direct-chats.controller';
 import { DirectChatsService } from '../services/direct-chats.service';
 import { DirectChatSettingsService } from '../services/direct-chat-settings.service';
-import { DirectChat } from '../../domain/entities/direct-chat.entity';
-import { DirectChatSettings } from '../../domain/entities/direct-chat-settings.entity';
+import { DirectChat } from '../../interfaces/direct-chat.interface';
+import { DirectChatSettings } from '../../interfaces/direct-chat-settings.interface';
 import { AuthGuard } from '../../../core/guards/auth.guard';
 import { DirectChatEnabledGuard } from '../guards/direct-chat-enabled.guard';
 import { RolesGuard } from '../../../core/guards/roles.guard';
@@ -28,7 +28,7 @@ describe('DirectChatsController', () => {
     updateSettings: jest.fn(),
   };
 
-  const mockChat = DirectChat.fromProps({
+  const mockChat = ({
     id: 'chat-1',
     creatorId: 'user-1',
     invitedUserId: 'user-2',
@@ -39,7 +39,7 @@ describe('DirectChatsController', () => {
     updatedAt: new Date().toISOString(),
   });
 
-  const mockSettings = DirectChatSettings.fromProps({
+  const mockSettings = ({
     id: 'direct_chat_settings',
     isEnabled: true,
     updatedAt: new Date().toISOString(),
@@ -94,8 +94,8 @@ describe('DirectChatsController', () => {
 
   describe('updateSettings', () => {
     it('should update settings', async () => {
-      const updatedSettings = DirectChatSettings.fromProps({
-        ...mockSettings.toJSON(),
+      const updatedSettings = ({
+        ...mockSettings,
         isEnabled: false,
         updatedBy: 'user-1',
       });
@@ -126,7 +126,7 @@ describe('DirectChatsController', () => {
     it('should return all chats for the user', async () => {
       const mockChatsWithInfo = [
         {
-          ...mockChat.toJSON(),
+          ...mockChat,
           otherParticipantName: 'User 2',
           otherParticipantProfilePictureUrl: 'https://example.com/pic.jpg',
         },
@@ -144,7 +144,7 @@ describe('DirectChatsController', () => {
     it('should return pending chats for the user', async () => {
       const mockPendingChats = [
         {
-          ...mockChat.toJSON(),
+          ...mockChat,
           otherParticipantName: 'User 1',
         },
       ];
@@ -160,7 +160,7 @@ describe('DirectChatsController', () => {
   describe('getChatById', () => {
     it('should return a specific chat', async () => {
       const mockChatWithInfo = {
-        ...mockChat.toJSON(),
+        ...mockChat,
         otherParticipantName: 'User 2',
       };
       mockDirectChatsService.getChatById.mockResolvedValue(mockChatWithInfo);
@@ -175,8 +175,8 @@ describe('DirectChatsController', () => {
 
   describe('confirmChat', () => {
     it('should confirm a chat', async () => {
-      const confirmedChat = DirectChat.fromProps({
-        ...mockChat.toJSON(),
+      const confirmedChat = ({
+        ...mockChat,
         invitedConfirmed: true,
         status: 'active',
       });

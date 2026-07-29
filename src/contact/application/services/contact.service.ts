@@ -1,12 +1,8 @@
 import { Injectable, Logger, Inject, forwardRef, UnauthorizedException } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import {
-  ContactRequest,
-  ContactRequestProps,
-  ContactRequestType,
-} from '../../domain/entities/contact-request.entity';
-import { ContactMessage } from '../../domain/entities/contact-message.entity';
+import { ContactRequest, ContactRequestType } from '../../interfaces/contact-request.interface';
+import { ContactMessage } from '../../interfaces/contact-message.interface';
 import { GeneralContactRequestDto } from '../dto/general-contact-request.dto';
 import { FeedbackRequestDto } from '../dto/feedback-request.dto';
 import { BusinessClaimRequestDto } from '../dto/business-claim-request.dto';
@@ -29,25 +25,49 @@ export class ContactService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  private toContactRequestProps(data: Record<string, unknown>, id: string): ContactRequestProps {
+  private toContactMessage(msg: Record<string, unknown>): ContactMessage {
+    return {
+      userId: msg.userId as string,
+      message: msg.message as string,
+      createdAt: msg.createdAt as string,
+      isAdminResponse: msg.isAdminResponse as boolean,
+    };
+  }
+
+  private toContactRequest(data: Record<string, unknown>, id: string): ContactRequest {
     const messages = (data.messages as Record<string, unknown>[]) || [];
     return {
       id,
       type: data.type as ContactRequestType,
       userId: data.userId as string | undefined,
       businessId: data.businessId as string | undefined,
-      messages: messages.map(msg =>
-        ContactMessage.fromProps({
-          userId: msg.userId as string | undefined,
-          message: msg.message as string,
-          createdAt: msg.createdAt as string,
-          isAdminResponse: msg.isAdminResponse as boolean,
-        }),
-      ),
+      messages: messages.map(msg => this.toContactMessage(msg)),
       createdAt: data.createdAt as string,
       updatedAt: data.updatedAt as string,
       isProcessed: (data.isProcessed as boolean) ?? false,
       responded: (data.responded as boolean) ?? false,
+    };
+  }
+
+  private createContactMessage(
+    props: Omit<ContactMessage, 'createdAt'>,
+  ): ContactMessage {
+    return {
+      ...props,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  private createContactRequestData(
+    props: Omit<ContactRequest, 'id' | 'responded' | 'isProcessed' | 'createdAt' | 'updatedAt'>,
+  ): Omit<ContactRequest, 'id'> {
+    const now = new Date().toISOString();
+    return {
+      ...props,
+      createdAt: now,
+      updatedAt: now,
+      responded: false,
+      isProcessed: false,
     };
   }
 
@@ -56,9 +76,7 @@ export class ContactService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).get();
     return snapshot.docs.map(doc =>
-      ContactRequest.fromProps(
-        this.toContactRequestProps(doc.data() as Record<string, unknown>, doc.id),
-      ),
+      this.toContactRequest(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -69,20 +87,21 @@ export class ContactService {
     if (!doc.exists) {
       return null;
     }
-    return ContactRequest.fromProps(
-      this.toContactRequestProps(doc.data() as Record<string, unknown>, doc.id),
-    );
+    return this.toContactRequest(doc.data() as Record<string, unknown>, doc.id);
   }
 
   private async createContactRequestInFirestore(
-    data: Omit<ContactRequest, 'id' | 'createdAt' | 'updatedAt'>,
+    data: Omit<ContactRequest, 'id' | 'responded' | 'isProcessed' | 'createdAt' | 'updatedAt'>,
   ): Promise<ContactRequest> {
     this.logger.log('Creating new contact request');
     const db = this.firebaseService.getFirestore();
-    const contactRequest = ContactRequest.create(data);
-    const plainData = toFirestoreData(contactRequest);
+    const contactRequest = this.createContactRequestData(data);
+    const plainData = toFirestoreData(contactRequest as unknown as Record<string, unknown>);
     const docRef = await db.collection(this.collection).add(plainData);
-    return ContactRequest.fromProps(this.toContactRequestProps(plainData, docRef.id));
+    return this.toContactRequest(
+      { ...plainData, id: docRef.id } as Record<string, unknown>,
+      docRef.id,
+    );
   }
 
   private async updateContactRequest(
@@ -95,13 +114,18 @@ export class ContactService {
     if (!doc.exists) {
       return null;
     }
-    const currentRequest = ContactRequest.fromProps(
-      this.toContactRequestProps(doc.data() as Record<string, unknown>, doc.id),
+    const currentRequest = this.toContactRequest(
+      doc.data() as Record<string, unknown>,
+      doc.id,
     );
-    const updatedRequest = currentRequest.update(data);
-    const plainData = toFirestoreData(updatedRequest);
+    const updatedRequest: ContactRequest = {
+      ...currentRequest,
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+    const plainData = toFirestoreData(updatedRequest as unknown as Record<string, unknown>);
     await db.collection(this.collection).doc(id).update(plainData);
-    return ContactRequest.fromProps(this.toContactRequestProps(plainData, id));
+    return this.toContactRequest({ ...plainData, id } as Record<string, unknown>, id);
   }
 
   private async findContactRequestsByUserId(userId: string): Promise<ContactRequest[]> {
@@ -109,9 +133,7 @@ export class ContactService {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).where('userId', '==', userId).get();
     return snapshot.docs.map(doc =>
-      ContactRequest.fromProps(
-        this.toContactRequestProps(doc.data() as Record<string, unknown>, doc.id),
-      ),
+      this.toContactRequest(doc.data() as Record<string, unknown>, doc.id),
     );
   }
 
@@ -124,18 +146,17 @@ export class ContactService {
     type: ContactRequestType,
   ): Promise<ContactRequest> {
     this.logger.debug(`Creating new ${type} contact request`);
-    const initialMessage = ContactMessage.create({
+    const initialMessage = this.createContactMessage({
       message: data.message,
       userId: data.userId,
       isAdminResponse: false,
     });
-    const contactRequest = ContactRequest.create({
+    const createdRequest = await this.createContactRequestInFirestore({
       type,
       businessId: 'businessId' in data ? data.businessId : '',
       userId: data.userId,
       messages: [initialMessage],
     });
-    const createdRequest = await this.createContactRequestInFirestore(contactRequest);
     const user = await this.usersService.getById(data.userId);
     if (user) {
       const contactRequestIds = user.contactRequestIds || [];
@@ -174,13 +195,13 @@ export class ContactService {
       throw new Error(`Contact request with id ${id} not found`);
     }
     const wasResponded = contactRequest.responded;
-    const newMessage = ContactMessage.create({
+    const newMessage = this.createContactMessage({
       message: data.message,
       userId: data.userId,
       isAdminResponse: true,
     });
     const updatedRequest = await this.updateContactRequest(id, {
-      messages: [...contactRequest.messages.map(msg => ContactMessage.fromProps(msg)), newMessage],
+      messages: [...contactRequest.messages, newMessage],
       responded: true,
     });
     if (!updatedRequest) {
@@ -248,13 +269,13 @@ export class ContactService {
     }
     const wasResponded = contactRequest.responded;
     const isAdminResponse = 'userType' in user && user.userType === UserType.SUPER_ADMIN;
-    const newMessage = ContactMessage.create({
+    const newMessage = this.createContactMessage({
       message: messageDto.message,
       userId: userId,
       isAdminResponse,
     });
     const updatedRequest = await this.updateContactRequest(id, {
-      messages: [...contactRequest.messages.map(msg => ContactMessage.fromProps(msg)), newMessage],
+      messages: [...contactRequest.messages, newMessage],
       responded: isAdminResponse,
     });
     if (!updatedRequest) {

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DirectChatSettingsService } from './direct-chat-settings.service';
-import { DirectChatSettings } from '../../domain/entities/direct-chat-settings.entity';
+import { DirectChatSettings } from '../../interfaces/direct-chat-settings.interface';
 import { FirebaseService } from '../../../firebase/firebase.service';
 
 describe('DirectChatSettingsService', () => {
@@ -15,13 +15,13 @@ describe('DirectChatSettingsService', () => {
   let mockFirestore: { collection: jest.Mock };
   let mockFirebaseService: { getFirestore: jest.Mock };
 
-  const mockSettings = DirectChatSettings.fromProps({
+  const mockSettings = ({
     id: 'direct_chat_settings',
     isEnabled: true,
     updatedAt: new Date().toISOString(),
   });
 
-  const mockDisabledSettings = DirectChatSettings.fromProps({
+  const mockDisabledSettings = ({
     id: 'direct_chat_settings',
     isEnabled: false,
     updatedAt: new Date().toISOString(),
@@ -29,7 +29,7 @@ describe('DirectChatSettingsService', () => {
   });
 
   const settingsToFirestoreData = (settings: DirectChatSettings): Record<string, unknown> => {
-    const { id, ...data } = settings.toJSON();
+    const { id, ...data } = settings;
     return data;
   };
 
