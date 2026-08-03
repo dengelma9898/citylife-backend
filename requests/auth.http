@@ -1,10 +1,19 @@
-@baseUrl = http://localhost:3000
-@firebaseApiKey = YOUR_FIREBASE_API_KEY
-@adminToken = YOUR_ADMIN_TOKEN
+# Prefer http-client.env.json (local / dev / prd) — see requests/env-check.http
+@baseUrl = {{baseUrl}}
+@firebaseApiKey = {{firebaseApiKey}}
+@token = {{token}}
 
-### Get Firebase ID Token (für Admin-User)
-### Ersetze YOUR_FIREBASE_API_KEY mit deiner Firebase API Key aus der .env Datei
-### Ersetze email und password mit den Credentials eines Admin-Users
+### Anonymous sign-up (same as Flutter anonymous auth)
+# @name anonymousSignUp
+POST https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={{firebaseApiKey}}
+Content-Type: application/json
+
+{
+  "returnSecureToken": true
+}
+
+### Password sign-in (admin / test user)
+# @name passwordSignIn
 POST https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebaseApiKey}}
 Content-Type: application/json
 
@@ -14,6 +23,5 @@ Content-Type: application/json
   "returnSecureToken": true
 }
 
-### Der Response enthält ein "idToken" Feld - kopiere diesen Wert und verwende ihn als Bearer Token
-### Setze dann @adminToken = <idToken> für die Verwendung in anderen Requests
+### Copy idToken from response into http-client.env.json -> token, then use env-check.http
 

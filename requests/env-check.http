@@ -1,0 +1,59 @@
+# Env diagnostic: compare auth behavior across local / dev / prd
+#
+# Setup (Cursor/VS Code REST Client):
+# 1. Set firebaseApiKey in requests/http-client.env.json (from .env.dev / FIREBASE_API_KEY)
+# 2. Select environment: dev or prd (bottom-right in editor)
+# 3. Run "Get anonymous Firebase token" below, copy idToken into http-client.env.json -> token
+# 4. Re-select environment and run the comparison requests
+#
+# Expected when token + env are correct: 200 on protected reads.
+# Same token must work on dev AND prd if both use the same Firebase project + service account.
+
+### 0) Baseline — no auth (both envs should return 401, message: No authorization header found)
+GET {{baseUrl}}/app-settings
+
+### 0b) Baseline — invalid token (both envs should return 401, message: Authentication failed)
+GET {{baseUrl}}/app-settings
+Authorization: Bearer invalid.token.here
+
+### 1) Get anonymous Firebase token (same flow as Flutter app)
+# @name anonymousSignUp
+POST https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={{firebaseApiKey}}
+Content-Type: application/json
+
+{
+  "returnSecureToken": true
+}
+
+### Copy response idToken into http-client.env.json for the selected environment.
+
+### 2) App settings — primary cold-start read
+GET {{baseUrl}}/app-settings
+Authorization: Bearer {{token}}
+
+### 3) Bootstrap bundle (exists on dev; prod may return 404 if not deployed yet)
+GET {{baseUrl}}/bootstrap
+Authorization: Bearer {{token}}
+
+### 4) Downtime status
+GET {{baseUrl}}/downtime
+Authorization: Bearer {{token}}
+
+### 5) Backend health (requires auth; nginx /health is separate and needs no token)
+GET {{baseUrl}}/health
+Authorization: Bearer {{token}}
+
+### 6) User profile — replace USER_ID with sub/uid from JWT (jwt.io)
+GET {{baseUrl}}/users/USER_ID/profile
+Authorization: Bearer {{token}}
+
+### 7) Sign in with password (admin / test user) — alternative token source
+# @name passwordSignIn
+POST https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebaseApiKey}}
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "your-password",
+  "returnSecureToken": true
+}

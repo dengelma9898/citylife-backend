@@ -54,8 +54,9 @@ npm run start:prod
 ## API-Dokumentation
 
 - Swagger UI: `GET /api` (lokal z. B. `http://localhost:3000/api`)
-- **Cold-Start-Bundle:** `GET /bootstrap` – aggregiert App-Settings, Kategorien, Keywords, Downtime und optional App-Version-Check; Details in [docs/api-bootstrap.md](docs/api-bootstrap.md)
-- Weitere Integrations-Guides: `docs/`
+- **Cold-Start-Bundle:** `GET /bootstrap` – aggregiert App-Settings, Kategorien, Keywords, Downtime und optional App-Version-Check; Details in [CONSTITUTION.md](CONSTITUTION.md) §5.1
+- Architektur, API-Verträge, Konfiguration: [CONSTITUTION.md](CONSTITUTION.md)
+- Audits, Roadmap, Integrations-Checklisten: [docs/app_review.html](docs/app_review.html)
 
 ## Docker Konfiguration
 
@@ -97,7 +98,7 @@ docker buildx build --platform linux/amd64 \
 
 ## VPS & Security
 
-Produktions-Hosting auf IONOS VPS (`nuernbergspots.de`). Inventar, Hardening-Status und Verifikation: [docs/vps-server-inventory.md](docs/vps-server-inventory.md). Backend-Container binden auf `127.0.0.1` — öffentlicher Zugriff nur via nginx (`/dev/`, `/prd/`).
+Produktions-Hosting auf IONOS VPS (`nuernbergspots.de`). Inventar, Hardening-Status und Verifikation: [docs/app_review.html](docs/app_review.html) (Tab „VPS Inventar“). Backend-Container binden auf `127.0.0.1` — öffentlicher Zugriff nur via nginx (`/dev/`, `/prd/`).
 
 ## Docker Deployment
 

@@ -16,7 +16,7 @@ export function getDefaultCacheMaxItems(): number {
 
 /**
  * Creates in-memory CacheModule options.
- * Shared cache (e.g. Redis) is intentionally not used – see docs/configuration-values.md.
+ * Shared cache (e.g. Redis) is intentionally not used – see CONSTITUTION.md §3.
  */
 export function createCacheModuleOptions(): CacheModuleOptions {
   return {

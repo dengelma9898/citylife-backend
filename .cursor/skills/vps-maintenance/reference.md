@@ -1,6 +1,6 @@
 # VPS Reference — nuernbergspots.de
 
-Vollständiges Inventar: [docs/vps-server-inventory.md](../../../docs/vps-server-inventory.md).
+Vollständiges Inventar: [docs/app_review.html](../../../docs/app_review.html) (Tab „VPS Inventar“).
 
 ## Zugang
 

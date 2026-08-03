@@ -5,7 +5,7 @@ description: SSH into the IONOS VPS (nuernbergspots.de), run OS/Docker updates, 
 
 # VPS Wartung — nuernbergspots.de
 
-IONOS-VPS (klassisch, **kein** `ionosctl`/Cloud-API). Vollständiges Inventar: [docs/vps-server-inventory.md](../../../docs/vps-server-inventory.md).
+IONOS-VPS (klassisch, **kein** `ionosctl`/Cloud-API). Vollständiges Inventar: [docs/app_review.html](../../../docs/app_review.html) (Tab „VPS Inventar“).
 
 ## Voraussetzungen
 
@@ -138,7 +138,7 @@ Kurz an User melden:
 - Anzahl upgradeter Pakete / Reboot ja/nein
 - Post-Check: alle PASS / welche FAIL
 - Uptime nach Reboot, Container-Laufzeit
-Optional `docs/vps-server-inventory.md` aktualisieren, wenn sich Infrastruktur geändert hat.
+Optional `docs/app_review.html` (Tab „VPS Inventar“) aktualisieren, wenn sich Infrastruktur geändert hat.
 
 ## Erwartete Services (Post-Check)
 

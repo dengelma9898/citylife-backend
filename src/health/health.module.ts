@@ -17,7 +17,7 @@ import { FirebaseModule } from '../firebase/firebase.module';
  * Konfiguration:
  * - MEMORY_HEAP_THRESHOLD: Maximaler Heap in MB (Standard: 500MB)
  *
- * Siehe docs/configuration-values.md für Details.
+ * Siehe CONSTITUTION.md §3 für Details.
  */
 @Module({
   imports: [TerminusModule, FirebaseModule],

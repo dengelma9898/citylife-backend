@@ -8,7 +8,7 @@ import { HealthIndicatorService, HealthIndicatorResult } from '@nestjs/terminus'
  * Konfiguration:
  * - MEMORY_HEAP_THRESHOLD: Maximaler Heap-Verbrauch in MB (Standard: 500MB)
  *
- * Siehe docs/configuration-values.md für Details.
+ * Siehe CONSTITUTION.md §3 für Details.
  */
 @Injectable()
 export class MemoryHealthIndicator {

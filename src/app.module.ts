@@ -43,7 +43,7 @@ import { BootstrapModule } from './bootstrap/bootstrap.module';
     // Rate-Limiting: Schutz vor DDoS und Brute-Force-Angriffen
     // ttl: Zeitfenster in Millisekunden (60000ms = 60 Sekunden)
     // limit: Maximale Anzahl Anfragen pro Zeitfenster
-    // Siehe docs/configuration-values.md für Erläuterungen der Werte
+    // Siehe CONSTITUTION.md §3 für Erläuterungen der Werte
     ThrottlerModule.forRoot([
       {
         name: 'default',
@@ -51,7 +51,7 @@ import { BootstrapModule } from './bootstrap/bootstrap.module';
         limit: process.env.NODE_ENV === 'dev' ? 100 : 60,
       },
     ]),
-    // Caching: In-Memory-Cache pro Container (LRU, siehe docs/configuration-values.md)
+    // Caching: In-Memory-Cache pro Container (LRU, siehe CONSTITUTION.md §3)
     CacheModule.register({
       isGlobal: true,
       ...createCacheModuleOptions(),

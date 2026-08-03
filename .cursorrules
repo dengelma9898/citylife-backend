@@ -153,12 +153,12 @@ export class Entity {
 - **IMPORTANT**: Every new module with read-heavy endpoints **MUST** implement caching
 - Use global `CACHE_MANAGER` from `@nestjs/cache-manager` (in-memory, per Docker container on VPS)
 - Reference pattern: `src/event-categories/services/event-categories.service.ts`
-- **MUST** document TTL values in `docs/configuration-values.md`
+- **MUST** document TTL values in `CONSTITUTION.md` (§3 Konfiguration)
 - **MUST** invalidate cache on all write operations (Create/Update/Delete)
 - **MUST** add debug logging for cache hit/miss
 - **MUST** add tests for cache hit, cache miss, and cache invalidation
 - For user profile enrichment in lists: use `UsersService.getUserProfilesByIds()` instead of N individual `getUserProfile()` calls
-- **Future option:** Shared Redis cache when running multiple backend replicas – see `docs/configuration-values.md` (Zukünftige Option: Shared Cache)
+- **Future option:** Shared Redis cache when running multiple backend replicas – see `CONSTITUTION.md` §3 (Zukünftige Option: Shared Cache)
 
 ### Testing
 - Use Jest framework
@@ -326,7 +326,8 @@ private toEntityProps(data: any, id: string) {
 - When updating the README:
   - Keep existing structure and tone (German for user-facing docs in this repo)
   - Remove outdated sections that no longer apply
-  - Prefer linking to `docs/` for detailed configuration (e.g., `docs/configuration-values.md`) instead of duplicating long reference tables
+  - Prefer linking to `CONSTITUTION.md` for detailed configuration instead of duplicating long reference tables
+  - Client integration, audits, and roadmaps: `docs/app_review.html`
   - Mention README updates briefly in the task summary when changes were made
 
 ### Testing Requirements
