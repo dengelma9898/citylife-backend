@@ -28,7 +28,7 @@ todos:
     package: "sonarqube-scanner"
     from: "^4.4.0"
     to: "^5.0.0"
-    status: pending
+    status: completed
   - id: pkg-typescript
     content: "typescript ^6.0.3 → ^7.0.2 (Major)"
     package: "typescript"
@@ -79,7 +79,14 @@ isProject: true
 
 ## sonarqube-scanner ^4.4.0 → ^5.0.0
 
-**Notizen:** (ausstehend)
+**Breaking Changes (v5.0.0):**
+- Node.js 22.12+ erforderlich (Projekt: v24.1.0 ✓)
+- Paket als ES Module veröffentlicht (kein programmatischer `require()`-Import im Projekt)
+- Deprecated Executables `sonar` und `sonar-scanner` entfernt → nur noch `sonar-scanner-npm`
+
+**Betroffene Bereiche:** `package.json` Script `sonar`
+
+**Notizen:** npm-Script `sonar` von `sonar-scanner` auf `sonar-scanner-npm` migriert (v5 entfernt alte Aliase). Alle Validierungen (lint, format, tsc, test, build:dev/prd, npm ci) grün.
 
 ## typescript ^6.0.3 → ^7.0.2
 
