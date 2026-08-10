@@ -16,7 +16,7 @@ todos:
     package: "csv-parse"
     from: "^6.2.1"
     to: "^7.0.2"
-    status: pending
+    status: completed
   - id: pkg-firebase-admin
     content: "firebase-admin ^13.10.0 → ^14.2.0 (Major)"
     package: "firebase-admin"
@@ -55,7 +55,14 @@ isProject: true
 
 ## csv-parse ^6.2.1 → ^7.0.2
 
-**Notizen:** (ausstehend)
+**Breaking Changes (Changelog v7.0.0):**
+- Laut Maintainer: v7.0.0 versehentlich als Major veröffentlicht — **keine API-Breaking-Changes**
+- Bugfix: Sync-Parse modifiziert Prototyp nicht mehr (#479)
+- Trim aligned mit ECMAScript-Whitespace (#482)
+
+**Betroffene Bereiche:** `src/events/application/services/csv-import.service.ts` (nutzt `csv-parse/sync`)
+
+**Notizen:** Update ohne Code-Anpassungen. Alle Validierungen (lint, format, tsc, test, build:dev/prd, npm ci) grün.
 
 ## firebase-admin ^13.10.0 → ^14.2.0
 
