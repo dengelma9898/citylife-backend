@@ -22,7 +22,7 @@ todos:
     package: "firebase-admin"
     from: "^13.10.0"
     to: "^14.2.0"
-    status: pending
+    status: completed
   - id: pkg-sonarqube-scanner
     content: "sonarqube-scanner ^4.4.0 → ^5.0.0 (Major)"
     package: "sonarqube-scanner"
@@ -66,7 +66,16 @@ isProject: true
 
 ## firebase-admin ^13.10.0 → ^14.2.0
 
-**Notizen:** (ausstehend)
+**Breaking Changes (v14.0.0):**
+- Node.js 22+ erforderlich (Projekt: v24.1.0 ✓)
+- Legacy-Namespace-API entfernt (`admin.auth()` etc.) — Projekt nutzt bereits modulare Imports (`firebase-admin/app`, `/auth`, `/firestore`, `/messaging`, `/storage`) ✓
+- Instance-ID-API entfernt — nicht im Projekt genutzt ✓
+- Legacy-FCM-Typen entfernt (`MessagingPayload` etc.) — `NotificationService` nutzt `getMessaging().send()` mit modernem Payload ✓
+- SDK-weites Error-Handling überarbeitet (neue Error-Typen/Codes)
+
+**Betroffene Bereiche:** `src/firebase/`, `src/notifications/`, `src/account-management/`, `src/core/guards/`, Tests mit `jest.mock('firebase-admin/*')`
+
+**Notizen:** Update ohne Code-Anpassungen an Firebase-Imports (bereits modular). Jest-Fix: `jose` (ESM-Transitive-Dep von firebase-admin v14 via jwks-rsa) zu `transformIgnorePatterns` in `package.json` hinzugefügt. Alle Validierungen (lint, format, tsc, test, build:dev/prd, npm ci) grün.
 
 ## sonarqube-scanner ^4.4.0 → ^5.0.0
 

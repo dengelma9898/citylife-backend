@@ -38,7 +38,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "csv-parse": "^7.0.2",
-    "firebase-admin": "^13.10.0",
+    "firebase-admin": "^14.2.0",
     "helmet": "^8.3.0",
     "luxon": "^3.7.2",
     "passkit-generator": "^3.5.7",
@@ -91,7 +91,7 @@
       ]
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!(data-uri-to-buffer|fetch-blob|formdata-polyfill)/)"
+      "node_modules/(?!(data-uri-to-buffer|fetch-blob|formdata-polyfill|jose)/)"
     ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
