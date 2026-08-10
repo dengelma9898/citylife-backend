@@ -1,0 +1,75 @@
+# Firebase project / environment diagnostic
+#
+# Dev API  -> citylife-fe75a        (see .env.dev)
+# Prod API -> nuernbergspots-b460a   (see .env.prd)
+#
+# Expected matrix:
+#   dev token  + /dev  -> 200 (or 403 on admin-only routes)
+#   dev token  + /prd  -> 401 Authentication failed
+#   prd token  + /dev  -> 401 Authentication failed
+#   prd token  + /prd  -> 200 (or 403 on admin-only routes)
+#
+# API keys: copy FIREBASE_API_KEY from .env.dev / .env.prd below.
+
+@baseUrlDev = https://nuernbergspots.de/dev
+@baseUrlPrd = https://nuernbergspots.de/prd
+@firebaseApiKeyDev = YOUR_DEV_FIREBASE_API_KEY
+@firebaseApiKeyPrd = YOUR_PRD_FIREBASE_API_KEY
+@devToken = YOUR_DEV_ID_TOKEN
+@prdToken = YOUR_PRD_ID_TOKEN
+
+### 1) Get anonymous token from DEV Firebase (citylife-fe75a)
+# @name devAnonymousToken
+POST https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={{firebaseApiKeyDev}}
+Content-Type: application/json
+
+{
+  "returnSecureToken": true
+}
+
+### 2) Get anonymous token from PRD Firebase (nuernbergspots-b460a)
+# @name prdAnonymousToken
+POST https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={{firebaseApiKeyPrd}}
+Content-Type: application/json
+
+{
+  "returnSecureToken": true
+}
+
+### 3) Baseline: no auth (both envs should return 401)
+GET {{baseUrlDev}}/app-settings
+
+###
+GET {{baseUrlPrd}}/app-settings
+
+### 4) DEV token against DEV API (should work)
+GET {{baseUrlDev}}/app-settings
+Authorization: Bearer {{devToken}}
+
+### 5) DEV token against PRD API (should fail with 401 Authentication failed)
+GET {{baseUrlPrd}}/app-settings
+Authorization: Bearer {{devToken}}
+
+### 6) PRD token against DEV API (should fail with 401 Authentication failed)
+GET {{baseUrlDev}}/app-settings
+Authorization: Bearer {{prdToken}}
+
+### 7) PRD token against PRD API (should work)
+GET {{baseUrlPrd}}/app-settings
+Authorization: Bearer {{prdToken}}
+
+### 8) Bootstrap cold-start check (same matrix)
+GET {{baseUrlDev}}/bootstrap
+Authorization: Bearer {{devToken}}
+
+###
+GET {{baseUrlPrd}}/bootstrap
+Authorization: Bearer {{devToken}}
+
+###
+GET {{baseUrlDev}}/bootstrap
+Authorization: Bearer {{prdToken}}
+
+###
+GET {{baseUrlPrd}}/bootstrap
+Authorization: Bearer {{prdToken}}

@@ -1,20 +1,13 @@
-# Prefer http-client.env.json (local / dev / prd) — see requests/env-check.http
-@baseUrl = {{baseUrl}}
-@firebaseApiKey = {{firebaseApiKey}}
-@token = {{token}}
+@baseUrl = http://localhost:3000
+@baseUrlDev = https://nuernbergspots.de/dev
+@baseUrlPrd = https://nuernbergspots.de/prd
+@firebaseApiKeyDev = YOUR_DEV_FIREBASE_API_KEY
+@firebaseApiKeyPrd = YOUR_PRD_FIREBASE_API_KEY
+@adminToken = YOUR_ADMIN_TOKEN
 
-### Anonymous sign-up (same as Flutter anonymous auth)
-# @name anonymousSignUp
-POST https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={{firebaseApiKey}}
-Content-Type: application/json
-
-{
-  "returnSecureToken": true
-}
-
-### Password sign-in (admin / test user)
-# @name passwordSignIn
-POST https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebaseApiKey}}
+### Get Firebase ID Token (DEV project: citylife-fe75a)
+### API key from .env.dev -> FIREBASE_API_KEY
+POST https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebaseApiKeyDev}}
 Content-Type: application/json
 
 {
@@ -23,5 +16,35 @@ Content-Type: application/json
   "returnSecureToken": true
 }
 
-### Copy idToken from response into http-client.env.json -> token, then use env-check.http
+### Get Firebase ID Token (PRD project: nuernbergspots-b460a)
+### API key from .env.prd -> FIREBASE_API_KEY
+POST https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebaseApiKeyPrd}}
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "your-password",
+  "returnSecureToken": true
+}
+
+### Anonymous token (DEV) - use for local/dev API testing
+# @name devAnonymousToken
+POST https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={{firebaseApiKeyDev}}
+Content-Type: application/json
+
+{
+  "returnSecureToken": true
+}
+
+### Anonymous token (PRD) - use for prod API testing
+# @name prdAnonymousToken
+POST https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={{firebaseApiKeyPrd}}
+Content-Type: application/json
+
+{
+  "returnSecureToken": true
+}
+
+### Copy idToken from response into @adminToken or @devToken/@prdToken
+### Cross-env diagnostics: see requests/env-diagnostic.http
 
