@@ -32,7 +32,10 @@ export class LegalDocumentService {
   private async saveDocument(document: LegalDocument): Promise<LegalDocument> {
     this.logger.debug(`Saving legal document ${document.id} of type ${document.type}`);
     const db = this.firebaseService.getFirestore();
-    await db.collection(this.collection).doc(document.id).set(toFirestoreData(document as unknown as Record<string, unknown>));
+    await db
+      .collection(this.collection)
+      .doc(document.id)
+      .set(toFirestoreData(document as unknown as Record<string, unknown>));
     return document;
   }
 

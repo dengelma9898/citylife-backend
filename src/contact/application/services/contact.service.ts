@@ -49,9 +49,7 @@ export class ContactService {
     };
   }
 
-  private createContactMessage(
-    props: Omit<ContactMessage, 'createdAt'>,
-  ): ContactMessage {
+  private createContactMessage(props: Omit<ContactMessage, 'createdAt'>): ContactMessage {
     return {
       ...props,
       createdAt: new Date().toISOString(),
@@ -114,10 +112,7 @@ export class ContactService {
     if (!doc.exists) {
       return null;
     }
-    const currentRequest = this.toContactRequest(
-      doc.data() as Record<string, unknown>,
-      doc.id,
-    );
+    const currentRequest = this.toContactRequest(doc.data() as Record<string, unknown>, doc.id);
     const updatedRequest: ContactRequest = {
       ...currentRequest,
       ...data,
@@ -139,10 +134,7 @@ export class ContactService {
 
   public async createContactRequest(
     data:
-      | GeneralContactRequestDto
-      | FeedbackRequestDto
-      | BusinessClaimRequestDto
-      | BusinessRequestDto,
+      GeneralContactRequestDto | FeedbackRequestDto | BusinessClaimRequestDto | BusinessRequestDto,
     type: ContactRequestType,
   ): Promise<ContactRequest> {
     this.logger.debug(`Creating new ${type} contact request`);

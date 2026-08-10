@@ -34,9 +34,7 @@ export class ChatroomsService {
   private async findAllChatrooms(): Promise<Chatroom[]> {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).get();
-    return snapshot.docs.map(doc =>
-      this.toChatroom(doc.data() as Record<string, unknown>, doc.id),
-    );
+    return snapshot.docs.map(doc => this.toChatroom(doc.data() as Record<string, unknown>, doc.id));
   }
 
   private async findChatroomById(id: string): Promise<Chatroom | null> {
@@ -95,9 +93,7 @@ export class ChatroomsService {
       .collection(this.collection)
       .where('participants', 'array-contains', userId)
       .get();
-    return snapshot.docs.map(doc =>
-      this.toChatroom(doc.data() as Record<string, unknown>, doc.id),
-    );
+    return snapshot.docs.map(doc => this.toChatroom(doc.data() as Record<string, unknown>, doc.id));
   }
 
   async getAll(): Promise<Chatroom[]> {

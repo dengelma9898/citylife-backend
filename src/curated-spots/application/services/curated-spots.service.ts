@@ -310,7 +310,9 @@ export class CuratedSpotsService {
     );
   }
 
-  private async findActiveNotDeletedByNameLowerPrefix(nameLowerPrefix: string): Promise<CuratedSpot[]> {
+  private async findActiveNotDeletedByNameLowerPrefix(
+    nameLowerPrefix: string,
+  ): Promise<CuratedSpot[]> {
     const trimmed = nameLowerPrefix.trim().toLowerCase();
     if (trimmed.length === 0) {
       return [];

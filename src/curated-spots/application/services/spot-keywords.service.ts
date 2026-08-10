@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../../../firebase/firebase.service';
 import { toFirestoreData } from '../../../firebase/firebase-mapper.util';
-import { SpotKeyword, normalizeSpotKeywordNameLower } from '../../interfaces/spot-keyword.interface';
+import {
+  SpotKeyword,
+  normalizeSpotKeywordNameLower,
+} from '../../interfaces/spot-keyword.interface';
 import { CreateSpotKeywordDto } from '../../dto/create-spot-keyword.dto';
 
 @Injectable()

@@ -105,7 +105,9 @@ export class EasterEggService {
       updatedAt: now,
     };
     const db = this.firebaseService.getFirestore();
-    const docRef = await db.collection(this.collection).add(toFirestoreData(egg as unknown as Record<string, unknown>));
+    const docRef = await db
+      .collection(this.collection)
+      .add(toFirestoreData(egg as unknown as Record<string, unknown>));
     this.logger.log(`Created easter egg with id: ${docRef.id}`);
     return { ...egg, id: docRef.id };
   }

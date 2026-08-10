@@ -83,7 +83,10 @@ export class UsersController {
   @Roles('super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Gibt Business-User zurück, die Review benötigen (nur SUPER_ADMIN)' })
-  @ApiResponse({ status: 401, description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen' })
+  @ApiResponse({
+    status: 401,
+    description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen',
+  })
   public async getBusinessUsersNeedsReview(): Promise<BusinessUser[]> {
     this.logger.log('GET /users/business-users/needs-review');
     return this.usersService.getBusinessUsersNeedsReview();
@@ -94,7 +97,10 @@ export class UsersController {
   @Roles('super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Anzahl Business-User mit Review-Bedarf (nur SUPER_ADMIN)' })
-  @ApiResponse({ status: 401, description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen' })
+  @ApiResponse({
+    status: 401,
+    description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen',
+  })
   public async getPendingBusinessUserReviewsCount(): Promise<{ count: number }> {
     this.logger.log('GET /users/business-users/needs-review/count');
 
@@ -196,7 +202,10 @@ export class UsersController {
   @Roles('super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Setzt needsReview für einen Business-User (nur SUPER_ADMIN)' })
-  @ApiResponse({ status: 401, description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen' })
+  @ApiResponse({
+    status: 401,
+    description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen',
+  })
   public async updateNeedsReview(
     @Param('id') id: string,
     @Body('needsReview') needsReview: boolean,

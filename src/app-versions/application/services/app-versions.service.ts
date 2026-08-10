@@ -97,7 +97,10 @@ export class AppVersionsService {
   private async findAllChangelogsInternal(): Promise<VersionChangelog[]> {
     this.logger.debug('Finding all changelogs');
     const db = this.firebaseService.getFirestore();
-    const snapshot = await db.collection(this.changelogsCollection).orderBy('version', 'desc').get();
+    const snapshot = await db
+      .collection(this.changelogsCollection)
+      .orderBy('version', 'desc')
+      .get();
     return snapshot.docs.map(doc =>
       this.toChangelog(doc.data() as Record<string, unknown>, doc.id),
     );

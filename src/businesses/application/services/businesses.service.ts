@@ -65,7 +65,7 @@ export class BusinessesService {
       status: data.status as BusinessStatus,
       benefit: data.benefit as string,
       previousBenefits: data.previousBenefits as string[] | undefined,
-      customers: ((data.customers as BusinessCustomer[]) || []),
+      customers: (data.customers as BusinessCustomer[]) || [],
       hasAccount: data.hasAccount as boolean,
       isPromoted: data.isPromoted as boolean | undefined,
       nuernbergspotsReview: data.nuernbergspotsReview as Business['nuernbergspotsReview'],
@@ -75,9 +75,7 @@ export class BusinessesService {
   private async findAllFromFirestore(): Promise<Business[]> {
     const db = this.firebaseService.getFirestore();
     const snapshot = await db.collection(this.collection).get();
-    return snapshot.docs.map(doc =>
-      this.toBusiness(doc.data() as Record<string, unknown>, doc.id),
-    );
+    return snapshot.docs.map(doc => this.toBusiness(doc.data() as Record<string, unknown>, doc.id));
   }
 
   private async findByIdFromFirestore(id: string): Promise<Business | null> {
@@ -126,9 +124,7 @@ export class BusinessesService {
       .where('status', '==', status)
       .where('hasAccount', '==', hasAccount)
       .get();
-    return snapshot.docs.map(doc =>
-      this.toBusiness(doc.data() as Record<string, unknown>, doc.id),
-    );
+    return snapshot.docs.map(doc => this.toBusiness(doc.data() as Record<string, unknown>, doc.id));
   }
 
   public async getAll(): Promise<Business[]> {
@@ -314,7 +310,10 @@ export class BusinessesService {
     if (!existingBusiness) {
       throw new NotFoundException('Business not found');
     }
-    const updatedPreviousBenefits = [...(existingBusiness.previousBenefits || []), existingBusiness.benefit];
+    const updatedPreviousBenefits = [
+      ...(existingBusiness.previousBenefits || []),
+      existingBusiness.benefit,
+    ];
     const limitedPreviousBenefits = updatedPreviousBenefits.slice(-5);
     const updatedBusiness: Business = {
       ...existingBusiness,

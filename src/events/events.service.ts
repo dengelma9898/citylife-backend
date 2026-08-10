@@ -598,9 +598,7 @@ export class EventsService {
           event: updated,
         });
       } catch (error: any) {
-        this.logger.error(
-          `Error bulk-updating category for event ${eventId}: ${error.message}`,
-        );
+        this.logger.error(`Error bulk-updating category for event ${eventId}: ${error.message}`);
         results.push({
           eventId,
           success: false,
@@ -610,9 +608,7 @@ export class EventsService {
     }
     const successful = results.filter(r => r.success).length;
     const failed = results.length - successful;
-    this.logger.log(
-      `Bulk category update completed: ${successful} successful, ${failed} failed`,
-    );
+    this.logger.log(`Bulk category update completed: ${successful} successful, ${failed} failed`);
     return {
       total: results.length,
       successful,

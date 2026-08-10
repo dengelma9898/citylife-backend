@@ -8,7 +8,14 @@ import {
   Logger,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthGuard } from '../../../core/guards/auth.guard';
 import { PassStatsService } from '../services/pass-stats.service';
 import { PassStatsQueryDto } from '../../dto/pass-stats-query.dto';

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { FirebaseService } from '../../../firebase/firebase.service';
-import { PassScanRecord, PassScanRecordProps } from '../../domain/interfaces/pass-scan-record.interface';
+import {
+  PassScanRecord,
+  PassScanRecordProps,
+} from '../../domain/interfaces/pass-scan-record.interface';
 
 import { removeUndefined } from '../../../firebase/firebase-mapper.util';
 

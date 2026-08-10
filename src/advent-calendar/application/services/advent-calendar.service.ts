@@ -104,7 +104,9 @@ export class AdventCalendarService {
       updatedAt: now,
     };
     const db = this.firebaseService.getFirestore();
-    const docRef = await db.collection(this.entriesCollection).add(toFirestoreData(entry as unknown as Record<string, unknown>));
+    const docRef = await db
+      .collection(this.entriesCollection)
+      .add(toFirestoreData(entry as unknown as Record<string, unknown>));
     this.logger.log(`Created advent calendar entry with id: ${docRef.id}`);
     return { ...entry, id: docRef.id };
   }

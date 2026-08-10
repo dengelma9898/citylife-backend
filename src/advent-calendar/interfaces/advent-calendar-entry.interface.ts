@@ -14,7 +14,10 @@ export interface AdventCalendarEntry {
   updatedAt: string;
 }
 
-export function addAdventCalendarParticipant(entry: AdventCalendarEntry, userId: string): AdventCalendarEntry {
+export function addAdventCalendarParticipant(
+  entry: AdventCalendarEntry,
+  userId: string,
+): AdventCalendarEntry {
   if (entry.participants.includes(userId)) {
     return entry;
   }
@@ -25,7 +28,10 @@ export function addAdventCalendarParticipant(entry: AdventCalendarEntry, userId:
   };
 }
 
-export function addAdventCalendarWinner(entry: AdventCalendarEntry, userId: string): AdventCalendarEntry {
+export function addAdventCalendarWinner(
+  entry: AdventCalendarEntry,
+  userId: string,
+): AdventCalendarEntry {
   if (entry.winners.includes(userId)) {
     return entry;
   }

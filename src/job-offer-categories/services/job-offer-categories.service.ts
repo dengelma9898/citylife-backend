@@ -43,7 +43,9 @@ export class JobOfferCategoriesService {
       updatedAt: now,
     };
     const db = this.firebaseService.getFirestore();
-    const docRef = await db.collection(this.collectionName).add(toFirestoreData(jobCategory as unknown as Record<string, unknown>));
+    const docRef = await db
+      .collection(this.collectionName)
+      .add(toFirestoreData(jobCategory as unknown as Record<string, unknown>));
     return { ...jobCategory, id: docRef.id };
   }
 
@@ -85,7 +87,10 @@ export class JobOfferCategoriesService {
       updatedAt: new Date(),
     };
     const db = this.firebaseService.getFirestore();
-    await db.collection(this.collectionName).doc(id).update(toFirestoreData(updatedCategory as unknown as Record<string, unknown>));
+    await db
+      .collection(this.collectionName)
+      .doc(id)
+      .update(toFirestoreData(updatedCategory as unknown as Record<string, unknown>));
     return updatedCategory;
   }
 

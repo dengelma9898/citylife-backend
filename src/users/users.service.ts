@@ -306,10 +306,7 @@ export class UsersService {
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
 
-      await db
-        .collection(this.businessUsersCollection)
-        .doc(id)
-        .update(removeUndefined(updateData));
+      await db.collection(this.businessUsersCollection).doc(id).update(removeUndefined(updateData));
 
       const businessUser = await this.getBusinessUser(id);
       if (!businessUser) {

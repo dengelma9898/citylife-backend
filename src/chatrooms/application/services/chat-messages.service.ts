@@ -190,7 +190,10 @@ export class ChatMessagesService {
     return this.updateMessageInFirestore(chatroomId, id, { reactions });
   }
 
-  private handleError(error: Error & { code?: string; path?: string }, details: ErrorDetails): never {
+  private handleError(
+    error: Error & { code?: string; path?: string },
+    details: ErrorDetails,
+  ): never {
     const errorDetails = {
       ...details,
       errorMessage: error.message,
@@ -426,7 +429,9 @@ export class ChatMessagesService {
       }
       return userData.userType === UserType.SUPER_ADMIN;
     } catch (error) {
-      this.logger.error(`Error checking super admin status for user ${userId}: ${(error as Error).message}`);
+      this.logger.error(
+        `Error checking super admin status for user ${userId}: ${(error as Error).message}`,
+      );
       return false;
     }
   }

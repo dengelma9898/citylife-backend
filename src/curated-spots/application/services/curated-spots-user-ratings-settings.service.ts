@@ -82,7 +82,9 @@ export class CuratedSpotsUserRatingsSettingsService {
     }
   }
 
-  private async save(settings: CuratedSpotsUserRatingsSettings): Promise<CuratedSpotsUserRatingsSettings> {
+  private async save(
+    settings: CuratedSpotsUserRatingsSettings,
+  ): Promise<CuratedSpotsUserRatingsSettings> {
     try {
       const db = this.firebaseService.getFirestore();
       await db

@@ -420,7 +420,10 @@ export class BusinessesController {
   @UseGuards(RolesGuard)
   @Roles('super_admin')
   @ApiOperation({ summary: 'Anzahl ausstehender Business-Freigaben (nur SUPER_ADMIN)' })
-  @ApiResponse({ status: 401, description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen' })
+  @ApiResponse({
+    status: 401,
+    description: 'Nicht autorisiert - Nur SUPER_ADMINs können diese Resource aufrufen',
+  })
   public async getPendingApprovalsCount(): Promise<{ count: number }> {
     this.logger.log('GET /businesses/pending-approvals/count');
 

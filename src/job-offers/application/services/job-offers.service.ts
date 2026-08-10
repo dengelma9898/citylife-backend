@@ -33,7 +33,8 @@ export class JobOffersService {
       images: (data.images as string[]) || [],
       location: data.location as JobOffer['location'],
       typeOfEmployment: data.typeOfEmployment as string,
-      additionalNotesForTypeOfEmployment: data.additionalNotesForTypeOfEmployment as string | undefined,
+      additionalNotesForTypeOfEmployment: data.additionalNotesForTypeOfEmployment as
+        string | undefined,
       homeOffice: data.homeOffice as boolean,
       additionalNotesHomeOffice: data.additionalNotesHomeOffice as string | undefined,
       wage: data.wage as string | undefined,
@@ -65,7 +66,9 @@ export class JobOffersService {
       updatedAt: now,
     };
     const db = this.firebaseService.getFirestore();
-    const docRef = await db.collection(this.collectionName).add(toFirestoreData(jobOffer as unknown as Record<string, unknown>));
+    const docRef = await db
+      .collection(this.collectionName)
+      .add(toFirestoreData(jobOffer as unknown as Record<string, unknown>));
     const savedJobOffer = { ...jobOffer, id: docRef.id };
     await this.sendNewJobOfferNotification(savedJobOffer);
     return savedJobOffer;
@@ -97,7 +100,10 @@ export class JobOffersService {
       updatedAt: new Date(),
     };
     const db = this.firebaseService.getFirestore();
-    await db.collection(this.collectionName).doc(id).update(toFirestoreData(updatedJobOffer as unknown as Record<string, unknown>));
+    await db
+      .collection(this.collectionName)
+      .doc(id)
+      .update(toFirestoreData(updatedJobOffer as unknown as Record<string, unknown>));
     return this.findOne(id);
   }
 
