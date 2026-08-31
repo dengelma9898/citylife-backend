@@ -6,6 +6,7 @@ import {
   forwardRef,
   BadRequestException,
 } from '@nestjs/common';
+import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { Event, DailyTimeSlot } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
 import { FirebaseService } from '../firebase/firebase.service';
@@ -19,6 +20,8 @@ import {
   BulkUpdateEventCategoryResult,
 } from './dto/bulk-update-event-category-result.dto';
 import { removeUndefined } from '../firebase/firebase-mapper.util';
+import { EVENTS_LIST_CACHE_KEY } from './constants/events-list-cache.constants';
+import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 @Injectable()
 export class EventsService {
@@ -31,6 +34,7 @@ export class EventsService {
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
     private readonly eventCategoriesService: EventCategoriesService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
   /**
@@ -77,28 +81,43 @@ export class EventsService {
     return timeSlots;
   }
 
+  private mapFirestoreDocToEvent(doc: QueryDocumentSnapshot): Event {
+    const data = doc.data();
+    const { startDate, endDate, ...rest } = data;
+    const dailyTimeSlots = this.convertDateRangeToDailyTimeSlots(
+      startDate,
+      endDate,
+      data.dailyTimeSlots,
+    );
+    return {
+      id: doc.id,
+      ...rest,
+      dailyTimeSlots,
+    } as Event;
+  }
+
+  private async invalidateListCache(): Promise<void> {
+    await this.cacheManager.del(EVENTS_LIST_CACHE_KEY);
+    this.logger.debug('Events list cache invalidated');
+  }
+
+  public async getAllUnfiltered(): Promise<Event[]> {
+    try {
+      this.logger.debug('Getting all events without status filter');
+      const db = this.firebaseService.getFirestore();
+      const snapshot = await db.collection(this.collection).get();
+      return snapshot.docs.map(doc => this.mapFirestoreDocToEvent(doc));
+    } catch (error) {
+      this.logger.error(`Error getting all unfiltered events: ${error.message}`);
+      throw error;
+    }
+  }
+
   public async getAll(): Promise<Event[]> {
     try {
       this.logger.debug('Getting all events');
-      const db = this.firebaseService.getFirestore();
-      const snapshot = await db.collection(this.collection).get();
-      const mapped = snapshot.docs.map(doc => {
-        const data = doc.data();
-        const { startDate, endDate, ...rest } = data;
-
-        const dailyTimeSlots = this.convertDateRangeToDailyTimeSlots(
-          startDate,
-          endDate,
-          data.dailyTimeSlots,
-        );
-
-        return {
-          id: doc.id,
-          ...rest,
-          dailyTimeSlots,
-        } as Event;
-      });
-      return mapped.filter(e => this.isPubliclyVisibleStatus(e.status));
+      const events = await this.getAllUnfiltered();
+      return events.filter(event => this.isPubliclyVisibleStatus(event.status));
     } catch (error) {
       this.logger.error(`Error getting all events: ${error.message}`);
       throw error;
@@ -238,6 +257,8 @@ export class EventsService {
         ...eventData,
       };
 
+      await this.invalidateListCache();
+
       if (initialStatus === EventStatus.ACTIVE) {
         await this.sendNewEventNotification(createdEvent).catch(error => {
           this.logger.error(`Error sending new event notification: ${error.message}`, error.stack);
@@ -307,6 +328,8 @@ export class EventsService {
         });
       }
 
+      await this.invalidateListCache();
+
       return updatedEvent;
     } catch (error) {
       this.logger.error(`Error updating event ${id}: ${error.message}`);
@@ -325,6 +348,7 @@ export class EventsService {
       }
 
       await db.collection(this.collection).doc(id).delete();
+      await this.invalidateListCache();
     } catch (error) {
       this.logger.error(`Error deleting event ${id}: ${error.message}`);
       throw error;

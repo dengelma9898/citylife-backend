@@ -1618,9 +1618,66 @@ Erstellung erfolgt u. a. über:
 
 ## Öffentliche Lesbarkeit
 
-- `GET /events` – nur `ACTIVE` (und Legacy ohne `status`).
+- `GET /events` – zwei Modi:
+  - **Legacy (deprecated):** ohne Query-Parameter → `Event[]`, nur `ACTIVE` (und Legacy ohne `status`), volle Liste.
+  - **Paginiert (neu):** mit mindestens einem Query-Parameter (`page`, `limit`, `q`, `status`, `approval`, `category`, `date`, `time`, `week`, `month`, `sort`, `order`, `facets`) → `{ data: Event[], meta: PaginationMeta, facets? }`.
 - `GET /events/by-ids?ids=…` – nur öffentlich sichtbare Events (keine `PENDING`).
 - `GET /events/:id` – `PENDING` liefert **404** für Nicht-Admins; **Admin/Super Admin** darf Pending-Events lesen (intern `includePendingInResult`).
+
+### Events-Liste mit Filter und Pagination (`GET /events` paginierter Modus)
+
+**Query-Parameter:**
+
+| Param | Werte | Bedeutung |
+|---|---|---|
+| `q` | string | Titelsuche (case-insensitive, contains) |
+| `status` | `past` \| `running` \| `future` | Laufzeit-Status (aus `dailyTimeSlots` / `monthYear`) |
+| `approval` | `pending` \| `active` \| `all` | Moderation (`PENDING` vs. öffentlich sichtbar) |
+| `category` | UUID \| `no-category` | Kategorie-Filter (`no-category` = fehlend/`default`) |
+| `date` | `with-date` \| `no-date` | Hat Datum vs. ohne |
+| `time` | `week` \| `month` | Zeitraum-Modus |
+| `week` | `1`–`53` | Kalenderwoche (nur wenn `time=week`) |
+| `month` | `yyyy-MM` | Monat (nur wenn `time=month`) |
+| `page` | number (default `1`) | Seite |
+| `limit` | number (default `50`, max `100`) | Seitengröße |
+| `sort` | `startDate` \| `updatedAt` (default `startDate`) | Sortierung |
+| `order` | `asc` \| `desc` (default `desc`) | Richtung |
+| `facets` | `true` | Optional: `pendingCount` (nur Admin), `monthOptions` |
+
+**Sichtbarkeit:**
+
+- Beliebiger authentifizierter User: implizit nur öffentlich sichtbare Events (`ACTIVE` + Legacy ohne `status`), sofern `approval` nicht gesetzt.
+- `approval=pending` oder `approval=all`: nur `admin` / `super_admin` (sonst `403`).
+- Admin ohne `approval`: alle Events (ACTIVE + PENDING).
+
+**Zusatz-Endpunkte:**
+
+- `GET /events/count?…` – Zähler mit denselben Filtern (ohne Pagination).
+- `GET /events/export?…` – CSV-Export mit denselben Filtern (nur `admin` / `super_admin`).
+
+**Caching:** In-Memory-Cache `events:list:all`, TTL = `CACHE_TTL_MS` (Default 5 min, siehe §3). Invalidierung bei Create/Update/Delete/Approve/Bulk-Category/CSV-Import.
+
+**Response (paginiert):**
+
+```json
+{
+  "data": [ /* Event[] */ ],
+  "meta": {
+    "page": 1,
+    "limit": 50,
+    "total": 3847,
+    "totalPages": 77,
+    "hasNextPage": true,
+    "hasPreviousPage": false
+  },
+  "facets": {
+    "pendingCount": 12,
+    "monthOptions": [{ "key": "2026-08", "label": "August 2026" }]
+  }
+}
+```
+
+`facets` nur wenn `facets=true`; `pendingCount` nur für Admins.
 
 ## „Meine“ Events (inkl. Pending)
 
@@ -1632,7 +1689,7 @@ Erstellung erfolgt u. a. über:
 
 ## Freigabe (Admin)
 
-- `GET /events/pending` – nur `admin` / `super_admin`: Liste aller `PENDING`-Events.
+- `GET /events/pending` – **deprecated**; nur `admin` / `super_admin`: Liste aller `PENDING`-Events. Ersatz: `GET /events?approval=pending`.
 - `PATCH /events/:id/approve` – nur `admin` / `super_admin`: setzt `PENDING` → `ACTIVE` und löst **einmalig** `NEW_EVENT` aus (analog Freigabe bei Businesses).
 
 Ablehnung ohne eigenen Status: Ein Admin kann ein unerwünschtes Event per `DELETE /events/:id` entfernen (siehe Berechtigung: Pending nur Ersteller/Admin).

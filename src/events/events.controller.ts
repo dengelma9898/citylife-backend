@@ -17,9 +17,10 @@ import {
   Req,
   ForbiddenException,
   UseGuards,
+  Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { EventsService } from './events.service';
 import { Event } from './interfaces/event.interface';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -29,6 +30,7 @@ import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
 import { CsvImportService } from './application/services/csv-import.service';
+import { EventsListQueryService } from './application/services/events-list-query.service';
 import { CsvImportResult } from './dto/csv-import-result.dto';
 import { CsvFileValidationPipe } from '../core/pipes/csv-file-validation.pipe';
 import { UserType } from '../users/enums/user-type.enum';
@@ -37,6 +39,10 @@ import { RolesGuard } from '../core/guards/roles.guard';
 import { Roles } from '../core/decorators/roles.decorator';
 import { BulkUpdateEventCategoryDto } from './dto/bulk-update-event-category.dto';
 import { BulkUpdateEventCategoryResult } from './dto/bulk-update-event-category-result.dto';
+import { EventsListQueryDto, EventsCountQueryDto } from './dto/events-list-query.dto';
+import { EventsListResponse, EventsCountResponse } from './dto/events-list-response.dto';
+import { isPaginatedEventsRequest } from './utils/event-list-filter.util';
+import { eventsToCsv } from './utils/events-export.util';
 
 function isFirebaseAnonymousUser(user?: { firebase?: { sign_in_provider?: string } }): boolean {
   return user?.firebase?.sign_in_provider === 'anonymous';
@@ -55,6 +61,7 @@ export class EventsController {
     private readonly usersService: UsersService,
     private readonly businessesService: BusinessesService,
     private readonly csvImportService: CsvImportService,
+    private readonly eventsListQueryService: EventsListQueryService,
   ) {
     this.logger.log('EventsController initialized');
   }
@@ -121,15 +128,80 @@ export class EventsController {
     return businessUser?.businessIds?.includes(businessId) ?? false;
   }
 
+  /**
+   * @deprecated Verwende GET /events mit Query-Parametern (page, limit, Filter) für paginierte Listen.
+   * Bleibt für Legacy-Clients erhalten.
+   */
   @Get()
-  public async getAll(): Promise<Event[]> {
-    this.logger.log('GET /events');
+  @ApiOperation({
+    summary: 'Liste aller öffentlichen Events oder paginierte/filterbare Event-Liste',
+    deprecated: false,
+  })
+  public async getEvents(
+    @Query() query: EventsListQueryDto,
+    @Req() req: Request,
+  ): Promise<Event[] | EventsListResponse> {
+    if (isPaginatedEventsRequest(query as Record<string, unknown>)) {
+      this.logger.log(`GET /events (paginated) ${JSON.stringify(query)}`);
+      const actorUid = req.user?.uid;
+      if (!actorUid) {
+        throw new ForbiddenException();
+      }
+      const isAdmin = await this.isActorAdmin(actorUid);
+      return this.eventsListQueryService.queryEvents(query, isAdmin);
+    }
+    this.logger.log('GET /events (legacy)');
     return this.eventsService.getAll();
   }
 
+  @Get('count')
+  @ApiOperation({ summary: 'Zählt Events mit denselben Filtern wie die paginierte Liste' })
+  public async getEventsCount(
+    @Query() query: EventsCountQueryDto,
+    @Req() req: Request,
+  ): Promise<EventsCountResponse> {
+    this.logger.log(`GET /events/count ${JSON.stringify(query)}`);
+    const actorUid = req.user?.uid;
+    if (!actorUid) {
+      throw new ForbiddenException();
+    }
+    const isAdmin = await this.isActorAdmin(actorUid);
+    return this.eventsListQueryService.countEvents(query, isAdmin);
+  }
+
+  @Get('export')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'super_admin')
+  @ApiOperation({ summary: 'Exportiert gefilterte Events als CSV' })
+  public async exportEvents(
+    @Query() query: EventsCountQueryDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    this.logger.log(`GET /events/export ${JSON.stringify(query)}`);
+    const actorUid = req.user?.uid;
+    if (!actorUid) {
+      throw new ForbiddenException();
+    }
+    const isAdmin = await this.isActorAdmin(actorUid);
+    const events = await this.eventsListQueryService.getFilteredEventsForExport(query, isAdmin);
+    const csv = eventsToCsv(events);
+    const filename = `events-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+  }
+
+  /**
+   * @deprecated Verwende GET /events?approval=pending (nur Admin).
+   */
   @Get('pending')
   @UseGuards(RolesGuard)
   @Roles('admin', 'super_admin')
+  @ApiOperation({
+    summary: 'Liste aller ausstehenden Events',
+    deprecated: true,
+  })
   public async getPendingEvents(): Promise<Event[]> {
     this.logger.log('GET /events/pending');
     return this.eventsService.getPendingEvents();

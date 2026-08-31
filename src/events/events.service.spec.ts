@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { EventsService } from './events.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { UsersService } from '../users/users.service';
@@ -8,6 +9,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { NotificationService } from '../notifications/application/services/notification.service';
 import { EventStatus } from './enums/event-status.enum';
+import { EVENTS_LIST_CACHE_KEY } from './constants/events-list-cache.constants';
 
 describe('EventsService', () => {
   let service: EventsService;
@@ -61,6 +63,12 @@ describe('EventsService', () => {
     sendToUser: jest.fn(),
   };
 
+  const mockCacheManager = {
+    del: jest.fn().mockResolvedValue(undefined),
+    get: jest.fn(),
+    set: jest.fn(),
+  };
+
   const mockEvent: Event = {
     id: 'event1',
     title: 'Test Event',
@@ -96,6 +104,10 @@ describe('EventsService', () => {
         {
           provide: NotificationService,
           useValue: mockNotificationService,
+        },
+        {
+          provide: CACHE_MANAGER,
+          useValue: mockCacheManager,
         },
       ],
     }).compile();
@@ -134,6 +146,44 @@ describe('EventsService', () => {
       const result = await service.getByIds(['nonexistent']);
 
       expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('getAllUnfiltered and cache invalidation', () => {
+    it('should return all events regardless of status', async () => {
+      const activeEvent = { ...mockEvent, status: EventStatus.ACTIVE };
+      const pendingEvent = { ...mockEvent, id: 'pending', status: EventStatus.PENDING };
+      const mockFirestore = {
+        collection: jest.fn().mockReturnValue({
+          get: jest.fn().mockResolvedValue({
+            docs: [
+              { id: 'event1', data: () => activeEvent },
+              { id: 'pending', data: () => pendingEvent },
+            ],
+          }),
+        }),
+      };
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      const result = await service.getAllUnfiltered();
+      expect(result).toHaveLength(2);
+    });
+
+    it('should invalidate list cache on create', async () => {
+      const mockFirestore = createFirestoreMock();
+      mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
+      await service.create(
+        {
+          title: 'Test',
+          description: 'Desc',
+          address: 'Addr',
+          latitude: 0,
+          longitude: 0,
+          categoryId: 'cat',
+          dailyTimeSlots: [],
+        },
+        EventStatus.PENDING,
+      );
+      expect(mockCacheManager.del).toHaveBeenCalledWith(EVENTS_LIST_CACHE_KEY);
     });
   });
 

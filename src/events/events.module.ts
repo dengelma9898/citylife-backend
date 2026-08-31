@@ -9,6 +9,7 @@ import { IsValidCategoryConstraint } from './dto/validators/is-valid-category.va
 import { NotificationsModule } from '../notifications/notifications.module';
 import { LocationModule } from '../location/location.module';
 import { CsvImportService } from './application/services/csv-import.service';
+import { EventsListQueryService } from './application/services/events-list-query.service';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { CsvImportService } from './application/services/csv-import.service';
     LocationModule,
   ],
   controllers: [EventsController],
-  providers: [EventsService, IsValidCategoryConstraint, CsvImportService],
+  providers: [EventsService, EventsListQueryService, IsValidCategoryConstraint, CsvImportService],
   exports: [EventsService],
 })
 export class EventsModule {}

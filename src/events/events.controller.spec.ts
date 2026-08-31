@@ -6,6 +6,7 @@ import { FirebaseStorageService } from '../firebase/firebase-storage.service';
 import { UsersService } from '../users/users.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
 import { CsvImportService } from './application/services/csv-import.service';
+import { EventsListQueryService } from './application/services/events-list-query.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Event } from './interfaces/event.interface';
@@ -43,6 +44,11 @@ describe('EventsController', () => {
     getUserProfile: jest.Mock;
   };
   let mockBusinessesService: { getById: jest.Mock; update: jest.Mock };
+  let mockEventsListQueryService: {
+    queryEvents: jest.Mock;
+    countEvents: jest.Mock;
+    getFilteredEventsForExport: jest.Mock;
+  };
 
   const mockFirebaseStorageService = {
     uploadFile: jest.fn(),
@@ -98,6 +104,11 @@ describe('EventsController', () => {
       getById: jest.fn(),
       update: jest.fn(),
     };
+    mockEventsListQueryService = {
+      queryEvents: jest.fn(),
+      countEvents: jest.fn(),
+      getFilteredEventsForExport: jest.fn(),
+    };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [EventsController],
       providers: [
@@ -106,6 +117,7 @@ describe('EventsController', () => {
         { provide: UsersService, useValue: mockUsersService },
         { provide: BusinessesService, useValue: mockBusinessesService },
         { provide: CsvImportService, useValue: mockCsvImportService },
+        { provide: EventsListQueryService, useValue: mockEventsListQueryService },
       ],
     }).compile();
 
@@ -116,12 +128,82 @@ describe('EventsController', () => {
     jest.clearAllMocks();
   });
 
-  describe('getAll', () => {
-    it('should return all events', async () => {
+  describe('getEvents', () => {
+    it('should return legacy array when no query params are provided', async () => {
       mockEventsService.getAll.mockResolvedValue([mockEvent]);
-      const result = await controller.getAll();
+      const result = await controller.getEvents({}, makeRequest());
       expect(result).toHaveLength(1);
       expect(mockEventsService.getAll).toHaveBeenCalled();
+      expect(mockEventsListQueryService.queryEvents).not.toHaveBeenCalled();
+    });
+
+    it('should return paginated response when query params are provided', async () => {
+      const paginatedResponse = {
+        data: [mockEvent],
+        meta: {
+          page: 1,
+          limit: 50,
+          total: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      };
+      mockEventsListQueryService.queryEvents.mockResolvedValue(paginatedResponse);
+      const result = await controller.getEvents({ page: 1, limit: 50 }, makeRequest());
+      expect(result).toEqual(paginatedResponse);
+      expect(mockEventsListQueryService.queryEvents).toHaveBeenCalledWith(
+        { page: 1, limit: 50 },
+        false,
+      );
+    });
+
+    it('should return admin paginated response for admin user', async () => {
+      mockUsersService.getUserProfile.mockResolvedValue({
+        ...defaultUserProfile,
+        userType: UserType.ADMIN,
+      });
+      mockEventsListQueryService.queryEvents.mockResolvedValue({
+        data: [mockEvent],
+        meta: {
+          page: 1,
+          limit: 50,
+          total: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      });
+      await controller.getEvents({ approval: 'pending' }, makeRequest());
+      expect(mockEventsListQueryService.queryEvents).toHaveBeenCalledWith(
+        { approval: 'pending' },
+        true,
+      );
+    });
+  });
+
+  describe('getEventsCount', () => {
+    it('should delegate count to list query service', async () => {
+      mockEventsListQueryService.countEvents.mockResolvedValue({ count: 3 });
+      const result = await controller.getEventsCount({ approval: 'active' }, makeRequest());
+      expect(result).toEqual({ count: 3 });
+      expect(mockEventsListQueryService.countEvents).toHaveBeenCalledWith(
+        { approval: 'active' },
+        false,
+      );
+    });
+  });
+
+  describe('exportEvents', () => {
+    it('should export filtered events as csv', async () => {
+      const res = {
+        setHeader: jest.fn(),
+        send: jest.fn(),
+      };
+      mockEventsListQueryService.getFilteredEventsForExport.mockResolvedValue([mockEvent]);
+      await controller.exportEvents({}, makeRequest(), res as never);
+      expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/csv; charset=utf-8');
+      expect(res.send).toHaveBeenCalled();
     });
   });
 
