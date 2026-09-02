@@ -97,6 +97,7 @@ describe('UsersService', () => {
 
   const mockBusinessesService = {
     getById: jest.fn(),
+    getByIds: jest.fn(),
   };
 
   const mockCacheManager = {
@@ -176,12 +177,14 @@ describe('UsersService', () => {
   describe('getBusinessUsersNeedsReview', () => {
     it('should return business users that need review', async () => {
       mockFirebaseService.getFirestore.mockReturnValue(createFirestoreMock(mockBusinessUser));
-      mockBusinessesService.getById.mockResolvedValue({ name: 'Test Business' });
+      mockBusinessesService.getByIds.mockResolvedValue([{ id: 'business1', name: 'Test Business' }]);
 
       const result = await service.getBusinessUsersNeedsReview();
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('business1');
+      expect(result[0].businessNames).toEqual(['Test Business']);
+      expect(mockBusinessesService.getByIds).toHaveBeenCalledWith(['business1']);
     });
   });
 

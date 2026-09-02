@@ -204,6 +204,38 @@ describe('BusinessesService', () => {
     });
   });
 
+  describe('getByIds', () => {
+    it('should return empty array for empty ids', async () => {
+      const result = await service.getByIds([]);
+      expect(result).toEqual([]);
+      expect(mockCollection.where).not.toHaveBeenCalled();
+    });
+
+    it('should batch load businesses by ids', async () => {
+      const mockBusiness = createMockBusiness({
+        openingHours: { monday: '09:00-22:00' },
+      });
+      mockQuery.get.mockResolvedValue({
+        docs: [{ id: 'business1', data: () => toFirestoreDoc(mockBusiness, 'business1').data() }],
+      });
+
+      const result = await service.getByIds(['business1']);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('business1');
+      expect(result[0].name).toBe('Restaurant A');
+      expect(mockCollection.where).toHaveBeenCalledWith('__name__', 'in', ['business1']);
+    });
+
+    it('should deduplicate ids before querying', async () => {
+      mockQuery.get.mockResolvedValue({ docs: [] });
+
+      await service.getByIds(['business1', 'business1', 'business2']);
+
+      expect(mockCollection.where).toHaveBeenCalledWith('__name__', 'in', ['business1', 'business2']);
+    });
+  });
+
   describe('create', () => {
     const createData = {
       name: 'New Restaurant',

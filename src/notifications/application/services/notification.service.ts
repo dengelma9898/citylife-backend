@@ -6,11 +6,34 @@ import { UsersService } from '../../../users/users.service';
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
+  private readonly FCM_SEND_CONCURRENCY = 25;
 
   constructor(
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
   ) {}
+
+  /**
+   * Führt mapper-Async-Aufrufe mit begrenzter Parallelität aus und erhält die Reihenfolge.
+   * Verhindert unbegrenzte Fan-outs (z. B. FCM-Sends an tausende Tokens).
+   */
+  private async mapWithConcurrency<T, R>(
+    items: T[],
+    concurrency: number,
+    mapper: (item: T) => Promise<R>,
+  ): Promise<R[]> {
+    const results: R[] = new Array(items.length);
+    let nextIndex = 0;
+    const workerCount = Math.min(concurrency, items.length);
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex++;
+        results[index] = await mapper(items[index]);
+      }
+    });
+    await Promise.all(workers);
+    return results;
+  }
 
   async sendToUser(userId: string, payload: NotificationPayload): Promise<void> {
     try {
@@ -24,7 +47,7 @@ export class NotificationService {
       this.logger.debug(`[FCM] Found ${fcmTokens.length} FCM tokens for user ${userId}`);
       const invalidTokens: string[] = [];
       let successCount = 0;
-      const sendPromises = fcmTokens.map(async token => {
+      await this.mapWithConcurrency(fcmTokens, this.FCM_SEND_CONCURRENCY, async token => {
         try {
           this.logger.debug(
             `[FCM] Sending to device ${token.deviceId} (token: ${token.token.substring(0, 20)}...)`,
@@ -67,7 +90,6 @@ export class NotificationService {
           }
         }
       });
-      await Promise.all(sendPromises);
       this.logger.log(
         `[FCM] Completed sending to user ${userId}: ${successCount} successful, ${invalidTokens.length} invalid tokens`,
       );
@@ -75,14 +97,16 @@ export class NotificationService {
         this.logger.debug(
           `[FCM] Removing ${invalidTokens.length} invalid tokens for user ${userId}`,
         );
-        for (const deviceId of invalidTokens) {
-          try {
-            await this.usersService.removeFcmToken(userId, deviceId);
-            this.logger.debug(`[FCM] Removed invalid token ${deviceId} for user ${userId}`);
-          } catch (error: any) {
-            this.logger.error(`[FCM] Error removing invalid token ${deviceId}: ${error.message}`);
-          }
-        }
+        await Promise.all(
+          invalidTokens.map(async deviceId => {
+            try {
+              await this.usersService.removeFcmToken(userId, deviceId);
+              this.logger.debug(`[FCM] Removed invalid token ${deviceId} for user ${userId}`);
+            } catch (error: any) {
+              this.logger.error(`[FCM] Error removing invalid token ${deviceId}: ${error.message}`);
+            }
+          }),
+        );
       }
     } catch (error: any) {
       this.logger.error(

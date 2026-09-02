@@ -300,18 +300,20 @@ export class EventsService {
         updatedAt: DateTimeUtils.getBerlinTime(),
       };
 
-      await db.collection(this.collection).doc(id).update(removeUndefined(updateData));
+      const cleanUpdateData = removeUndefined(updateData);
+      await db.collection(this.collection).doc(id).update(cleanUpdateData);
 
-      const updatedDoc = await db.collection(this.collection).doc(id).get();
-      const updatedData = updatedDoc.data();
-      const { startDate: newStartDate, endDate: newEndDate, ...newRest } = updatedData;
+      // Kein erneutes Lesen nötig: Firestore wendet keine Server-Transformationen an,
+      // das verschmolzene Objekt entspricht exakt dem persistierten Zustand.
+      const mergedData = { ...oldEventData, ...cleanUpdateData };
+      const { startDate: newStartDate, endDate: newEndDate, ...newRest } = mergedData;
       const newDailyTimeSlots = this.convertDateRangeToDailyTimeSlots(
         newStartDate,
         newEndDate,
-        updatedData.dailyTimeSlots,
+        mergedData.dailyTimeSlots,
       );
       const updatedEvent: Event = {
-        id: updatedDoc.id,
+        id: doc.id,
         ...newRest,
         dailyTimeSlots: newDailyTimeSlots,
       } as Event;

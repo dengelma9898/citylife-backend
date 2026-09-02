@@ -137,6 +137,32 @@ export class BusinessesService {
     return this.findByIdFromFirestore(id);
   }
 
+  public async getByIds(ids: string[]): Promise<Business[]> {
+    if (!ids || ids.length === 0) {
+      return [];
+    }
+    const uniqueIds = [...new Set(ids)];
+    const db = this.firebaseService.getFirestore();
+    const chunks = this.chunkArray(uniqueIds, 30);
+    const results = await Promise.all(
+      chunks.map(async chunk => {
+        const snapshot = await db.collection(this.collection).where('__name__', 'in', chunk).get();
+        return snapshot.docs.map(doc =>
+          this.toBusiness(doc.data() as Record<string, unknown>, doc.id),
+        );
+      }),
+    );
+    return results.flat();
+  }
+
+  private chunkArray<T>(array: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+  }
+
   public async create(data: CreateBusinessDto): Promise<Business> {
     this.logger.debug('Creating new business');
     const initialStatus = data.isAdmin ? BusinessStatus.ACTIVE : BusinessStatus.PENDING;

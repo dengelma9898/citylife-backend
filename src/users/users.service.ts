@@ -16,6 +16,7 @@ import { UserType } from './enums/user-type.enum';
 import { CreateBusinessUserDto } from './dto/create-business-user.dto';
 import { EventsService } from '../events/events.service';
 import { BusinessesService } from '../businesses/application/services/businesses.service';
+import { Business } from '../businesses/interfaces/business.interface';
 import { FirebaseService } from '../firebase/firebase.service';
 import { DateTimeUtils } from '../utils/date-time.utils';
 import { BusinessStatus } from '../businesses/domain/enums/business-status.enum';
@@ -85,21 +86,20 @@ export class UsersService {
           }) as BusinessUser,
       );
 
-      const businessUsersWithNames = await Promise.all(
-        businessUsers.map(async user => {
-          const businessNames = await Promise.all(
-            user.businessIds.map(async businessId => {
-              const business = await this.businessesService.getById(businessId);
-              return business?.name || 'Unbekanntes Business';
-            }),
-          );
+      const businessIds = [...new Set(businessUsers.flatMap(user => user.businessIds))];
+      const businessesById = new Map<string, Business>();
+      if (businessIds.length > 0) {
+        this.logger.debug(`Loading ${businessIds.length} businesses for review users`);
+        const foundBusinesses = await this.businessesService.getByIds(businessIds);
+        foundBusinesses.forEach(business => businessesById.set(business.id, business));
+      }
 
-          return {
-            ...user,
-            businessNames,
-          };
-        }),
-      );
+      const businessUsersWithNames = businessUsers.map(user => ({
+        ...user,
+        businessNames: user.businessIds.map(
+          businessId => businessesById.get(businessId)?.name || 'Unbekanntes Business',
+        ),
+      }));
 
       return businessUsersWithNames;
     } catch (error) {
@@ -230,6 +230,7 @@ export class UsersService {
       if (!doc.exists) {
         throw new NotFoundException('User not found');
       }
+      const existingProfile = doc.data() as UserProfile;
       const updateData = {
         ...profile,
         updatedAt: DateTimeUtils.getBerlinTime(),
@@ -237,8 +238,9 @@ export class UsersService {
       await db.collection(this.usersCollection).doc(id).update(removeUndefined(updateData));
       // Cache invalidieren nach Update
       await this.invalidateUserProfileCache(id);
-      const updatedDoc = await db.collection(this.usersCollection).doc(id).get();
-      return updatedDoc.data() as UserProfile;
+      // Kein erneutes Lesen nötig: Firestore wendet keine Server-Transformationen an,
+      // das verschmolzene Objekt entspricht exakt dem persistierten Zustand.
+      return removeUndefined({ ...existingProfile, ...updateData }) as UserProfile;
     } catch (error) {
       this.logger.error(`Error updating user profile for id ${id}: ${error.message}`);
       throw error;
@@ -584,20 +586,21 @@ export class UsersService {
       this.logger.debug(`Cache miss for ${uncachedIds.length} user profiles, fetching from DB`);
       const db = this.firebaseService.getFirestore();
       const chunks = this.chunkArray(uncachedIds, 30);
-      const chunkPromises = chunks.map(chunk =>
-        db
+      const chunkPromises = chunks.map(async chunk => {
+        const snapshot = await db
           .collection(this.usersCollection)
           .where('__name__', 'in', chunk)
-          .get()
-          .then(async snapshot => {
-            for (const doc of snapshot.docs) {
-              const profile = doc.data() as UserProfile;
-              userProfiles.set(doc.id, profile);
-              // Speichere im Cache
-              await this.cacheManager.set(`${this.CACHE_PREFIX}${doc.id}`, profile, this.CACHE_TTL);
-            }
-          }),
-      );
+          .get();
+        const cachePromises: Promise<unknown>[] = [];
+        for (const doc of snapshot.docs) {
+          const profile = doc.data() as UserProfile;
+          userProfiles.set(doc.id, profile);
+          cachePromises.push(
+            this.cacheManager.set(`${this.CACHE_PREFIX}${doc.id}`, profile, this.CACHE_TTL),
+          );
+        }
+        await Promise.all(cachePromises);
+      });
       await Promise.all(chunkPromises);
       return userProfiles;
     } catch (error) {
