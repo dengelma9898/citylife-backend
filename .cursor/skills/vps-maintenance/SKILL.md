@@ -124,6 +124,15 @@ sshpass -p "$IONOS_PWD" ssh "${IONOS_USER}@${IONOS_IP}" 'bash -s' < .cursor/skil
 
 **Alle Checks müssen PASS sein.** Bei FAIL: Diagnose (siehe [reference.md](reference.md) → Fehlerbehebung).
 
+**Health-Cron prüfen** (nach P0/P1 Deploy):
+
+```bash
+sshpass -p "$IONOS_PWD" ssh "${IONOS_USER}@${IONOS_IP}" \
+  'crontab -l | grep check-backend-health || echo "cron not configured"'
+sshpass -p "$IONOS_PWD" ssh "${IONOS_USER}@${IONOS_IP}" \
+  'tail -20 /var/log/nuernbergspots-health.log 2>/dev/null || echo "no health log yet"'
+```
+
 Zusätzlich von lokal (optional, externe Erreichbarkeit):
 
 ```bash
@@ -148,8 +157,9 @@ Optional `docs/app_review.html` (Tab „VPS Inventar“) aktualisieren, wenn sic
 | `nuernbergspots-test` | `Up`, Port 3000 |
 | nginx | `active` |
 | docker | `active` |
-| Backend `/health` (direkt) | HTTP **401** (Auth required — korrekt) |
+| Backend `/health` (direkt) | HTTP **200** (öffentlicher Liveness-Check) |
 | nginx `https://…/health` | HTTP **200** |
+| Health-Cron | `crontab -l` enthält `check-backend-health.sh` |
 | SSL-Zertifikat | Gültig (Wildcard `*.nuernbergspots.de`) |
 
 ## Sicherheit
@@ -162,3 +172,21 @@ Optional `docs/app_review.html` (Tab „VPS Inventar“) aktualisieren, wenn sic
 
 - Server-Details: [reference.md](reference.md)
 - Verifikations-Skript: [scripts/verify-vps.sh](scripts/verify-vps.sh)
+- Health-Cron-Skript: [scripts/check-backend-health.sh](scripts/check-backend-health.sh)
+
+## Health-Cron einrichten (einmalig auf VPS)
+
+Nach Deploy mit öffentlichem `GET /health`:
+
+```bash
+eval "$(grep '^export IONOS_' ~/.zshrc)"
+sshpass -p "$IONOS_PWD" ssh "${IONOS_USER}@${IONOS_IP}" 'bash -s' <<'REMOTE'
+mkdir -p /opt/nuernbergspots/scripts
+REMOTE
+sshpass -p "$IONOS_PWD" scp .cursor/skills/vps-maintenance/scripts/check-backend-health.sh \
+  "${IONOS_USER}@${IONOS_IP}:/opt/nuernbergspots/scripts/check-backend-health.sh"
+sshpass -p "$IONOS_PWD" ssh "${IONOS_USER}@${IONOS_IP}" \
+  'chmod +x /opt/nuernbergspots/scripts/check-backend-health.sh && touch /var/log/nuernbergspots-health.log'
+sshpass -p "$IONOS_PWD" ssh "${IONOS_USER}@${IONOS_IP}" \
+  '(crontab -l 2>/dev/null | grep -v check-backend-health; echo "*/5 * * * * /opt/nuernbergspots/scripts/check-backend-health.sh >> /var/log/nuernbergspots-health.log 2>&1") | crontab -'
+```

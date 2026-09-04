@@ -468,28 +468,17 @@ export class EventsService {
         this.logger.warn(`[NOTIFICATION] No users to notify for event ${event.id}`);
         return;
       }
-      const sendPromises = usersToNotify.map(async ({ id }) => {
-        try {
-          this.logger.debug(`[NOTIFICATION] Sending to user ${id}`);
-          await this.notificationService.sendToUser(id, {
-            title: 'Neues Event verfügbar',
-            body: `${event.title} - ${event.categoryId}`,
-            data: {
-              type: 'NEW_EVENT',
-              eventId: event.id,
-              eventTitle: event.title,
-              categoryId: event.categoryId,
-            },
-          });
-          this.logger.debug(`[NOTIFICATION] Successfully sent to user ${id}`);
-        } catch (error: any) {
-          this.logger.error(
-            `[NOTIFICATION] Error sending notification to user ${id}: ${error.message}`,
-            error.stack,
-          );
-        }
+      const userIds = usersToNotify.map(({ id }) => id);
+      await this.notificationService.sendToUsers(userIds, {
+        title: 'Neues Event verfügbar',
+        body: `${event.title} - ${event.categoryId}`,
+        data: {
+          type: 'NEW_EVENT',
+          eventId: event.id,
+          eventTitle: event.title,
+          categoryId: event.categoryId,
+        },
       });
-      await Promise.all(sendPromises);
       this.logger.log(
         `[NOTIFICATION] Completed notification process for event ${event.id}. Sent to ${usersToNotify.length} users.`,
       );
@@ -552,28 +541,17 @@ export class EventsService {
         this.logger.warn(`[NOTIFICATION] No users to notify for event update ${event.id}`);
         return;
       }
-      const sendPromises = usersToNotify.map(async ({ id }) => {
-        try {
-          this.logger.debug(`[NOTIFICATION] Sending to user ${id}`);
-          await this.notificationService.sendToUser(id, {
-            title: 'Event wurde aktualisiert',
-            body: `${event.title} wurde aktualisiert`,
-            data: {
-              type: 'FAV_EVENT_UPDATE',
-              eventId: event.id,
-              eventTitle: event.title,
-              updateType,
-            },
-          });
-          this.logger.debug(`[NOTIFICATION] Successfully sent to user ${id}`);
-        } catch (error: any) {
-          this.logger.error(
-            `[NOTIFICATION] Error sending notification to user ${id}: ${error.message}`,
-            error.stack,
-          );
-        }
+      const userIds = usersToNotify.map(({ id }) => id);
+      await this.notificationService.sendToUsers(userIds, {
+        title: 'Event wurde aktualisiert',
+        body: `${event.title} wurde aktualisiert`,
+        data: {
+          type: 'FAV_EVENT_UPDATE',
+          eventId: event.id,
+          eventTitle: event.title,
+          updateType,
+        },
       });
-      await Promise.all(sendPromises);
       this.logger.log(
         `[NOTIFICATION] Completed update notification process for event ${event.id}. Sent to ${usersToNotify.length} users.`,
       );

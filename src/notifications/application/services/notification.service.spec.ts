@@ -184,4 +184,21 @@ describe('NotificationService', () => {
     expect(mockSend).toHaveBeenCalledTimes(60);
     expect(maxActive).toBeLessThanOrEqual(25);
   });
+
+  it('should limit concurrent sendToUser calls when sending to many users', async () => {
+    const userIds = Array.from({ length: 50 }, (_, index) => `user-${index}`);
+    usersService.getFcmTokens.mockResolvedValue([]);
+    let activeCount = 0;
+    let maxActive = 0;
+    const sendToUserSpy = jest.spyOn(service, 'sendToUser').mockImplementation(async () => {
+      activeCount++;
+      maxActive = Math.max(maxActive, activeCount);
+      await new Promise(resolve => setTimeout(resolve, 2));
+      activeCount--;
+    });
+    await service.sendToUsers(userIds, payload);
+    expect(sendToUserSpy).toHaveBeenCalledTimes(50);
+    expect(maxActive).toBeLessThanOrEqual(15);
+    sendToUserSpy.mockRestore();
+  });
 });

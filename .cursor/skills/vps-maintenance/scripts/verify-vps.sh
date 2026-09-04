@@ -110,15 +110,15 @@ fi
 echo "--- health endpoints ---"
 code_prd=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3100/health 2>/dev/null || echo "000")
 code_dev=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health 2>/dev/null || echo "000")
-if [ "$code_prd" = "401" ]; then
-  check "health-prd-401" "ok"
+if [ "$code_prd" = "200" ]; then
+  check "health-prd-200" "ok"
 else
-  check "health-prd-401" "got $code_prd (expected 401)"
+  check "health-prd-200" "got $code_prd (expected 200)"
 fi
-if [ "$code_dev" = "401" ]; then
-  check "health-dev-401" "ok"
+if [ "$code_dev" = "200" ]; then
+  check "health-dev-200" "ok"
 else
-  check "health-dev-401" "got $code_dev (expected 401)"
+  check "health-dev-200" "got $code_dev (expected 200)"
 fi
 
 if [ -f /etc/ssl/nuernbergspots.de/fullchain.pem ]; then

@@ -98,8 +98,8 @@ jobs:
             # Speichere aktuelle Image-ID vor dem Pull (falls vorhanden)
             OLD_IMAGE_ID=$(docker images -q ${{ env.IMAGE_NAME_DEV }}:latest 2>/dev/null || true)
             
-            # Stoppe und entferne alten Container
-            docker stop nuernbergspots-test || true
+            # Stoppe und entferne alten Container (30s Graceful Shutdown)
+            docker stop -t 30 nuernbergspots-test || true
             docker rm nuernbergspots-test || true
             
             # Erstelle certificates Verzeichnis und Service Account
@@ -120,6 +120,19 @@ jobs:
               -e GOOGLE_APPLICATION_CREDENTIALS=/app/certificates/service_account.json \
               -v /app/certificates:/app/certificates \
               ${{ env.IMAGE_NAME_DEV }}:latest
+            
+            wait_for_health() {
+              local port=$1 name=$2
+              for i in $(seq 1 30); do
+                code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${port}/health" || echo "000")
+                if [ "$code" = "200" ]; then echo "${name} healthy"; return 0; fi
+                sleep 2
+              done
+              echo "${name} health check failed"
+              docker logs "${name}" --tail 50
+              exit 1
+            }
+            wait_for_health 3000 nuernbergspots-test
             
             # Cleanup: Lösche altes Image falls es sich geändert hat
             NEW_IMAGE_ID=$(docker images -q ${{ env.IMAGE_NAME_DEV }}:latest)
@@ -191,8 +204,8 @@ jobs:
             # Speichere aktuelle Image-ID vor dem Pull (falls vorhanden)
             OLD_IMAGE_ID=$(docker images -q ${{ env.IMAGE_NAME_PRD }}:latest 2>/dev/null || true)
             
-            # Stoppe und entferne alten Container
-            docker stop nuernbergspots || true
+            # Stoppe und entferne alten Container (30s Graceful Shutdown)
+            docker stop -t 30 nuernbergspots || true
             docker rm nuernbergspots || true
             
             # Erstelle certificates Verzeichnis und Service Account
@@ -213,6 +226,19 @@ jobs:
               -e GOOGLE_APPLICATION_CREDENTIALS=/app/certificates/service_account.json \
               -v /app/certificates:/app/certificates \
               ${{ env.IMAGE_NAME_PRD }}:latest
+            
+            wait_for_health() {
+              local port=$1 name=$2
+              for i in $(seq 1 30); do
+                code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${port}/health" || echo "000")
+                if [ "$code" = "200" ]; then echo "${name} healthy"; return 0; fi
+                sleep 2
+              done
+              echo "${name} health check failed"
+              docker logs "${name}" --tail 50
+              exit 1
+            }
+            wait_for_health 3100 nuernbergspots
             
             # Cleanup: Lösche altes Image falls es sich geändert hat
             NEW_IMAGE_ID=$(docker images -q ${{ env.IMAGE_NAME_PRD }}:latest)

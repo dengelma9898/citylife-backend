@@ -398,12 +398,17 @@ Health-Checks ermöglichen Monitoring und Kubernetes Probes.
 
 ### Health-Check-Endpoints
 
-| Endpoint | Zweck | Kubernetes Probe |
-|----------|-------|------------------|
-| `GET /health` | Basis-Check (Service läuft) | Liveness Probe |
-| `GET /health/detailed` | Alle Indikatoren | Readiness Probe |
-| `GET /health/firebase` | Firebase-Verbindung | - |
-| `GET /health/memory` | Memory-Status | - |
+| Endpoint | Zweck | Auth | Kubernetes Probe |
+|----------|-------|------|------------------|
+| `GET /health` | Basis-Check (Service läuft) | Keine (`@Public()`) | Liveness Probe |
+| `GET /health/detailed` | Alle Indikatoren | Erforderlich | Readiness Probe |
+| `GET /health/firebase` | Firebase-Verbindung | Erforderlich | - |
+| `GET /health/memory` | Memory-Status | Erforderlich | - |
+
+**Deployment & Monitoring:**
+- Docker `HEALTHCHECK` prüft `GET /health` im Container (siehe `Dockerfile`)
+- CI/CD wartet nach `docker run` auf HTTP 200 auf dem Container-Port
+- VPS-Cron: `check-backend-health.sh` alle 5 Min (Ports 3000/3100), Log: `/var/log/nuernbergspots-health.log`
 
 ### Konfiguration im Code
 

@@ -53,7 +53,8 @@ npm run start:prod
 
 ## API-Dokumentation
 
-- Swagger UI: `GET /api` (lokal z. B. `http://localhost:3000/api`)
+- Swagger UI: `GET /api` (lokal z. B. `http://localhost:3000/api`; in `NODE_ENV=prd` deaktiviert)
+- Health: `GET /health` ohne Auth (Liveness); Details unter `GET /health/detailed` (Auth erforderlich)
 - **Cold-Start-Bundle:** `GET /bootstrap` – aggregiert App-Settings, Kategorien, Keywords, Downtime und optional App-Version-Check; Details in [CONSTITUTION.md](CONSTITUTION.md) §5.1
 - Architektur, API-Verträge, Konfiguration: [CONSTITUTION.md](CONSTITUTION.md)
 - Audits, Roadmap, Integrations-Checklisten: [docs/app_review.html](docs/app_review.html)

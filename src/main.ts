@@ -26,6 +26,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: loggerLevels,
   });
+  app.enableShutdownHooks();
 
   // Security-Headers mit Helmet hinzufügen
   app.use(
@@ -99,15 +100,17 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger configuration
-  const config = new DocumentBuilder()
-    .setTitle('Nürnbergspots API')
-    .setDescription('The Nürnbergspots API description')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  // Swagger configuration (disabled in production)
+  if (nodeEnv !== 'prd') {
+    const config = new DocumentBuilder()
+      .setTitle('Nürnbergspots API')
+      .setDescription('The Nürnbergspots API description')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
+  }
 
   // Get port from environment variable or use default
   const port = configService.get<number>('PORT') || 3000;

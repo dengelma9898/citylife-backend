@@ -404,27 +404,16 @@ export class BusinessesService {
         this.logger.warn(`[NOTIFICATION] No users to notify for business ${business.id}`);
         return;
       }
-      const sendPromises = usersToNotify.map(async ({ id, profile }) => {
-        try {
-          this.logger.debug(`[NOTIFICATION] Sending to user ${id}`);
-          await this.notificationService.sendToUser(id, {
-            title: 'Neuer Partner verfügbar',
-            body: `${business.name} ist jetzt verfügbar`,
-            data: {
-              type: 'NEW_BUSINESS',
-              businessId: business.id,
-              businessName: business.name,
-            },
-          });
-          this.logger.debug(`[NOTIFICATION] Successfully sent to user ${id}`);
-        } catch (error: any) {
-          this.logger.error(
-            `[NOTIFICATION] Error sending notification to user ${id}: ${error.message}`,
-            error.stack,
-          );
-        }
+      const userIds = usersToNotify.map(({ id }) => id);
+      await this.notificationService.sendToUsers(userIds, {
+        title: 'Neuer Partner verfügbar',
+        body: `${business.name} ist jetzt verfügbar`,
+        data: {
+          type: 'NEW_BUSINESS',
+          businessId: business.id,
+          businessName: business.name,
+        },
       });
-      await Promise.all(sendPromises);
       this.logger.log(
         `[NOTIFICATION] Completed notification process for business ${business.id}. Sent to ${usersToNotify.length} users.`,
       );
@@ -478,31 +467,18 @@ export class BusinessesService {
         );
         return;
       }
-      const sendPromises = businessUsersToNotify.map(async user => {
-        try {
-          this.logger.debug(`[BUSINESS_NOTIFICATION] Sending to business user ${user.id}`);
-          await this.notificationService.sendToUser(user.id, {
-            title: 'Dein Business ist jetzt aktiv',
-            body: `${business.name} wurde freigeschaltet und ist jetzt sichtbar`,
-            data: {
-              type: 'BUSINESS_ACTIVATED',
-              businessId: business.id,
-              businessName: business.name,
-              previousStatus: 'PENDING',
-              newStatus: 'ACTIVE',
-            },
-          });
-          this.logger.debug(
-            `[BUSINESS_NOTIFICATION] Successfully sent to business user ${user.id}`,
-          );
-        } catch (error: any) {
-          this.logger.error(
-            `[BUSINESS_NOTIFICATION] Error sending notification to business user ${user.id}: ${error.message}`,
-            error.stack,
-          );
-        }
+      const userIds = businessUsersToNotify.map(user => user.id);
+      await this.notificationService.sendToUsers(userIds, {
+        title: 'Dein Business ist jetzt aktiv',
+        body: `${business.name} wurde freigeschaltet und ist jetzt sichtbar`,
+        data: {
+          type: 'BUSINESS_ACTIVATED',
+          businessId: business.id,
+          businessName: business.name,
+          previousStatus: 'PENDING',
+          newStatus: 'ACTIVE',
+        },
       });
-      await Promise.all(sendPromises);
       this.logger.log(
         `[BUSINESS_NOTIFICATION] Completed business activated notification process for business ${business.id}. Sent to ${businessUsersToNotify.length} business users.`,
       );

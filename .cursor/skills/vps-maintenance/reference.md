@@ -22,8 +22,18 @@ Vollständiges Inventar: [docs/app_review.html](../../../docs/app_review.html) (
 - Config: `/etc/nginx/sites-available/nuernbergspots.de`
 - Referenz-Kopie im Repo: [scripts/nuernbergspots.de.nginx](scripts/nuernbergspots.de.nginx)
 - SSL: `/etc/ssl/nuernbergspots.de/` (Wildcard bis 2027-02-02)
-- Statischer Health: `GET /health` → 200
+- Statischer Health: `GET /health` → 200 (nginx, prüft nicht das Backend)
+- Backend Liveness: `GET http://127.0.0.1:3000/health` und `:3100/health` → 200 (ohne Auth)
 - Routen: nur `/dev/`, `/prd/`, `/` → Redirect `/dev/`
+
+## Health-Cron
+
+| Einstellung | Wert |
+|-------------|------|
+| Skript (Repo) | `.cursor/skills/vps-maintenance/scripts/check-backend-health.sh` |
+| Skript (VPS) | `/opt/nuernbergspots/scripts/check-backend-health.sh` |
+| Cron | `*/5 * * * *` |
+| Log | `/var/log/nuernbergspots-health.log` |
 
 ## Fehlerbehebung nach Reboot
 
@@ -33,7 +43,7 @@ Vollständiges Inventar: [docs/app_review.html](../../../docs/app_review.html) (
 | Port nicht offen | Container-Status prüfen |
 | nginx inactive | `nginx -t && systemctl start nginx` |
 | docker inactive | `systemctl start docker` |
-| health ≠ 401 | Nest-App noch am Starten — 60 s warten |
+| health ≠ 200 auf Container-Port | Nest-App noch am Starten — 60 s warten; `docker logs <name>` |
 
 ## Manuelles Container-Neustarten
 

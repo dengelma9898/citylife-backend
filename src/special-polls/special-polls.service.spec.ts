@@ -353,7 +353,7 @@ describe('SpecialPollsService', () => {
       await service.create(createDto);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledWith(['user1'], {
         title: 'Neue Umfrage verfügbar',
         body: 'New Poll',
         data: {
@@ -388,7 +388,7 @@ describe('SpecialPollsService', () => {
 
       await service.create(createDto);
 
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('should not send notification when preference is undefined (default: false)', async () => {
@@ -413,7 +413,7 @@ describe('SpecialPollsService', () => {
 
       await service.create(createDto);
 
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('should handle notification errors gracefully', async () => {
@@ -433,7 +433,7 @@ describe('SpecialPollsService', () => {
           },
         },
       ]);
-      mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification failed'));
+      mockNotificationService.sendToUsers.mockRejectedValue(new Error('Notification failed'));
 
       const createDto: CreateSpecialPollDto = {
         title: 'New Poll',
@@ -442,7 +442,7 @@ describe('SpecialPollsService', () => {
       const result = await service.create(createDto);
 
       expect(result).toBeDefined();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalled();
     });
   });
 

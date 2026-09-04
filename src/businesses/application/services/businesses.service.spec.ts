@@ -442,10 +442,10 @@ describe('BusinessesService', () => {
       };
       mockUsersService.getAllUserProfilesWithIds.mockResolvedValue([]);
       mockUsersService.getAllBusinessUsers.mockResolvedValue([mockBusinessUser]);
-      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+      mockNotificationService.sendToUsers.mockResolvedValue(undefined);
       await service.updateStatus('business1', BusinessStatus.ACTIVE);
       expect(mockUsersService.getAllBusinessUsers).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('business-user-1', {
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledWith(['business-user-1'], {
         title: 'Dein Business ist jetzt aktiv',
         body: 'Test Business wurde freigeschaltet und ist jetzt sichtbar',
         data: {
@@ -484,7 +484,7 @@ describe('BusinessesService', () => {
       mockUsersService.getAllBusinessUsers.mockResolvedValue([mockBusinessUser]);
       await service.updateStatus('business1', BusinessStatus.ACTIVE);
       expect(mockUsersService.getAllBusinessUsers).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('should not send business activated notification when preference is undefined (default false)', async () => {
@@ -510,7 +510,7 @@ describe('BusinessesService', () => {
       mockUsersService.getAllBusinessUsers.mockResolvedValue([mockBusinessUser]);
       await service.updateStatus('business1', BusinessStatus.ACTIVE);
       expect(mockUsersService.getAllBusinessUsers).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('should only send notification to business users with matching businessId', async () => {
@@ -552,11 +552,11 @@ describe('BusinessesService', () => {
         mockBusinessUser1,
         mockBusinessUser2,
       ]);
-      mockNotificationService.sendToUser.mockResolvedValue(undefined);
+      mockNotificationService.sendToUsers.mockResolvedValue(undefined);
       await service.updateStatus('business1', BusinessStatus.ACTIVE);
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledTimes(1);
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('business-user-1', expect.any(Object));
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalledWith('business-user-2', expect.any(Object));
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledTimes(1);
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledWith(['business-user-1'], expect.any(Object));
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalledWith(['business-user-2'], expect.any(Object));
     });
 
     it('should not send notification for other status changes', async () => {
@@ -581,7 +581,7 @@ describe('BusinessesService', () => {
       mockUsersService.getAllBusinessUsers.mockResolvedValue([]);
       await service.updateStatus('business1', BusinessStatus.INACTIVE);
       expect(mockUsersService.getAllBusinessUsers).not.toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
   });
 

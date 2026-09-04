@@ -144,28 +144,17 @@ export class JobOffersService {
         this.logger.warn(`[NOTIFICATION] No users to notify for job offer ${jobOffer.id}`);
         return;
       }
-      const sendPromises = usersToNotify.map(async ({ id }) => {
-        try {
-          this.logger.debug(`[NOTIFICATION] Sending to user ${id}`);
-          await this.notificationService.sendToUser(id, {
-            title: 'Neues Job-Angebot',
-            body: `${jobOffer.title} - ${jobOffer.jobOfferCategoryId}`,
-            data: {
-              type: 'NEW_JOB_OFFER',
-              jobOfferId: jobOffer.id,
-              jobTitle: jobOffer.title,
-              jobOfferCategoryId: jobOffer.jobOfferCategoryId,
-            },
-          });
-          this.logger.debug(`[NOTIFICATION] Successfully sent to user ${id}`);
-        } catch (error: any) {
-          this.logger.error(
-            `[NOTIFICATION] Error sending notification to user ${id}: ${error.message}`,
-            error.stack,
-          );
-        }
+      const userIds = usersToNotify.map(({ id }) => id);
+      await this.notificationService.sendToUsers(userIds, {
+        title: 'Neues Job-Angebot',
+        body: `${jobOffer.title} - ${jobOffer.jobOfferCategoryId}`,
+        data: {
+          type: 'NEW_JOB_OFFER',
+          jobOfferId: jobOffer.id,
+          jobTitle: jobOffer.title,
+          jobOfferCategoryId: jobOffer.jobOfferCategoryId,
+        },
       });
-      await Promise.all(sendPromises);
       this.logger.log(
         `[NOTIFICATION] Completed notification process for job offer ${jobOffer.id}. Sent to ${usersToNotify.length} users.`,
       );

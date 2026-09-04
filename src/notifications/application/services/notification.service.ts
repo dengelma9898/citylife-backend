@@ -2,38 +2,18 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { getMessaging } from 'firebase-admin/messaging';
 import { NotificationPayload } from '../../domain/interfaces/notification-payload.interface';
 import { UsersService } from '../../../users/users.service';
+import { mapWithConcurrency } from '../../../core/utils/concurrency.util';
 
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
   private readonly FCM_SEND_CONCURRENCY = 25;
+  private readonly USER_SEND_CONCURRENCY = 15;
 
   constructor(
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
   ) {}
-
-  /**
-   * Führt mapper-Async-Aufrufe mit begrenzter Parallelität aus und erhält die Reihenfolge.
-   * Verhindert unbegrenzte Fan-outs (z. B. FCM-Sends an tausende Tokens).
-   */
-  private async mapWithConcurrency<T, R>(
-    items: T[],
-    concurrency: number,
-    mapper: (item: T) => Promise<R>,
-  ): Promise<R[]> {
-    const results: R[] = new Array(items.length);
-    let nextIndex = 0;
-    const workerCount = Math.min(concurrency, items.length);
-    const workers = Array.from({ length: workerCount }, async () => {
-      while (nextIndex < items.length) {
-        const index = nextIndex++;
-        results[index] = await mapper(items[index]);
-      }
-    });
-    await Promise.all(workers);
-    return results;
-  }
 
   async sendToUser(userId: string, payload: NotificationPayload): Promise<void> {
     try {
@@ -47,7 +27,7 @@ export class NotificationService {
       this.logger.debug(`[FCM] Found ${fcmTokens.length} FCM tokens for user ${userId}`);
       const invalidTokens: string[] = [];
       let successCount = 0;
-      await this.mapWithConcurrency(fcmTokens, this.FCM_SEND_CONCURRENCY, async token => {
+      await mapWithConcurrency(fcmTokens, this.FCM_SEND_CONCURRENCY, async token => {
         try {
           this.logger.debug(
             `[FCM] Sending to device ${token.deviceId} (token: ${token.token.substring(0, 20)}...)`,
@@ -119,8 +99,9 @@ export class NotificationService {
   async sendToUsers(userIds: string[], payload: NotificationPayload): Promise<void> {
     try {
       this.logger.debug(`Sending notification to ${userIds.length} users`);
-      const sendPromises = userIds.map(userId => this.sendToUser(userId, payload));
-      await Promise.all(sendPromises);
+      await mapWithConcurrency(userIds, this.USER_SEND_CONCURRENCY, userId =>
+        this.sendToUser(userId, payload),
+      );
     } catch (error: any) {
       this.logger.error(`Error sending notification to multiple users: ${error.message}`);
     }

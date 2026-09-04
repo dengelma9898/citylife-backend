@@ -61,6 +61,7 @@ describe('EventsService', () => {
 
   const mockNotificationService = {
     sendToUser: jest.fn(),
+    sendToUsers: jest.fn(),
   };
 
   const mockCacheManager = {
@@ -219,7 +220,7 @@ describe('EventsService', () => {
       await service.create(mockCreateEventDto, EventStatus.ACTIVE);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledWith(['user1'], {
         title: 'Neues Event verfügbar',
         body: expect.stringContaining('Test Event'),
         data: {
@@ -252,7 +253,7 @@ describe('EventsService', () => {
       await service.create(mockCreateEventDto, EventStatus.ACTIVE);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('should send notification when preference is undefined (default: true)', async () => {
@@ -274,7 +275,7 @@ describe('EventsService', () => {
       await service.create(mockCreateEventDto, EventStatus.ACTIVE);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalled();
     });
 
     it('should not send notification when no users with enabled preference exist', async () => {
@@ -310,7 +311,7 @@ describe('EventsService', () => {
       await service.create(mockCreateEventDto, EventStatus.ACTIVE);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('should handle notification errors gracefully', async () => {
@@ -330,12 +331,12 @@ describe('EventsService', () => {
           },
         },
       ]);
-      mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification error'));
+      mockNotificationService.sendToUsers.mockRejectedValue(new Error('Notification error'));
 
       const result = await service.create(mockCreateEventDto, EventStatus.ACTIVE);
 
       expect(result).toBeDefined();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalled();
     });
   });
 
@@ -490,8 +491,8 @@ describe('EventsService', () => {
       await service.update('event1', { title: 'New Event Title' });
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledTimes(1);
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledTimes(1);
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledWith(['user1'], {
         title: 'Event wurde aktualisiert',
         body: 'New Event Title wurde aktualisiert',
         data: {
@@ -533,7 +534,7 @@ describe('EventsService', () => {
       await service.update('event1', { title: 'New Event Title' });
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('should send notification when preference is undefined (default: true)', async () => {
@@ -564,7 +565,7 @@ describe('EventsService', () => {
       await service.update('event1', { title: 'New Event Title' });
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalled();
     });
 
     it('should not send notification when event is not favorited', async () => {
@@ -597,7 +598,7 @@ describe('EventsService', () => {
       await service.update('event1', { title: 'New Event Title' });
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('should determine update type correctly', async () => {
@@ -633,8 +634,8 @@ describe('EventsService', () => {
 
       await service.update('event1', { dailyTimeSlots: [{ date: '2024-01-03', from: '10:00', to: '12:00' }] });
 
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(
-        'user1',
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledWith(
+        ['user1'],
         expect.objectContaining({
           data: expect.objectContaining({
             updateType: expect.any(String),
@@ -669,12 +670,12 @@ describe('EventsService', () => {
           },
         },
       ]);
-      mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification error'));
+      mockNotificationService.sendToUsers.mockRejectedValue(new Error('Notification error'));
 
       const result = await service.update('event1', { title: 'New Event Title' });
 
       expect(result).toBeDefined();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalled();
     });
   });
 
@@ -693,7 +694,7 @@ describe('EventsService', () => {
       const mockFirestore = createFirestoreMock();
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
       await service.create(pendingCreateDto, EventStatus.PENDING);
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
       expect(mockUsersService.getAllUserProfilesWithIds).not.toHaveBeenCalled();
     });
 
@@ -764,7 +765,7 @@ describe('EventsService', () => {
       });
       mockFirebaseService.getFirestore.mockReturnValue(mockFirestore);
       await service.update('event1', { title: 'New Event Title' });
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
   });
 
@@ -895,8 +896,8 @@ describe('EventsService', () => {
       jest.spyOn(service, 'getById').mockResolvedValueOnce(oldEvent);
       const result = await service.bulkUpdateCategory(['event1'], targetCategoryId);
       expect(result.successful).toBe(1);
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith(
-        'user1',
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledWith(
+        ['user1'],
         expect.objectContaining({
           data: expect.objectContaining({
             type: 'FAV_EVENT_UPDATE',

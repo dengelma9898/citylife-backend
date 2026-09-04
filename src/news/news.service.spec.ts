@@ -86,6 +86,7 @@ describe('NewsService', () => {
 
   const mockNotificationService = {
     sendToUser: jest.fn(),
+    sendToUsers: jest.fn(),
   };
 
   const mockTextNewsItem: TextNewsItem = {
@@ -268,7 +269,7 @@ describe('NewsService', () => {
       await service.createTextNews(createDto);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledWith(['user1'], {
         title: 'Neue Nachricht verfügbar',
         body: 'New Text News',
         data: {
@@ -305,7 +306,7 @@ describe('NewsService', () => {
       await service.createTextNews(createDto);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('should not send notification when preference is undefined (default: false)', async () => {
@@ -332,7 +333,7 @@ describe('NewsService', () => {
       await service.createTextNews(createDto);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).not.toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).not.toHaveBeenCalled();
     });
   });
 
@@ -383,7 +384,7 @@ describe('NewsService', () => {
       await service.createImageNews(createDto);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledWith(['user1'], {
         title: 'Neue Nachricht verfügbar',
         body: 'New Image News',
         data: {
@@ -457,7 +458,7 @@ describe('NewsService', () => {
       await service.createPollNews(createDto);
 
       expect(mockUsersService.getAllUserProfilesWithIds).toHaveBeenCalled();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalledWith('user1', {
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalledWith(['user1'], {
         title: 'Neue Nachricht verfügbar',
         body: 'New Poll Question?',
         data: {
@@ -485,7 +486,7 @@ describe('NewsService', () => {
           },
         },
       ]);
-      mockNotificationService.sendToUser.mockRejectedValue(new Error('Notification failed'));
+      mockNotificationService.sendToUsers.mockRejectedValue(new Error('Notification failed'));
 
       const createDto: CreateTextNewsDto = {
         content: 'New Text News',
@@ -495,7 +496,7 @@ describe('NewsService', () => {
       const result = await service.createTextNews(createDto);
 
       expect(result).toBeDefined();
-      expect(mockNotificationService.sendToUser).toHaveBeenCalled();
+      expect(mockNotificationService.sendToUsers).toHaveBeenCalled();
     });
   });
 

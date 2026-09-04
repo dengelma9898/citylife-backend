@@ -4,6 +4,7 @@ import { HealthCheck, HealthCheckService, HealthCheckResult } from '@nestjs/term
 import { FirebaseHealthIndicator } from './indicators/firebase-health.indicator';
 import { MemoryHealthIndicator } from './indicators/memory-health.indicator';
 import { SkipThrottle } from '@nestjs/throttler';
+import { Public } from '../core/decorators/public.decorator';
 
 /**
  * Health-Check-Controller für Monitoring und Liveness/Readiness Probes.
@@ -29,6 +30,7 @@ export class HealthController {
    * Gibt nur den allgemeinen Status zurück (für Kubernetes Liveness Probe).
    */
   @Get()
+  @Public()
   @HealthCheck()
   @ApiOperation({ summary: 'Basis Health-Check' })
   @ApiResponse({ status: 200, description: 'Service ist gesund' })

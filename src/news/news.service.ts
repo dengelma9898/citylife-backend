@@ -535,27 +535,16 @@ export class NewsService {
         this.logger.warn(`[NOTIFICATION] No users to notify for news ${newsItem.id}`);
         return;
       }
-      const sendPromises = usersToNotify.map(async ({ id }) => {
-        try {
-          this.logger.debug(`[NOTIFICATION] Sending to user ${id}`);
-          await this.notificationService.sendToUser(id, {
-            title: 'Neue Nachricht verfügbar',
-            body: newsTitle,
-            data: {
-              type: 'NEW_NEWS',
-              newsId: newsItem.id,
-              newsTitle: newsTitle,
-            },
-          });
-          this.logger.debug(`[NOTIFICATION] Successfully sent to user ${id}`);
-        } catch (error: any) {
-          this.logger.error(
-            `[NOTIFICATION] Error sending notification to user ${id}: ${error.message}`,
-            error.stack,
-          );
-        }
+      const userIds = usersToNotify.map(({ id }) => id);
+      await this.notificationService.sendToUsers(userIds, {
+        title: 'Neue Nachricht verfügbar',
+        body: newsTitle,
+        data: {
+          type: 'NEW_NEWS',
+          newsId: newsItem.id,
+          newsTitle: newsTitle,
+        },
       });
-      await Promise.all(sendPromises);
       this.logger.log(
         `[NOTIFICATION] Completed notification process for news ${newsItem.id}. Sent to ${usersToNotify.length} users.`,
       );
