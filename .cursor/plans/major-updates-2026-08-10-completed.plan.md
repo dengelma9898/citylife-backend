@@ -1,9 +1,9 @@
 ---
 name: Major Dependency Updates 2026-08-10
 overview: Schrittweise Major-Updates für backend npm-Abhängigkeiten
-status: pending
+status: completed
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-09-14
 todos:
   - id: pkg-types-node
     content: "@types/node ^25.9.5 → ^26.2.0 (Major)"
@@ -34,7 +34,7 @@ todos:
     package: "typescript"
     from: "^6.0.3"
     to: "^7.0.2"
-    status: pending
+    status: blocked
 isProject: true
 ---
 
@@ -90,4 +90,16 @@ isProject: true
 
 ## typescript ^6.0.3 → ^7.0.2
 
-**Notizen:** (ausstehend)
+**Breaking Changes (TypeScript 7.0):**
+- TypeScript 7.0 liefert nur noch das `tsc`-Executable aus und exponiert vorerst nicht mehr die programmatische JavaScript Compiler API (diese wird erst für TS 7.1 erwartet).
+
+**Inkompatibilitäten im Projekt-Ökosystem:**
+- `@nestjs/cli`: Bricht `nest build` ab mit `Error: The installed TypeScript version (7.0.2) does not expose the programmatic compiler API that the Nest CLI requires. Please install TypeScript 6 (e.g. "npm i -D typescript@^6") until then.`
+- `ts-jest` (29.4.12): Unterstützt TS 7 nicht (`peer typescript@">=4.3 <7"`), Tests brechen ab mit `The TypeScript compiler "typescript" (version 7.0.2) does not expose the JavaScript compiler API required by ts-jest.`
+- `@typescript-eslint` (8.70.0): ESLint bricht ab mit `Error: typescript-eslint does not support TS 7.0.`
+
+**Notizen:**
+- Update ist durch Ökosystem-Tooling (NestJS CLI, ts-jest, typescript-eslint) aktuell technisch unmöglich / blockiert.
+- Rollback durchgeführt (`git checkout -- package.json package-lock.json && npm ci`).
+- `typescript` bleibt auf `^6.0.3` gepinnt bis TS 7.1 bzw. Tooling-Support vorhanden ist.
+- Alle Validierungen auf TS 6.0.3 grün: lint, format, tsc, test, build:dev, build:prd, npm ci.
