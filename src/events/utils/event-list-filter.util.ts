@@ -25,8 +25,7 @@ export interface EventListFilterParams {
 export function matchesCategoryFilter(event: Event, categoryFilter: string): boolean {
   return (
     categoryFilter === 'all' ||
-    (categoryFilter === 'no-category' &&
-      (!event.categoryId || event.categoryId === 'default')) ||
+    (categoryFilter === 'no-category' && (!event.categoryId || event.categoryId === 'default')) ||
     (categoryFilter !== 'no-category' && event.categoryId === categoryFilter)
   );
 }
@@ -94,8 +93,7 @@ export function filterEvents(events: Event[], params: EventListFilterParams): Ev
       matchesStatus =
         statusFilter === 'all' ||
         (statusFilter === 'past' && isPastDate(lastDate)) ||
-        (statusFilter === 'running' &&
-          isWithinDateInterval(new Date(), firstDate, lastDate)) ||
+        (statusFilter === 'running' && isWithinDateInterval(new Date(), firstDate, lastDate)) ||
         (statusFilter === 'future' && isFutureDate(firstDate));
     } else if (event.monthYear) {
       matchesStatus = true;

@@ -45,7 +45,13 @@ export function paginateEvents<T>(
   items: T[],
   page: number,
   limit: number,
-): { data: T[]; total: number; totalPages: number; hasNextPage: boolean; hasPreviousPage: boolean } {
+): {
+  data: T[];
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+} {
   const total = items.length;
   const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
   const safePage = Math.max(1, page);

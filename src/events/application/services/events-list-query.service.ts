@@ -3,10 +3,7 @@ import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { getDefaultCacheTtlMs } from '../../../core/cache/cache.config';
 import { EventsService } from '../../events.service';
 import { EventsListQueryDto } from '../../dto/events-list-query.dto';
-import {
-  EventsCountResponse,
-  EventsListResponse,
-} from '../../dto/events-list-response.dto';
+import { EventsCountResponse, EventsListResponse } from '../../dto/events-list-response.dto';
 import { Event } from '../../interfaces/event.interface';
 import { EventStatus } from '../../enums/event-status.enum';
 import { EVENTS_LIST_CACHE_KEY } from '../../constants/events-list-cache.constants';

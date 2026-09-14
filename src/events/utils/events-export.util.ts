@@ -10,15 +10,7 @@ function escapeCsvValue(value: string | number | boolean): string {
 }
 
 export function eventsToCsv(events: Event[]): string {
-  const headers = [
-    'id',
-    'title',
-    'status',
-    'categoryId',
-    'startDate',
-    'location',
-    'isPromoted',
-  ];
+  const headers = ['id', 'title', 'status', 'categoryId', 'startDate', 'location', 'isPromoted'];
   const rows = events.map(event => [
     event.id,
     event.title,
