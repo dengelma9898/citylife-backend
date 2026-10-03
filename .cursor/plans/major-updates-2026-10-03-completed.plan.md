@@ -1,7 +1,7 @@
 ---
 name: Major Dependency Updates 2026-10-03
 overview: Schrittweise Major-Updates für backend npm-Abhängigkeiten
-status: pending
+status: completed
 created: 2026-10-03
 updated: 2026-10-03
 todos:
@@ -16,7 +16,7 @@ todos:
     package: "typescript"
     from: "^6.0.3"
     to: "^7.0.2"
-    status: pending
+    status: blocked
 isProject: true
 ---
 
@@ -53,4 +53,10 @@ Pakete: `common`, `core`, `platform-express`, `testing`, `cli`, `schematics`, `c
 
 **Hinweis:** `@nestjs/swagger` 12 deklariert Peer `typescript ^5.5 || ^6`. Wird nach dem NestJS-Update erneut geprüft (voraussichtlich weiterhin blockiert).
 
-**Notizen:** _(nach Abschluss ergänzen)_
+**Prüfung 2026-10-03 (Peer-Ranges der aktuellen Latest-Versionen):**
+- `ts-jest` 29.4.14: `typescript >=4.3 <7`
+- `@typescript-eslint/parser` 8.71.0: `typescript >=4.8.4 <6.1.0`
+- `@nestjs/swagger` 12.0.2: `typescript ^5.5.0 || ^6.0.0`
+- `@nestjs/cli` 12.0.8: intern `typescript ~6.0.2`; TS 7 liefert keine programmatische Compiler-API (erst TS 7.1 erwartet)
+
+**Notizen:** Blockiert, kein Install-Versuch nötig (Peer-Ranges schließen TS 7 aus). `typescript` bleibt auf `^6.0.3`. Erneut prüfen, sobald ts-jest, typescript-eslint, @nestjs/swagger und @nestjs/cli TS 7 unterstützen.
