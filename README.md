@@ -1,5 +1,10 @@
 # citylife-backend
 
+## Voraussetzungen
+
+- **Node.js ≥ 24.9** (NestJS 12 liefert ESM-Pakete aus; Jest lädt diese per `require(esm)`, was erst ab Node 24.9 unterstützt wird). `@nestjs/schematics` 12 verlangt zudem `^24.15`.
+- Tests laufen über `npm test` (startet Jest mit `--experimental-vm-modules`).
+
 ## Umgebungsvariablen
 
 Die Anwendung verwendet verschiedene Umgebungsvariablen, die in der `.env` Datei konfiguriert werden müssen:
