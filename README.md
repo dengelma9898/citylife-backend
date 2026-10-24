@@ -2,8 +2,13 @@
 
 ## Voraussetzungen
 
-- **Node.js ≥ 24.9** (NestJS 12 liefert ESM-Pakete aus; Jest lädt diese per `require(esm)`, was erst ab Node 24.9 unterstützt wird). `@nestjs/schematics` 12 verlangt zudem `^24.15`.
+- **Node.js 26.x (LTS)** (NestJS 12 liefert ESM-Pakete aus; Jest lädt diese per `require(esm)`, was ab Node 24.9 unterstützt wird). `@nestjs/schematics` 12 erlaubt `^22.22.3 || ^24.15.0 || >=26.0.0`. Die CI-Pipeline (`deployment.yml`) und das `Dockerfile` verwenden `node:26` bzw. `node:26-slim`. Lokale Version per nvm: `.nvmrc` → `26`.
 - Tests laufen über `npm test` (startet Jest mit `--experimental-vm-modules`).
+
+## Agent-Skills (Cursor)
+
+- Projekt-Skill `nestjs-best-practices` (40 Regeln zu Architektur, DI, Security, Performance, Testing) liegt in `.agents/skills/nestjs-best-practices/`, Quelle (`kadajett/agent-nestjs-skills`) ist in `skills-lock.json` gepinnt. Wiederherstellen/Aktualisieren: `npx skills experimental_install` bzw. `npx skills update` (erfordert arm64-Node per `nvm use`, siehe `.nvmrc`, und ein lauffähiges `git`).
+- **Vorrang:** Bei Widersprüchen gelten `.cursorrules` und `CONSTITUTION.md` vor den generischen Skill-Regeln (z. B. Firebase Auth/Firestore statt JWT/ORM-Migrationen, `CACHE_MANAGER` laut `CONSTITUTION.md` §3).
 
 ## Umgebungsvariablen
 
@@ -101,6 +106,10 @@ docker buildx build --platform linux/amd64 \
   -t dengelma/nuernbergspots \
   --push .
 ```
+
+## CI/CD (GitHub Actions)
+
+`.github/workflows/deployment.yml` läuft bei jedem Push, Pull Request und manuell per `workflow_dispatch`. Per `concurrency` (`group: ${{ github.workflow }}-${{ github.ref }}`, `cancel-in-progress: true` – wie im Admin-FE) bricht ein neuer Run ältere laufende/ wartende Runs desselben Branches bzw. Pull Requests sofort ab; Runs anderer Branches bleiben unberührt. Bereits vor dieser Änderung gestartete, hängende Runs ggf. einmalig manuell im Actions-Tab abbrechen.
 
 ## VPS & Security
 

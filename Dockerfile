@@ -2,7 +2,7 @@
 
 # --- Stage 1: Build ---
 # Compiles TypeScript; devDependencies (TypeScript, Nest CLI) stay in this stage only.
-FROM node:24-slim AS builder
+FROM node:26-slim AS builder
 
 ARG NODE_ENV=prd
 
@@ -16,7 +16,7 @@ RUN npm run build:${NODE_ENV}
 
 # --- Stage 2: Runtime ---
 # Only production dependencies, compiled output, and runtime assets.
-FROM node:24-slim AS production
+FROM node:26-slim AS production
 
 ARG NODE_ENV=prd
 ARG PORT=3000
