@@ -77,6 +77,7 @@ Task Progress:
 - [ ] Schritt 6: Validierungen ausführen
 - [ ] Schritt 7: Fehler beheben (Fix-Loop)
 - [ ] Schritt 8: Plan aktualisieren
+- [ ] Schritt 9: Ausführung per SubAgent verifizieren + Skill-Optimierungen aufzeigen
 ```
 
 ### Schritt 1: Plan-Status prüfen
@@ -171,7 +172,7 @@ git diff --stat package.json package-lock.json
 
 ### Schritt 6: Projekt-Validierungen (alle müssen grün sein)
 
-Reihenfolge wie im Minor/Patch-Skill und CI:
+Reihenfolge wie in CI:
 
 | # | Check | Befehl |
 |---|--------|--------|
@@ -253,10 +254,61 @@ Todo auf `blocked` setzen, Begründung im Plan dokumentieren.
 
 **Plan-Fortschritt:** X/Y abgeschlossen
 
+**SubAgent-Verifikation:** ✅ alle Prüfpunkte bestanden (bzw. Abweichungen + Nachbesserung)
+
+**Skill-Optimierungen (zur Freigabe):**
+- [Schritt 4] … (oder „Keine Skill-Optimierungen identifiziert")
+
 **Nächster Schritt:**
 - Weitere offene Majors: Skill erneut aufrufen
 - Plan vollständig: User soll committen; nächster Scan erst nach erneutem Aufruf (erstellt dann neuen Plan)
 ```
+
+### Schritt 9: Verifikation per SubAgent + Skill-Optimierungen
+
+**Pflicht:** Nach Schritt 8 die Ausführung **unabhängig** von einem SubAgent prüfen lassen — auch bei `skipped`/`blocked` (dann mit Fokus auf sauberen Rollback und Plan-Eintrag). Der SubAgent kennt den Verlauf nicht und prüft ausschließlich anhand von Repo-Zustand, Plan-Datei und dieser `SKILL.md`.
+
+**Start:** `Task`-Tool mit `subagent_type: "generalPurpose"`, `run_in_background: false`. Der SubAgent arbeitet **read-only**: keine Dateiänderungen, kein `git commit`, keine Änderung an `package.json`/Lockfile/Plan/Skill.
+
+**Prompt-Vorlage** (Platzhalter in `<…>` füllen):
+
+```
+Verifiziere die Ausführung des Skills `.cursor/skills/backend-update-major/SKILL.md` im Repo `backend/`.
+Lies zuerst die SKILL.md. Ändere keine Dateien.
+
+Kontext aus der Ausführung:
+- Plan-Datei: <Pfad>
+- Bearbeitetes Paket: <paket> <from> → <to>
+- Ergebnis laut Agent: <completed | skipped | blocked>
+- Durchgeführte Fixes: <Liste oder "keine">
+
+Prüfe:
+1. Genau ein Primary-Paket: `git diff package.json` zeigt nur das geplante Paket (plus direkte Peer-Abhängigkeiten desselben Scopes); keine unerwarteten Major-Sprünge anderer Pakete.
+2. Plan-Konsistenz: Es existiert genau ein Plan für den aktuellen Zyklus; Dateiname-Status (`pending`/`completed`) und Frontmatter `status` stimmen überein und passen zu den Todos (alle `completed`/`skipped` ⇒ `completed`, sonst `pending`); genau das bearbeitete Todo wurde geändert, `updated`-Datum ist gesetzt; Fixes/Blocker-Begründung stehen im Plan-Body.
+3. Bei `completed`: Alle Checks aus Schritt 6 laufen jetzt grün: `npm run lint`, `npm run format:check`, `npx tsc --noEmit`, `npm run test`, `npm run build:dev`, `npm run build:prd`.
+4. Bei `skipped`/`blocked`: `package.json` und `package-lock.json` entsprechen wieder dem Ausgangszustand (`git diff --stat` ohne Dependency-Änderung).
+5. `package.json` und `package-lock.json` sind konsistent (`npm ls --depth=0` ohne ERR/missing).
+6. Fixes sind minimal und zielgerichtet, regelkonform zu `.cursorrules`; bei Verhaltensänderungen existieren Tests.
+7. Kein Auto-Commit erfolgt (`git log -1` unverändert) und keine unerwarteten Dateien (`git status --short`).
+8. Wurde jeder Workflow-Schritt der SKILL.md eingehalten bzw. begründet übersprungen (insb. Changelog-Recherche in Plan-Body dokumentiert)?
+
+Optimierungen für den Skill selbst: Nenne nur konkrete, belegte Verbesserungen (veraltete Befehle, fehlende oder überflüssige Checks, Widersprüche, unklare Formulierungen, wiederkehrende Fix-Muster aus dieser Ausführung, Abweichungen zwischen Skill und tatsächlichem `package.json`/CI). Keine spekulativen Vorschläge.
+
+Antwortformat (Markdown, deutsch):
+## Verifikation
+| Prüfpunkt | Status (✅/⚠️/❌) | Beleg |
+## Abweichungen
+- … oder "keine"
+## Optimierungsvorschläge für den Skill
+- [Abschnitt/Schritt] Problem → konkreter Änderungsvorschlag … oder "keine"
+```
+
+**Auswertung durch den Haupt-Agent:**
+
+1. Findet der SubAgent ❌/⚠️ am Projektzustand oder Plan (z. B. Check rot, falscher Plan-Status): Fix-Loop (Schritt 7) bzw. Plan-Korrektur (Schritt 8) ausführen, danach Schritt 9 wiederholen (max. 2 Wiederholungen, dann User informieren).
+2. Optimierungsvorschläge **nicht** automatisch in die `SKILL.md` übernehmen — dem User unter „Skill-Optimierungen" präsentieren und auf Freigabe warten.
+3. Keine Vorschläge → ausdrücklich „Keine Skill-Optimierungen identifiziert" melden.
+4. Die User-Zusammenfassung (Ende von Schritt 8) erst nach Abschluss von Schritt 9 ausgeben.
 
 ---
 
@@ -285,7 +337,6 @@ Todo auf `blocked` setzen, Begründung im Plan dokumentieren.
 
 ## Referenzen
 
-- Minor/Patch-Skill (Validierungen): [.cursor/skills/backend-update-minor-patch/SKILL.md](../backend-update-minor-patch/SKILL.md)
 - CI-Checks: `.github/workflows/deployment.yml`
 - Qualitätsmatrix: `BACKEND-OPTIMIERUNGSVORSCHLAEGE.md`
 - Coding-Standards: `.cursorrules`

@@ -29,6 +29,7 @@ Task Progress:
 - [ ] Schritt 4: Validierungen ausführen
 - [ ] Schritt 5: Fehler beheben (Fix-Loop bis alle Checks grün)
 - [ ] Schritt 6: Ergebnis dokumentieren
+- [ ] Schritt 7: Ausführung per SubAgent verifizieren + Skill-Optimierungen aufzeigen
 ```
 
 ### Schritt 1: Ausgangszustand
@@ -145,6 +146,48 @@ Nur wenn: Fix unvertretbar aufwendig, externes Blocker-Problem, oder User forder
 - Liste der **Code-/Config-Fixes** (falls welche nötig waren)
 - Hinweis: User soll manuell committen (kein Auto-Commit; Commit kann `package.json`, Lockfile und Fix-Dateien enthalten)
 
+### Schritt 7: Verifikation per SubAgent + Skill-Optimierungen
+
+**Pflicht:** Nach Schritt 6 (und nur wenn alle Checks grün sind oder ein Rollback erfolgt ist) die Ausführung **unabhängig** von einem SubAgent prüfen lassen. Der SubAgent kennt den Verlauf nicht und prüft ausschließlich anhand von Repo-Zustand und dieser `SKILL.md`.
+
+**Start:** `Task`-Tool mit `subagent_type: "generalPurpose"`, `run_in_background: false`. Der SubAgent arbeitet **read-only**: keine Dateiänderungen, kein `git commit`, keine Änderung an `package.json`/Lockfile/Skill.
+
+**Prompt-Vorlage** (Platzhalter in `<…>` füllen):
+
+```
+Verifiziere die Ausführung des Skills `.cursor/skills/backend-update-minor-patch/SKILL.md` im Repo `backend/`.
+Lies zuerst die SKILL.md. Ändere keine Dateien.
+
+Kontext aus der Ausführung:
+- Geänderte Pakete: <Kurzliste oder `git diff package.json`-Ausschnitt>
+- Durchgeführte Fixes: <Liste oder "keine">
+- Ergebnis laut Agent: <alle Checks grün | Rollback | Pin von <paket>>
+
+Prüfe:
+1. Kein Major-Sprung: `git diff package.json` — alle Versionsänderungen bleiben innerhalb derselben Major-Version (Pins mit Begründung sind erlaubt).
+2. `package.json` und `package-lock.json` sind konsistent (`npm ls --depth=0` ohne ERR/missing; Lockfile-Diff plausibel).
+3. Alle Checks aus Schritt 4 laufen jetzt grün: `npm run lint`, `npm run format:check`, `npx tsc --noEmit`, `npm run test`, `npm run build:dev`, `npm run build:prd`.
+4. Fixes sind minimal und zielgerichtet (`git diff --stat` ohne unrelated Änderungen), regelkonform zu `.cursorrules`; bei Verhaltensänderungen existieren Tests.
+5. Kein Auto-Commit erfolgt (`git log -1` unverändert gegenüber Ausgangszustand) und keine unerwarteten Dateien (`git status --short`).
+6. Wurde jeder Workflow-Schritt der SKILL.md eingehalten bzw. begründet übersprungen?
+
+Optimierungen für den Skill selbst: Nenne nur konkrete, belegte Verbesserungen (veraltete Befehle, fehlende oder überflüssige Checks, Widersprüche, unklare Formulierungen, wiederkehrende Fix-Muster aus dieser Ausführung, Abweichungen zwischen Skill und tatsächlichem `package.json`/CI). Keine spekulativen Vorschläge.
+
+Antwortformat (Markdown, deutsch):
+## Verifikation
+| Prüfpunkt | Status (✅/⚠️/❌) | Beleg |
+## Abweichungen
+- … oder "keine"
+## Optimierungsvorschläge für den Skill
+- [Abschnitt/Schritt] Problem → konkreter Änderungsvorschlag … oder "keine"
+```
+
+**Auswertung durch den Haupt-Agent:**
+
+1. Findet der SubAgent ❌/⚠️ am Projektzustand (z. B. Check rot, Major-Sprung): Fix-Loop (Schritt 5) erneut ausführen, danach Schritt 7 wiederholen (max. 2 Wiederholungen, dann User informieren).
+2. Optimierungsvorschläge **nicht** automatisch in die `SKILL.md` übernehmen — dem User unter „Skill-Optimierungen" präsentieren und auf Freigabe warten.
+3. Keine Vorschläge → ausdrücklich „Keine Skill-Optimierungen identifiziert" melden.
+
 ## Fehlerbehandlung
 
 | Situation | Vorgehen |
@@ -175,6 +218,11 @@ Nur wenn: Fix unvertretbar aufwendig, externes Blocker-Problem, oder User forder
 - [x] npm ci
 
 **Fixes:** ESLint-Regel in `users.service.ts` angepasst, Jest-Mock für `@nestjs/config` aktualisiert
+
+**SubAgent-Verifikation:** ✅ alle Prüfpunkte bestanden (bzw. Abweichungen + Nachbesserung)
+
+**Skill-Optimierungen (zur Freigabe):**
+- [Schritt 4] `npm ci` doppelt ausgeführt → zusammenfassen … (oder „Keine Skill-Optimierungen identifiziert")
 
 **Nächster Schritt:** Änderungen prüfen und manuell committen.
 ```
