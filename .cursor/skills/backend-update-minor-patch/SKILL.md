@@ -12,7 +12,7 @@ Projekt: `backend/` (NestJS, npm, `package-lock.json`). Richtlinien: `.cursorrul
 ## Voraussetzungen
 
 - Arbeitsverzeichnis: Repository-Root `backend/`
-- Node.js 24 (wie CI/Dockerfile)
+- Node.js 26 (wie CI/Dockerfile)
 - Sauberer Git-Status empfohlen (Änderungen nur an `package.json` + `package-lock.json`)
 - **Kein automatischer Commit** — User committet manuell
 - **Neue Fehler müssen behoben werden** — Rollback nur als letzter Ausweg, wenn ein Fix nicht vertretbar ist
@@ -36,11 +36,12 @@ Task Progress:
 
 ```bash
 cd backend
-git status --short package.json package-lock.json
-node --version   # Erwartung: v24.x
+git status --short
+node --version   # Erwartung: v26.x
 ```
 
 Falls `package.json` oder `package-lock.json` bereits uncommitted geändert sind: User informieren, bevor fortgefahren wird.
+Falls andere Dateien geändert oder untracked sind (z. B. Skills, Docs): User kurz darauf hinweisen und klären, ob fortgefahren werden soll, damit der spätere Commit nicht vermischt wird.
 
 ### Schritt 2: Minor/Patch-Update (alle Pakete)
 
@@ -166,7 +167,7 @@ Kontext aus der Ausführung:
 Prüfe:
 1. Kein Major-Sprung: `git diff package.json` — alle Versionsänderungen bleiben innerhalb derselben Major-Version (Pins mit Begründung sind erlaubt).
 2. `package.json` und `package-lock.json` sind konsistent (`npm ls --depth=0` ohne ERR/missing; Lockfile-Diff plausibel).
-3. Alle Checks aus Schritt 4 laufen jetzt grün: `npm run lint`, `npm run format:check`, `npx tsc --noEmit`, `npm run test`, `npm run build:dev`, `npm run build:prd`.
+3. Alle Checks aus Schritt 4 laufen jetzt grün: `npm run lint`, `npm run format:check`, `npx tsc --noEmit`, `npm run test`, `npm run build:dev`, `npm run build:prd`; danach `npm ci` und erneut `npm run lint && npm run test`.
 4. Fixes sind minimal und zielgerichtet (`git diff --stat` ohne unrelated Änderungen), regelkonform zu `.cursorrules`; bei Verhaltensänderungen existieren Tests.
 5. Kein Auto-Commit erfolgt (`git log -1` unverändert gegenüber Ausgangszustand) und keine unerwarteten Dateien (`git status --short`).
 6. Wurde jeder Workflow-Schritt der SKILL.md eingehalten bzw. begründet übersprungen?
