@@ -197,9 +197,10 @@ export class Entity {
   - `NEW_BUSINESS`: Sent when a new business becomes active (created with ACTIVE status or changed from PENDING to ACTIVE)
   - `DIRECT_CHAT_REQUEST`: Sent when a user receives a direct chat request
   - `CONTACT_REQUEST_RESPONSE`: Sent when an admin responds to a contact request
+  - `NEW_KIDS_SPOT`: Sent once per curated spot when it first becomes kids-visible (`CuratedSpotsService`, payload `spotId` + `spotName`)
 - **Notification Preferences**:
   - Stored in `UserProfile.notificationPreferences` (Firebase Firestore `users` collection)
-  - Structure: `{ directMessages?: boolean, newBusinesses?: boolean, directChatRequests?: boolean, contactRequestResponses?: boolean }`
+  - Structure: `{ directMessages?: boolean, newBusinesses?: boolean, directChatRequests?: boolean, contactRequestResponses?: boolean, newKidsSpots?: boolean }` (plus further opt-in flags, see `NotificationPreferences`)
   - Default: `false` if preference is undefined (Notifications werden nur gesendet, wenn Präferenz explizit auf `true` gesetzt ist)
   - Update endpoint: `PATCH /users/:id/profile` with `notificationPreferences` in body
 - **Module Dependencies**:

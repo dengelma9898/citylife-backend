@@ -82,6 +82,12 @@ export interface SurveyNotificationData {
   categoryId?: string;
 }
 
+export interface KidsSpotNotificationData {
+  type: 'NEW_KIDS_SPOT';
+  spotId: string;
+  spotName: string;
+}
+
 export interface EasterEggHuntWinnerNotificationData {
   type: 'EASTER_EGG_HUNT_WINNER';
   eggId: string;
@@ -101,4 +107,5 @@ export type NotificationData =
   | JobOfferNotificationData
   | NewsNotificationData
   | SurveyNotificationData
+  | KidsSpotNotificationData
   | EasterEggHuntWinnerNotificationData;

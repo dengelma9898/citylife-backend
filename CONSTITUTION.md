@@ -348,6 +348,7 @@ Erst relevant, wenn das Deployment **über einen einzelnen VPS-Container** hinau
 | Event-Kategorien | `event-categories:all` | 10 Min | Create/Update/Delete |
 | Business-Kategorien | `business-categories:all` | 10 Min | Create/Update/Delete |
 | Bootstrap Bundle | `bootstrap:public`, `bootstrap:public:{version}` | 5 Min | TTL-basiert (`userProfile` nicht im Bundle) |
+| Kids-Spots (ungefilterte, kids-sichtbare Liste) | `curated-spots:kids:all` | 5 Min | Create/Update/Soft-Delete/Bild-Upload (Filter laufen im Speicher) |
 
 ---
 
@@ -1970,6 +1971,10 @@ Für **„Adresse beim Spot anlegen“** (Autocomplete aus Text oder Vorbefüllu
 | `address` | Objekt | **Pflicht** in API-Responses; gleiche Struktur wie bei **Partnern** (`BusinessAddressDto`): `street`, `houseNumber`, `postalCode`, `city`, `latitude`, `longitude` (siehe [`business-address.dto.ts`](../src/businesses/dto/business-address.dto.ts)). Beim **Lesen** sehr alter Firestore-Dokumente ohne `address`-Feld füllt das Backend Platzhalter (leere Strings, `0` für Koordinaten); solche Einträge sollten per `PATCH` mit einer echten Adresse nachgezogen werden. |
 | `videoUrl` | string \| null | z. B. nach Upload oder manuell per PATCH |
 | `instagramUrl` | string \| null | gültige URL (`class-validator` `@IsUrl`) |
+| `websiteUrl` | string \| null | gültige http(s)-URL (Website des Spots; die App priorisiert Website vor Instagram). Optional, damit auch Spots ohne Website (z. B. öffentliche Spielplätze) möglich sind |
+| `kidsProfile` | Objekt \| null | **Kids-Profil** (siehe unten). `null` = kein Kids Spot. Ist es gesetzt, ist es vollständig |
+| `isKidsSpot` | boolean | **nur lesen**, abgeleitet (`kidsProfile !== null`), wird nie gespeichert |
+| `kidsNotificationSentAt` | string \| null | **nur lesen/intern**: ISO-Zeitpunkt der einmaligen `NEW_KIDS_SPOT`-Push; nie im Request-Body |
 | `status` | `"PENDING"` \| `"ACTIVE"` | Sichtbarkeit in der öffentlichen App |
 | `isDeleted` | boolean | Soft-Delete |
 | `createdAt` / `updatedAt` | string (ISO) | vom Server gesetzt |
@@ -1978,6 +1983,38 @@ Für **„Adresse beim Spot anlegen“** (Autocomplete aus Text oder Vorbefüllu
 | `adminRatedAt` | string \| null | ISO-Zeitpunkt der **letzten** Änderung an `adminRating` (bei Wert `null` ebenfalls `null`); **nur serverseitig**, nie im Request-Body |
 | `userRatingAverage` | number \| null | Durchschnitt aller abgegebenen Nutzerbewertungen (nur lesen; wird bei Nutzer-`POST` aktualisiert) |
 | `userRatingCount` | number | Anzahl abgegebener Nutzerbewertungen (Start **0**) |
+
+### Kids-Profil (`kidsProfile`)
+
+Ein **Kids Spot** ist ein Curated Spot mit gesetztem Kids-Profil (Begriffe: [CONTEXT.md](./CONTEXT.md), Entscheidung: [ADR 0001](./docs/adr/0001-kids-spots-in-curated-spots-integrieren.md)). Bestands-Spots sind keine Kids Spots, bis die Redaktion sie per `PATCH` qualifiziert (keine Migration).
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `locationType` | `"INDOOR"` \| `"OUTDOOR"` \| `"BOTH"` | Pflicht |
+| `suitableForToddlers` | boolean | Pflicht; Kleinkind (0–5) |
+| `suitableForSchoolKids` | boolean | Pflicht; Schulkind (6+). **Mindestens eine** der beiden Altersgruppen muss `true` sein |
+| `isFree` | boolean | Pflicht; Eintritt für **alle Parteien** frei (Konsum wird nicht betrachtet) |
+| `isBadWeatherTip` | boolean | Pflicht; redaktionelles Siegel, unabhängig von `locationType` |
+| `equipmentTags` | string[] | Optional (Default `[]`), eindeutig; nur Anzeige, **kein Filter**. Erlaubt: `DIAPER_CHANGING_FACILITY`, `STROLLER_FRIENDLY`, `NURSING_FRIENDLY`, `PLAY_AREA`, `CHILD_SEATS`, `STEP_FREE_ACCESS` (Enum `KidsEquipmentTag`; neue Tags nur per Code-Änderung) |
+
+**PATCH-Semantik:** `kidsProfile` weggelassen = unverändert, `null` = Profil entfernen (Spot bleibt bestehen), Objekt = Profil **vollständig** ersetzen. `websiteUrl: null` entfernt die Website.
+
+**Kids-sichtbar** ist ein Spot, wenn `status = ACTIVE`, nicht gelöscht, `kidsProfile` gesetzt **und** mindestens ein Bild in `imageUrls` vorhanden ist. Ohne Foto bleibt der Spot in der normalen Ansicht sichtbar, taucht aber nicht in der Kids-Ansicht auf.
+
+### GET `/curated-spots/kids`
+
+**Auth:** jeder authentifizierte User. **Response `data`:** `CuratedSpot[]` (nur kids-sichtbare Spots, nach Name A–Z, keine Paginierung).
+
+| Query | Werte | Semantik |
+|-------|-------|----------|
+| `locationType` | `INDOOR` \| `OUTDOOR` \| `BOTH` | `INDOOR` liefert `INDOOR` + `BOTH`, `OUTDOOR` liefert `OUTDOOR` + `BOTH`, `BOTH` nur `BOTH` |
+| `ageGroup` | `TODDLER` \| `SCHOOL_CHILD` | Spots, die für die Gruppe geeignet sind (Spots dürfen beide Gruppen haben) |
+| `isFree` | `true` \| `false` | `true` = nur kostenlose Spots, `false` = kein Filter |
+| `isBadWeatherTip` | `true` \| `false` | `true` = nur Schlechtwetter-Tipps, `false` = kein Filter |
+
+Alle gesetzten Filter werden mit **UND** kombiniert; ohne Filter werden alle Kids Spots geliefert. Ungültige Werte und unbekannte Query-Parameter führen zu **400**. Caching: siehe Cache-Tabelle in §3 (`curated-spots:kids:all`, 5 Min, Invalidierung bei jedem Spot-Write).
+
+**Push:** Bei erstmaliger Kids-Sichtbarkeit eines Spots wird `NEW_KIDS_SPOT` an Nutzer mit `notificationPreferences.newKidsSpots === true` gesendet (siehe Notification-Präferenzen).
 
 ---
 
@@ -2058,7 +2095,8 @@ Details zur App-Integration: [flutter-curated-spots-read-integration.md](./flutt
 | `address` | **Ja** | verschachteltes Objekt: `street`, `houseNumber`, `postalCode`, `city` (jeweils nicht-leerer String), `latitude` / `longitude` als Zahl (wie Partner-Adresse) |
 | `keywordIds` | Nein | bestehende `spotKeywords`-IDs |
 | `newKeywordNames` | Nein | Strings max. 120 Zeichen; Server legt fehlende Keywords an und **merged** die IDs in `keywordIds` |
-| `videoUrl` / `instagramUrl` | Nein | müssen gültige URLs sein, wenn gesetzt |
+| `videoUrl` / `instagramUrl` / `websiteUrl` | Nein | müssen gültige URLs sein, wenn gesetzt |
+| `kidsProfile` | Nein | macht den Spot zum Kids Spot; Struktur siehe „Kids-Profil“ (Foto-Upload folgt danach, daher löst ein Create nie die Kids-Push aus) |
 | `status` | Nein | Default **`PENDING`**, wenn weggelassen |
 | `adminRating` | Nein | optional **1–5**; setzt gleichzeitig `adminRatedAt` (wie bei PATCH, später per `PATCH` änderbar) |
 
@@ -2935,6 +2973,9 @@ Die `data`-Felder variieren je nach Notification-Typ. Siehe CONSTITUTION §6.2 f
 | `newJobOffers` | ✅ Implementiert | `NEW_JOB_OFFER` |
 | `newNews` | ✅ Implementiert | `NEW_NEWS` |
 | `newSurveys` | ✅ Implementiert | `NEW_SURVEY` |
+| `newKidsSpots` | ✅ Implementiert | `NEW_KIDS_SPOT` |
+
+**`newKidsSpots` / `NEW_KIDS_SPOT`:** Opt-in (Default `false`). Wird **einmalig pro Spot** gesendet, sobald ein Curated Spot erstmals kids-sichtbar wird (aktiv, Kids-Profil gesetzt, mindestens 1 Foto) – egal ob durch Aktivieren, nachträgliches Kids-Profil oder das erste Foto. Reaktivierung oder erneutes Setzen des Profils sendet nichts mehr (`kidsNotificationSentAt` am Spot). `data`: `{ "type": "NEW_KIDS_SPOT", "spotId": "...", "spotName": "..." }`.
 
 ---
 

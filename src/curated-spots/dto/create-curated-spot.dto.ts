@@ -14,6 +14,7 @@ import {
 import { Type } from 'class-transformer';
 import { CuratedSpotStatus } from '../domain/enums/curated-spot-status.enum';
 import { CuratedSpotAddressDto } from './curated-spot-address.dto';
+import { KidsProfileDto } from './kids-profile.dto';
 import { IsHttpUrlAllowingSpacesInPathConstraint } from './is-http-url-allowing-spaces.constraint';
 
 export class CreateCuratedSpotDto {
@@ -49,6 +50,15 @@ export class CreateCuratedSpotDto {
   @IsOptional()
   @Validate(IsHttpUrlAllowingSpacesInPathConstraint)
   readonly instagramUrl?: string;
+
+  @IsOptional()
+  @Validate(IsHttpUrlAllowingSpacesInPathConstraint)
+  readonly websiteUrl?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => KidsProfileDto)
+  readonly kidsProfile?: KidsProfileDto;
 
   @IsOptional()
   @IsEnum(CuratedSpotStatus)

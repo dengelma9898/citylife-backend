@@ -39,6 +39,10 @@ export class NotificationPreferencesDto {
 
   @IsBoolean()
   @IsOptional()
+  public readonly newKidsSpots?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
   public readonly businessActivated?: boolean;
 
   @IsBoolean()

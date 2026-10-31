@@ -24,6 +24,7 @@ import { CuratedSpot } from '../../interfaces/curated-spot.interface';
 import { CuratedSpotUserRatingView } from '../services/curated-spot-user-ratings.service';
 import { CreateCuratedSpotDto } from '../../dto/create-curated-spot.dto';
 import { UpdateCuratedSpotDto } from '../../dto/update-curated-spot.dto';
+import { KidsSpotsQueryDto } from '../../dto/kids-spots-query.dto';
 import { UpdateCuratedSpotsUserRatingsSettingsDto } from '../../dto/update-curated-spots-user-ratings-settings.dto';
 import { SubmitCuratedSpotUserRatingDto } from '../../dto/submit-curated-spot-user-rating.dto';
 import { RolesGuard } from '../../../core/guards/roles.guard';
@@ -74,6 +75,18 @@ export class CuratedSpotsController {
     this.logger.log('GET /curated-spots/search');
     const ids = CuratedSpotsService.parseKeywordIdsFromQuery(keywordIds);
     return this.curatedSpotsService.searchActive(namePrefix, ids);
+  }
+
+  @Get('kids')
+  @ApiOperation({
+    summary:
+      'List kids spots (active, kids profile set, at least one photo) filtered with AND, sorted by name',
+  })
+  public async listKids(@Query() query: KidsSpotsQueryDto): Promise<CuratedSpot[]> {
+    this.logger.log('GET /curated-spots/kids');
+    return this.curatedSpotsService.searchKids(
+      CuratedSpotsService.parseKidsFiltersFromQuery(query),
+    );
   }
 
   @Get('settings/user-ratings')

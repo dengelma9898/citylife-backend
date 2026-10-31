@@ -1,4 +1,6 @@
 import { CuratedSpotStatus } from '../domain/enums/curated-spot-status.enum';
+import { KidsEquipmentTag } from '../domain/enums/kids-equipment-tag.enum';
+import { KidsLocationType } from '../domain/enums/kids-location-type.enum';
 
 export interface CuratedSpotAddress {
   street: string;
@@ -31,6 +33,47 @@ export function normalizeCuratedSpotNameLower(name: string): string {
 }
 
 /**
+ * Kids profile of a curated spot. A spot is a kids spot exactly when this profile is set.
+ */
+export interface KidsProfile {
+  locationType: KidsLocationType;
+  /** Suitable for toddlers (0-5 years). */
+  suitableForToddlers: boolean;
+  /** Suitable for school children (6+ years). */
+  suitableForSchoolKids: boolean;
+  /** Admission is free for all parties (consumption is not considered). */
+  isFree: boolean;
+  /** Editorial seal, independent of the location type. */
+  isBadWeatherTip: boolean;
+  equipmentTags: KidsEquipmentTag[];
+}
+
+/**
+ * Builds a kids profile from Firestore / plain JSON.
+ * Missing or malformed legacy data yields null; unknown equipment tags are dropped.
+ */
+export function parseKidsProfile(raw: unknown): KidsProfile | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const o = raw as Record<string, unknown>;
+  const locationType = Object.values(KidsLocationType).find(value => value === o.locationType);
+  if (locationType === undefined) {
+    return null;
+  }
+  const knownTags = Object.values(KidsEquipmentTag);
+  const rawTags = Array.isArray(o.equipmentTags) ? o.equipmentTags : [];
+  return {
+    locationType,
+    suitableForToddlers: o.suitableForToddlers === true,
+    suitableForSchoolKids: o.suitableForSchoolKids === true,
+    isFree: o.isFree === true,
+    isBadWeatherTip: o.isBadWeatherTip === true,
+    equipmentTags: [...new Set(knownTags.filter(tag => rawTags.includes(tag)))],
+  };
+}
+
+/**
  * Curated location spot (admin-managed), searchable by name prefix and spot keyword IDs (AND).
  */
 export interface CuratedSpot {
@@ -43,6 +86,13 @@ export interface CuratedSpot {
   address: CuratedSpotAddress;
   videoUrl?: string | null;
   instagramUrl?: string | null;
+  websiteUrl?: string | null;
+  /** Kids profile; the spot is a kids spot exactly when this is set. */
+  kidsProfile?: KidsProfile | null;
+  /** Derived in API responses (kidsProfile !== null); never stored. */
+  isKidsSpot?: boolean;
+  /** ISO time of the one-time "new kids spot" push; internal, never accepted from clients. */
+  kidsNotificationSentAt?: string | null;
   status: CuratedSpotStatus;
   isDeleted: boolean;
   createdAt: string;

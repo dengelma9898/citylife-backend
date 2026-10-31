@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { UsersModule } from '../users/users.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { CuratedSpotsController } from './application/controllers/curated-spots.controller';
 import { SpotKeywordsController } from './application/controllers/spot-keywords.controller';
 import { CuratedSpotsService } from './application/services/curated-spots.service';
@@ -10,7 +11,7 @@ import { CuratedSpotUserRatingsService } from './application/services/curated-sp
 import { CuratedSpotsUserRatingsEnabledGuard } from './application/guards/curated-spots-user-ratings-enabled.guard';
 
 @Module({
-  imports: [FirebaseModule, UsersModule],
+  imports: [FirebaseModule, UsersModule, NotificationsModule],
   controllers: [CuratedSpotsController, SpotKeywordsController],
   providers: [
     CuratedSpotsService,

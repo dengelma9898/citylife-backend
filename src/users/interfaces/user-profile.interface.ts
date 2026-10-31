@@ -19,6 +19,7 @@ export interface NotificationPreferences {
   newJobOffers?: boolean;
   newNews?: boolean;
   newSurveys?: boolean;
+  newKidsSpots?: boolean;
   easterEggHuntWinner?: boolean;
 }
 

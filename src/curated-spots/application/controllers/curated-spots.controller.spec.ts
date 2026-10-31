@@ -5,6 +5,8 @@ import { CuratedSpotsService } from '../services/curated-spots.service';
 import { FirebaseStorageService } from '../../../firebase/firebase-storage.service';
 import { CuratedSpot } from '../../interfaces/curated-spot.interface';
 import { CuratedSpotStatus } from '../../domain/enums/curated-spot-status.enum';
+import { KidsLocationType } from '../../domain/enums/kids-location-type.enum';
+import { KidsAgeGroup } from '../../domain/enums/kids-age-group.enum';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 import { CuratedSpotsUserRatingsSettingsService } from '../services/curated-spots-user-ratings-settings.service';
 import { CuratedSpotUserRatingsService } from '../services/curated-spot-user-ratings.service';
@@ -46,6 +48,7 @@ describe('CuratedSpotsController', () => {
       listAllForAdmin: jest.fn(),
       getByIdForAdmin: jest.fn(),
       searchActive: jest.fn(),
+      searchKids: jest.fn(),
       listActiveForApp: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -94,6 +97,42 @@ describe('CuratedSpotsController', () => {
     const result = await controller.search('caf', ['a', 'b']);
     expect(mockCuratedSpotsService.searchActive).toHaveBeenCalledWith('caf', ['a', 'b']);
     expect(result).toHaveLength(1);
+  });
+
+  it('listKids should convert query to filters and delegate', async () => {
+    mockCuratedSpotsService.searchKids.mockResolvedValue([mockSpot]);
+    const result = await controller.listKids({
+      locationType: KidsLocationType.INDOOR,
+      ageGroup: KidsAgeGroup.TODDLER,
+      isFree: 'true',
+      isBadWeatherTip: 'false',
+    });
+    expect(mockCuratedSpotsService.searchKids).toHaveBeenCalledWith({
+      locationType: KidsLocationType.INDOOR,
+      ageGroup: KidsAgeGroup.TODDLER,
+      isFree: true,
+      isBadWeatherTip: undefined,
+    });
+    expect(result).toHaveLength(1);
+  });
+
+  it('listKids should pass empty filters when no query is given', async () => {
+    mockCuratedSpotsService.searchKids.mockResolvedValue([]);
+    await controller.listKids({});
+    expect(mockCuratedSpotsService.searchKids).toHaveBeenCalledWith({
+      locationType: undefined,
+      ageGroup: undefined,
+      isFree: undefined,
+      isBadWeatherTip: undefined,
+    });
+  });
+
+  it('should register GET kids before GET :id so the route is not shadowed', () => {
+    const routeOf = (name: keyof CuratedSpotsController): string =>
+      Reflect.getMetadata('path', CuratedSpotsController.prototype[name]);
+    const handlerNames = Object.getOwnPropertyNames(CuratedSpotsController.prototype);
+    expect(routeOf('listKids')).toBe('kids');
+    expect(handlerNames.indexOf('listKids')).toBeLessThan(handlerNames.indexOf('getById'));
   });
 
   it('uploadImages should throw when no files', async () => {
