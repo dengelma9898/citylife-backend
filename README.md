@@ -61,6 +61,16 @@ npm run start:test
 npm run start:prod
 ```
 
+## Testdaten: Weihnachtsmärkte (nur Dev `citylife-fe75a`)
+
+`scripts/seed-christmas-markets-citylife.js` schreibt die 10 Prototyp-Weihnachtsmärkte (Saison 2026) in die Firestore-Collection `christmasMarkets` (Doc-IDs = Slugs, idempotent per Merge) und legt bei `--write` das Feature-Flag-Dokument `settings/christmas_markets_settings` mit `isEnabled: false` an, falls es fehlt. Die API (`GET/POST/PATCH/DELETE /christmas-markets`, Schreibrechte nur `admin`/`super_admin`) und das Flag `christmas-markets` sind in [CONSTITUTION.md](CONSTITUTION.md) §5.9 beschrieben, der Client-Vertrag in [docs/flutter-christmas-markets-integration.md](docs/flutter-christmas-markets-integration.md). Zeiträume/Öffnungszeiten sind Beispielwerte des Prototyps und vor Livegang redaktionell zu prüfen:
+
+```bash
+npm run seed:christmas-markets:citylife            # Dry-Run (Standard, ohne Firebase-Zugriff)
+npm run seed:christmas-markets:citylife -- --write # Daten anlegen/aktualisieren
+npm run seed:christmas-markets:citylife -- --delete # Seed-Dokumente wieder entfernen
+```
+
 ## API-Dokumentation
 
 - Swagger UI: `GET /api` (lokal z. B. `http://localhost:3000/api`; in `NODE_ENV=prd` deaktiviert)

@@ -349,6 +349,8 @@ Erst relevant, wenn das Deployment **über einen einzelnen VPS-Container** hinau
 | Business-Kategorien | `business-categories:all` | 10 Min | Create/Update/Delete |
 | Bootstrap Bundle | `bootstrap:public`, `bootstrap:public:{version}` | 5 Min | TTL-basiert (`userProfile` nicht im Bundle) |
 | Kids-Spots (ungefilterte, kids-sichtbare Liste) | `curated-spots:kids:all` | 5 Min | Create/Update/Soft-Delete/Bild-Upload (Filter laufen im Speicher) |
+| Feature-Flags | `feature-flags:{flag}` | 15 Min | PATCH des jeweiligen Flags |
+| Weihnachtsmärkte | `christmas-markets:all`, `christmas-markets:{id}` | 15 Min | Create/Update/Delete |
 
 ---
 
@@ -1828,6 +1830,8 @@ Interaktive Doku: **`GET /api`** (Swagger UI), Tag-Gruppen u. a. `curated-spot
 | `curatedSpots` | Spot-Dokumente (inkl. `adminRating` / Nutzer-Aggregate `userRatingAverage`, `userRatingCount`) |
 | `curatedSpots/{spotId}/userRatings/{userId}` | Einmalige Endnutzer-Bewertung pro User (`score`, `ratedAt`) – nur wenn Feature aktiv |
 | `settings/curated_spots_user_ratings_settings` | Feature-Toggle `isEnabled` für Endnutzer-Bewertungen (Default **false**) |
+| `settings/community_settings` | Feature-Flag `community` (Default **true**), siehe Abschnitt „Feature-Flags“ |
+| `settings/kids_spots_settings` | Feature-Flag `kids-spots` (Default **false**), siehe Abschnitt „Feature-Flags“ |
 | `spotKeywords` | Tag-Keywords nur für Spots (nicht `keywords` für Businesses) |
 
 Bei neuen zusammengesetzten Firestore-Queries können in der **Firebase Console** **Composite Indexes** nötig werden (Fehlermeldung mit Link kommt von Firebase).
@@ -2278,6 +2282,24 @@ Nur **ACTIVE** und nicht gelöscht; sonst **404** (gleiches Verhalten wie in der
 - Vergleichbares Admin-Pattern (CRUD + Auth): [taxi-stands-admin-integration.md](./taxi-stands-admin-integration.md)
 
 
+### Feature-Flags (Produkt)
+
+Das Backend **hinterlegt** die Produkt-Feature-Flags nur; was bei deaktiviertem Flag blockiert oder versteckt wird, entscheidet das jeweilige Frontend (App, Admin-FE). Es gibt bewusst keine Backend-Guards auf Basis dieser Flags.
+
+| Flag (`:flag`) | Firestore-Dokument | Default | Bedeutung |
+|----------------|--------------------|---------|-----------|
+| `community` | `settings/community_settings` | **true** | Community-Bereich (läuft live und bleibt an, bis umgeschaltet wird) |
+| `kids-spots` | `settings/kids_spots_settings` | **false** | Kids-Spots-Bereich (neu; wird bewusst aktiviert) |
+| `christmas-markets` | `settings/christmas_markets_settings` | **false** | Weihnachtsmärkte-Bereich (saisonal; wird nach App-Rollout bewusst aktiviert) |
+
+| Methode | Pfad | Auth | Beschreibung |
+|---------|------|------|--------------|
+| GET | `/feature-flags` | jeder authentifizierte User | Alle Flags in einem Payload: `{ "community": { … }, "kidsSpots": { … }, "christmasMarkets": { … } }` |
+| GET | `/feature-flags/:flag` | jeder authentifizierte User | Einzelnes Flag (`community`, `kids-spots` oder `christmas-markets`, sonst 400) |
+| PATCH | `/feature-flags/:flag` | `admin` / `super_admin` | Body `{ "isEnabled": boolean }`; Response ist das aktualisierte Flag |
+
+**Response-Objekt je Flag:** `{ "id": string, "isEnabled": boolean, "updatedAt": string, "updatedBy"?: string }`. Die Flags sind unabhängig voneinander: Das Ersetzen der Community durch Kids-Spots erfolgt clientseitig (z. B. `community=false` und `kids-spots=true` setzen und die App entscheidet). Fehlende Firestore-Dokumente werden beim ersten Lesen mit dem Default angelegt. Caching: `feature-flags:{flag}`, 15 Minuten, Invalidierung beim PATCH des jeweiligen Flags.
+
 ### 5.8 Special Polls (HTTP)
 
 Dieses Dokument beschreibt die **HTTP-API** für **Special Polls** (`/special-polls`), damit das **Admin-Frontend** (Super-Admin) Umfragen anlegen, status setzen, hervorheben, Antworten moderieren und löschen kann. Endnutzer-Flows (Liste, Antwort, Upvote) sind dieselben Routen wie in der App; hier der Fokus auf **Super-Admin**.
@@ -2542,6 +2564,48 @@ Erlaubte Werte: **`ACTIVE`**, **`INACTIVE`** (kein `PENDING` / `CLOSED` als neue
 
 - Flutter-App (Lesen, Antworten, Upvotes): [flutter-special-polls-integration.md](./flutter-special-polls-integration.md)
 - Benachrichtigungen: [notification-suggestions.md](./notification-suggestions.md)
+
+### 5.9 Weihnachtsmärkte (HTTP)
+
+Saisonale, redaktionell gepflegte Märkte als **eigene flache Domäne** (bewusst keine kuratierten Spots). **Backend-Code:** `src/christmas-markets/` (flaches Layout analog Special Polls, Firestore direkt über `FirebaseService`). Es gibt **keinen** Push-/Notification-Typ und **kein** Backend-Enforcement des Feature-Flags: Das CRUD funktioniert auch bei deaktiviertem Flag (Admin-Pflege), die App blendet den Bereich clientseitig ein/aus.
+
+| Methode | Pfad | Rollen | Beschreibung |
+|---------|------|--------|--------------|
+| GET | `/christmas-markets` | authentifiziert | Alle Märkte, sortiert nach `startDate` aufsteigend; Märkte ohne Datum ans Ende (danach Name A–Z) |
+| GET | `/christmas-markets/:id` | authentifiziert | Einzelner Markt, sonst **404** |
+| POST | `/christmas-markets` | `admin`, `super_admin` | Anlegen; `id` optional als Slug (`^[a-z0-9]+(?:-[a-z0-9]+)*$`), sonst Auto-ID; belegte ID → **409** |
+| PATCH | `/christmas-markets/:id` | `admin`, `super_admin` | Teilupdate (kein `id` im Body) |
+| DELETE | `/christmas-markets/:id` | `admin`, `super_admin` | Löschen, sonst **404** |
+
+**Validierung:** strikte DTOs (`class-validator`, globale `ValidationPipe` mit Whitelist): Pflicht `name`, `city`, `place`, `description`, `periodLabel`, `openingHoursLabel`, `latitude`/`longitude` (`@IsLatitude`/`@IsLongitude`); optional `startDate`/`endDate` (`@IsISO8601`), `imageUrl` (`@IsUrl`), `highlights` (String-Array). Zusätzlich prüft der Service `endDate >= startDate` (sonst **400**, bei PATCH gegen die zusammengeführten Werte). Audit-Felder `createdBy`/`updatedBy` setzt der Server aus `@CurrentUser()`; `createdAt`/`updatedAt` serverseitig.
+
+**Firestore (`christmasMarkets`, Doc-ID = Slug bei Seed/Admin-Vorgabe):**
+
+| Feld | Typ | Hinweis |
+|------|-----|---------|
+| `name`, `city`, `place`, `description`, `periodLabel`, `openingHoursLabel` | string | Anzeigetexte; `periodLabel`/`openingHoursLabel` sind reine Anzeige-Strings |
+| `startDate`, `endDate` | Timestamp \| null | Status-Logik der App („Öffnet in x Tagen“); API liefert ISO-Strings |
+| `latitude`, `longitude` | number | –90..90 / –180..180 |
+| `imageUrl` | string \| null | Titelbild; ohne Bild Emoji-Fallback in der App |
+| `highlights` | string[] | Chips in der App |
+| `createdAt`, `updatedAt` | Timestamp | serverseitig |
+| `createdBy`, `updatedBy` | string | serverseitig (Firebase-UID) |
+
+Reads konvertieren Timestamps zu ISO-Strings, damit der JSON-Vertrag zur App stabil ist. **Caching:** `christmas-markets:all` / `christmas-markets:{id}`, TTL 15 Min (siehe §3), Invalidierung bei POST/PATCH/DELETE.
+
+**Feature-Flag:** `christmas-markets` (`settings/christmas_markets_settings`, Default **false**, siehe Abschnitt „Feature-Flags (Produkt)“). Aktivierung erfolgt bewusst über das Admin-FE, erst nach App-Rollout.
+
+**Seed (nur Dev `citylife-fe75a`):** Die 10 Prototyp-Märkte (Saison 2026) aus den App-Fixtures idempotent einspielen – Projekt-Guard, Dry-Run als Standard, deterministische Doc-IDs, `--write` legt zusätzlich das Flag-Dokument mit `false` an, falls es fehlt (ein aktiviertes Flag wird nie zurückgesetzt):
+
+```bash
+npm run seed:christmas-markets:citylife            # Dry-Run (Standard)
+npm run seed:christmas-markets:citylife -- --write # Daten anlegen/aktualisieren
+npm run seed:christmas-markets:citylife -- --delete # Seed-Dokumente entfernen
+```
+
+Zeiträume/Öffnungszeiten sind Beispielwerte des Prototyps (Quelle: frankentourismus.de) und vor Livegang redaktionell zu prüfen; Bildrechte der Nürnberg-`imageUrl` klären.
+
+**Client-Vertrag:** [flutter-christmas-markets-integration.md](./flutter-christmas-markets-integration.md)
 
 ---
 

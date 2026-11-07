@@ -149,6 +149,10 @@ export class Entity {
 - **Thin Controllers**: Controllers must strictly handle request/response routing and parameter extraction.
 - **No Complex Transformations in Controllers**: Delegate legacy payload transformations, data mappings, or business logic to services, mappers, or custom pipes.
 
+### Feature Flags (Settings-Muster)
+- Produkt-Flags liegen als je ein Dokument in der Firestore-Collection `settings` (`community_settings` Default true, `kids_spots_settings` und `christmas_markets_settings` Default false) und werden über `src/feature-flags/` verwaltet (`GET /feature-flags`, `GET/PATCH /feature-flags/:flag`; PATCH nur `admin`/`super_admin`)
+- **WICHTIG**: Das Backend hinterlegt Flags nur – es blockiert auf ihrer Basis keine Endpunkte. Was bei deaktiviertem Flag versteckt wird, entscheidet das Frontend. Keine Guards aus Feature-Flags bauen, außer das Feature verlangt es ausdrücklich (Gegenbeispiele mit Guard: `DirectChatEnabledGuard`, `CuratedSpotsUserRatingsEnabledGuard` für ihre eigenen Endpunkte)
+
 ### Caching (Mandatory for New Modules)
 - **IMPORTANT**: Every new module with read-heavy endpoints **MUST** implement caching
 - Use global `CACHE_MANAGER` from `@nestjs/cache-manager` (in-memory, per Docker container on VPS)

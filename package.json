@@ -22,6 +22,7 @@
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:cov": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "test:debug": "node --experimental-vm-modules --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/jest/bin/jest.js --runInBand",
+    "seed:christmas-markets:citylife": "node scripts/seed-christmas-markets-citylife.js",
     "sonar": "sonar-scanner-npm",
     "prepare": "husky install"
   },

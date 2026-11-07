@@ -33,6 +33,8 @@ import { TaxiStandsModule } from './taxi-stands/taxi-stands.module';
 import { CuratedSpotsModule } from './curated-spots/curated-spots.module';
 import { PassStatsModule } from './pass-stats/pass-stats.module';
 import { BootstrapModule } from './bootstrap/bootstrap.module';
+import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
+import { ChristmasMarketsModule } from './christmas-markets/christmas-markets.module';
 
 @Module({
   imports: [
@@ -86,6 +88,8 @@ import { BootstrapModule } from './bootstrap/bootstrap.module';
     CuratedSpotsModule,
     PassStatsModule,
     BootstrapModule,
+    FeatureFlagsModule,
+    ChristmasMarketsModule,
   ],
 })
 export class AppModule {}
